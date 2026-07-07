@@ -1,0 +1,413 @@
+using System.Net;
+using System.Net.Http;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Xunit;
+
+namespace Verifiabl.Tests;
+
+public class ClientRequestTests
+{
+    private const string Reference = "u0FE9WLIS7GYKQnpJPygBw";
+    private const string KeyVersion = "0f8fad5b-d9cb-469f-a165-70867728950e.1";
+
+    private static RegisterNonPiiRequest ValidRequest() => new()
+    {
+        Schema = "au.payslip.v1",
+        IssuedAt = new DateTimeOffset(2026, 5, 31, 11, 2, 3, TimeSpan.FromHours(10)),
+        PayslipNonPii = new PayslipNonPii
+        {
+            PeriodStart = "2026-05-01",
+            PeriodEnd = "2026-05-31",
+        },
+        EncryptionMetadata = new EncryptionMetadata
+        {
+            Iv = "AAAAAAAAAAAAAAAA",
+            Tag = "AAAAAAAAAAAAAAAAAAAAAA",
+            KeyVersion = KeyVersion,
+        },
+    };
+
+    private static VerifiablClient Client(
+        FakeHttpHandler handler,
+        Action<VerifiablClientOptions>? configure = null)
+    {
+        var options = new VerifiablClientOptions
+        {
+            Auth = VerifiablAuth.ApiKey("static-key"),
+            HttpClient = new HttpClient(handler),
+        };
+        configure?.Invoke(options);
+        return new VerifiablClient(options);
+    }
+
+    private static FakeHttpHandler RegistrationHandler(string reference = Reference)
+    {
+        return new FakeHttpHandler
+        {
+            Responder = (_, _, _) => Task.FromResult(FakeHttpHandler.Json(
+                HttpStatusCode.OK,
+                $"{{\"verifiabl_reference\":\"{reference}\"}}")),
+        };
+    }
+
+    [Fact]
+    public async Task SendsRegistrationToTheProductionIssuerOriginWithBearerAuth()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+
+        RegisterNonPiiResponse response = await client.RegisterNonPiiAsync(ValidRequest());
+
+        Assert.Equal(Reference, response.VerifiablReference);
+        CapturedRequest sent = Assert.Single(handler.Requests);
+        Assert.Equal("https://register.verifiabl.io/v1/registerNonPII", sent.Uri.ToString());
+        Assert.Equal("Bearer static-key", sent.Authorization);
+
+        using JsonDocument body = JsonDocument.Parse(sent.Body);
+        Assert.Equal("au.payslip.v1", body.RootElement.GetProperty("schema").GetString());
+        // The +10:00 offset input is sent as UTC with a Z suffix.
+        Assert.Equal(
+            "2026-05-31T01:02:03.0000000Z",
+            body.RootElement.GetProperty("issued_at").GetString());
+        JsonElement nonPii = body.RootElement.GetProperty("payslip_non_pii");
+        Assert.Equal("2026-05-01", nonPii.GetProperty("period_start").GetString());
+        Assert.Equal("2026-05-31", nonPii.GetProperty("period_end").GetString());
+        JsonElement metadata = body.RootElement.GetProperty("encryption_metadata");
+        Assert.Equal(KeyVersion, metadata.GetProperty("key_version").GetString());
+    }
+
+    [Fact]
+    public async Task RoutesRegistrationToTheSandboxIssuerOrigin()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(
+            handler,
+            options => options.Environment = VerifiablEnvironment.Sandbox);
+
+        await client.RegisterNonPiiAsync(ValidRequest());
+
+        Assert.StartsWith(
+            "https://register.sandbox.verifiabl.io/",
+            Assert.Single(handler.Requests).Uri.ToString());
+    }
+
+    [Fact]
+    public async Task PassesThroughProviderSpecificPayslipFields()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.PayslipNonPii!.AdditionalData = new JsonObject
+        {
+            ["total_hours"] = 152,
+            ["allowances"] = new JsonArray("meal", "travel"),
+        };
+
+        await client.RegisterNonPiiAsync(request);
+
+        using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
+        JsonElement nonPii = body.RootElement.GetProperty("payslip_non_pii");
+        Assert.Equal(152, nonPii.GetProperty("total_hours").GetInt32());
+        Assert.Equal(2, nonPii.GetProperty("allowances").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task DoesNotLetPassthroughKeysOverrideTheMappedPeriodDates()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.PayslipNonPii!.AdditionalData = new JsonObject
+        {
+            ["period_start"] = "1999-01-01",
+            ["period_end"] = "1999-01-31",
+        };
+
+        await client.RegisterNonPiiAsync(request);
+
+        using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
+        JsonElement nonPii = body.RootElement.GetProperty("payslip_non_pii");
+        Assert.Equal("2026-05-01", nonPii.GetProperty("period_start").GetString());
+        Assert.Equal("2026-05-31", nonPii.GetProperty("period_end").GetString());
+    }
+
+    [Fact]
+    public async Task LetsExplicitIssuerBaseUrlOverridesWinOverTheEnvironment()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler, options =>
+        {
+            options.Environment = VerifiablEnvironment.Sandbox;
+            options.IssuerBaseUrl = new Uri("https://issuer.example.com/ignored/path");
+        });
+
+        await client.RegisterNonPiiAsync(ValidRequest());
+
+        // Only the origin of the override is used.
+        Assert.Equal(
+            "https://issuer.example.com/v1/registerNonPII",
+            Assert.Single(handler.Requests).Uri.ToString());
+    }
+
+    [Fact]
+    public async Task MapsTheApiResponseToABarcodeImageForCreateBarcode()
+    {
+        var handler = new FakeHttpHandler
+        {
+            Responder = (_, _, _) => Task.FromResult(FakeHttpHandler.Json(
+                HttpStatusCode.OK,
+                $"{{\"verifiabl_reference\":\"{Reference}\"," +
+                "\"symbol\":{\"format\":\"png\",\"data\":\"aGVsbG8=\"}}")),
+        };
+        VerifiablClient client = Client(handler);
+
+        var request = new CreateBarcodeRequest
+        {
+            Schema = "au.payslip.v1",
+            IssuedAt = DateTimeOffset.UtcNow,
+            PayslipNonPii = new PayslipNonPii { PeriodStart = "2026-05-01", PeriodEnd = "2026-05-31" },
+            EncryptionMetadata = ValidRequest().EncryptionMetadata,
+            EncryptedPii = "abc123",
+        };
+        CreateBarcodeResponse response = await client.CreateBarcodeAsync(request);
+
+        Assert.Equal(Reference, response.VerifiablReference);
+        Assert.Equal("png", response.Barcode.Format);
+        Assert.Equal("aGVsbG8=", response.Barcode.Data);
+        Assert.Equal(
+            "https://register.verifiabl.io/v1/registerAndBuildSymbol",
+            Assert.Single(handler.Requests).Uri.ToString());
+        using JsonDocument body = JsonDocument.Parse(handler.Requests[0].Body);
+        Assert.Equal("abc123", body.RootElement.GetProperty("encrypted_pii").GetString());
+    }
+
+    [Fact]
+    public async Task ThrowsVerifiablApiExceptionWithTheStableCodeOnApiErrors()
+    {
+        var handler = new FakeHttpHandler
+        {
+            Responder = (_, _, _) => Task.FromResult(FakeHttpHandler.Json(
+                HttpStatusCode.BadRequest,
+                "{\"error\":\"Validation failed\",\"code\":\"VALIDATION_FAILED\"," +
+                "\"field_errors\":[{\"path\":\"payslip_non_pii.period_start\",\"message\":\"bad date\"}]}")),
+        };
+        VerifiablClient client = Client(handler);
+
+        VerifiablApiException exception = await Assert.ThrowsAsync<VerifiablApiException>(
+            () => client.RegisterNonPiiAsync(ValidRequest()));
+
+        Assert.Equal(400, exception.Status);
+        Assert.Equal(VerifiablErrorCodes.ValidationFailed, exception.Code);
+        Assert.Equal("Validation failed", exception.Message);
+        VerifiablFieldError fieldError = Assert.Single(exception.Body!.FieldErrors!);
+        Assert.Equal("payslip_non_pii.period_start", fieldError.Path);
+        Assert.Equal("bad date", fieldError.Message);
+    }
+
+    [Fact]
+    public async Task OmitsFieldErrorsWhenTheApiSendsNone()
+    {
+        var handler = new FakeHttpHandler
+        {
+            Responder = (_, _, _) => Task.FromResult(FakeHttpHandler.Json(
+                HttpStatusCode.Forbidden,
+                "{\"error\":\"Forbidden\",\"code\":\"FORBIDDEN\"}")),
+        };
+        VerifiablClient client = Client(handler);
+
+        VerifiablApiException exception = await Assert.ThrowsAsync<VerifiablApiException>(
+            () => client.RegisterNonPiiAsync(ValidRequest()));
+
+        Assert.Null(exception.Body!.FieldErrors);
+    }
+
+    [Fact]
+    public async Task IncludesRequestIdsOnApiErrors()
+    {
+        var handler = new FakeHttpHandler
+        {
+            Responder = (_, _, _) =>
+            {
+                HttpResponseMessage response = FakeHttpHandler.Json(
+                    HttpStatusCode.InternalServerError,
+                    "{\"error\":\"boom\",\"code\":\"INTERNAL_ERROR\"}");
+                response.Headers.Add("x-request-id", "req-123");
+                return Task.FromResult(response);
+            },
+        };
+        VerifiablClient client = Client(handler);
+
+        VerifiablApiException exception = await Assert.ThrowsAsync<VerifiablApiException>(
+            () => client.RegisterNonPiiAsync(ValidRequest()));
+
+        Assert.Equal("req-123", exception.RequestId);
+    }
+
+    [Fact]
+    public async Task PassesThroughUnknownErrorCodes()
+    {
+        var handler = new FakeHttpHandler
+        {
+            Responder = (_, _, _) => Task.FromResult(FakeHttpHandler.Json(
+                (HttpStatusCode)429,
+                "{\"error\":\"Slow down\",\"code\":\"RATE_LIMITED\"}")),
+        };
+        VerifiablClient client = Client(handler);
+
+        VerifiablApiException exception = await Assert.ThrowsAsync<VerifiablApiException>(
+            () => client.RegisterNonPiiAsync(ValidRequest()));
+
+        Assert.Equal("RATE_LIMITED", exception.Code);
+    }
+
+    [Fact]
+    public async Task SurvivesNonJsonErrorBodies()
+    {
+        var handler = new FakeHttpHandler
+        {
+            Responder = (_, _, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadGateway)
+            {
+                Content = new StringContent("<html>gateway error</html>"),
+            }),
+        };
+        VerifiablClient client = Client(handler);
+
+        VerifiablApiException exception = await Assert.ThrowsAsync<VerifiablApiException>(
+            () => client.RegisterNonPiiAsync(ValidRequest()));
+
+        Assert.Equal(502, exception.Status);
+        Assert.Equal(VerifiablErrorCodes.InternalError, exception.Code);
+        Assert.Null(exception.Body);
+    }
+
+    [Fact]
+    public async Task ToleratesAdditiveFieldsInSuccessResponses()
+    {
+        var handler = new FakeHttpHandler
+        {
+            Responder = (_, _, _) => Task.FromResult(FakeHttpHandler.Json(
+                HttpStatusCode.OK,
+                $"{{\"verifiabl_reference\":\"{Reference}\",\"future_field\":42}}")),
+        };
+        VerifiablClient client = Client(handler);
+
+        RegisterNonPiiResponse response = await client.RegisterNonPiiAsync(ValidRequest());
+
+        Assert.Equal(Reference, response.VerifiablReference);
+    }
+
+    [Fact]
+    public async Task EmitsRequestAndResponseHooks()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        var requests = new List<VerifiablRequestEvent>();
+        var responses = new List<VerifiablResponseEvent>();
+        VerifiablClient client = Client(handler, options =>
+        {
+            options.OnRequest = requests.Add;
+            options.OnResponse = responses.Add;
+        });
+
+        await client.RegisterNonPiiAsync(ValidRequest());
+
+        VerifiablRequestEvent request = Assert.Single(requests);
+        Assert.Equal("/v1/registerNonPII", request.Path);
+        Assert.Equal("POST", request.Method);
+        VerifiablResponseEvent response = Assert.Single(responses);
+        Assert.Equal(200, response.Status);
+        Assert.True(response.ElapsedMs >= 0);
+    }
+
+    [Fact]
+    public async Task HookFailuresDoNotChangeRequestBehaviour()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler, options =>
+        {
+            options.OnRequest = _ => throw new InvalidOperationException("hook boom");
+            options.OnResponse = _ => throw new InvalidOperationException("hook boom");
+        });
+
+        RegisterNonPiiResponse response = await client.RegisterNonPiiAsync(ValidRequest());
+
+        Assert.Equal(Reference, response.VerifiablReference);
+    }
+
+    [Fact]
+    public async Task EmitsErrorHooksWhenTheRequestFails()
+    {
+        var handler = new FakeHttpHandler
+        {
+            Responder = (_, _, _) =>
+                Task.FromException<HttpResponseMessage>(new HttpRequestException("socket closed")),
+        };
+        var errors = new List<VerifiablErrorEvent>();
+        VerifiablClient client = Client(handler, options => options.OnError = errors.Add);
+
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.RegisterNonPiiAsync(ValidRequest()));
+
+        VerifiablErrorEvent error = Assert.Single(errors);
+        Assert.Equal("/v1/registerNonPII", error.Path);
+        Assert.IsType<HttpRequestException>(error.Error);
+    }
+
+    [Theory]
+    [InlineData("payslip.v1")]
+    [InlineData("AU.payslip.v1")]
+    [InlineData("au.payslip.1")]
+    public async Task ValidatesTheSchemaBeforeSending(string schema)
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.Schema = schema;
+
+        await Assert.ThrowsAsync<ArgumentException>(() => client.RegisterNonPiiAsync(request));
+
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task ValidatesKeyVersionsBeforeSending()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.EncryptionMetadata!.KeyVersion = "not-a-key-version";
+
+        await Assert.ThrowsAsync<ArgumentException>(() => client.RegisterNonPiiAsync(request));
+
+        Assert.Empty(handler.Requests);
+    }
+
+    [Theory]
+    [InlineData("2026-13-01")]
+    [InlineData("01-05-2026")]
+    [InlineData("2026-02-30")]
+    public async Task ValidatesPeriodDatesBeforeSending(string periodStart)
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.PayslipNonPii!.PeriodStart = periodStart;
+
+        await Assert.ThrowsAsync<ArgumentException>(() => client.RegisterNonPiiAsync(request));
+
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task RequiresIssuedAt()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.IssuedAt = null;
+
+        await Assert.ThrowsAsync<ArgumentException>(() => client.RegisterNonPiiAsync(request));
+
+        Assert.Empty(handler.Requests);
+    }
+}
