@@ -19,6 +19,9 @@ jobs:
     permissions:
       contents: read
       security-events: write
+      # Required for CodeQL to read the workflow run while the repo is private;
+      # a no-op once the repo is public (public repos grant it implicitly).
+      actions: read
     steps:
       - uses: actions/checkout@v4
       - uses: github/codeql-action/init@v3
