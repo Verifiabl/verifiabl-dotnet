@@ -66,9 +66,10 @@ public class ClientRequestTests
 
         using JsonDocument body = JsonDocument.Parse(sent.Body);
         Assert.Equal("au.payslip.v1", body.RootElement.GetProperty("schema").GetString());
-        // The +10:00 offset input is sent as UTC with a Z suffix.
+        // The +10:00 offset input is sent as UTC, millisecond precision with a Z
+        // suffix, matching the Node SDK's Date.toISOString() wire value.
         Assert.Equal(
-            "2026-05-31T01:02:03.0000000Z",
+            "2026-05-31T01:02:03.000Z",
             body.RootElement.GetProperty("issued_at").GetString());
         JsonElement nonPii = body.RootElement.GetProperty("payslip_non_pii");
         Assert.Equal("2026-05-01", nonPii.GetProperty("period_start").GetString());

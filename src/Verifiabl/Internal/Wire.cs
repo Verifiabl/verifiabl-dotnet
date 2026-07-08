@@ -123,7 +123,11 @@ internal static class Wire
         }
 
         body["schema"] = schema;
-        body["issued_at"] = issuedAt.Value.UtcDateTime.ToString("O", CultureInfo.InvariantCulture);
+        // Millisecond-precision UTC, matching JavaScript's Date.toISOString(): the
+        // API accepts arbitrary sub-second precision, but this keeps the wire value
+        // identical to the Node SDK's.
+        body["issued_at"] = issuedAt.Value.ToUniversalTime()
+            .ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture);
         body["payslip_non_pii"] = PayslipNonPiiFields(payslipNonPii, $"{label}.PayslipNonPii");
         body["encryption_metadata"] = new JsonObject
         {
