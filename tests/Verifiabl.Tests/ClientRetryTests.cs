@@ -20,7 +20,7 @@ public class ClientRetryTests
     private static RegisterNonPiiRequest SingleRequest() => new()
     {
         Schema = "au.payslip.v1",
-        IssuedAt = DateTimeOffset.UnixEpoch,
+        IssuedAt = new DateTimeOffset(2026, 5, 31, 0, 0, 0, TimeSpan.Zero),
         PayslipNonPii = new PayslipNonPii { PeriodStart = "2026-05-01", PeriodEnd = "2026-05-31" },
         EncryptionMetadata = Metadata(),
     };
@@ -29,7 +29,7 @@ public class ClientRetryTests
     {
         VerifiablReference = Reference,
         Schema = "au.payslip.v1",
-        IssuedAt = DateTimeOffset.UnixEpoch,
+        IssuedAt = new DateTimeOffset(2026, 5, 31, 0, 0, 0, TimeSpan.Zero),
         PayslipNonPii = new PayslipNonPii { PeriodStart = "2026-05-01", PeriodEnd = "2026-05-31" },
         EncryptionMetadata = Metadata(),
     };
