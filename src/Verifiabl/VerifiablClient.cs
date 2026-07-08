@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -48,9 +49,23 @@ public class VerifiablClient
     private readonly Action<VerifiablRequestEvent>? _onRequest;
     private readonly Action<VerifiablResponseEvent>? _onResponse;
     private readonly Action<VerifiablErrorEvent>? _onError;
+    private readonly int _maxRetries;
 
     private readonly SemaphoreSlim _tokenSemaphore = new(1, 1);
     private volatile CachedToken? _tokenCache;
+
+    /// <summary>
+    /// Sent as the User-Agent on every request so Verifiabl support can identify
+    /// the SDK version behind a call. Unlike some SDKs this carries no usage
+    /// telemetry: PII never leaves the provider, and neither does anything else.
+    /// </summary>
+    private static readonly string UserAgent = BuildUserAgent();
+
+    /// <summary>
+    /// The backoff sleep between retry attempts. A seam so tests can advance
+    /// without real delay; production uses <see cref="Task.Delay(TimeSpan, CancellationToken)"/>.
+    /// </summary>
+    internal Func<TimeSpan, CancellationToken, Task> DelayAsync { get; set; } = Task.Delay;
 
     /// <summary>Create a client. See <see cref="VerifiablClientOptions"/>.</summary>
     public VerifiablClient(VerifiablClientOptions options)
@@ -85,7 +100,15 @@ public class VerifiablClient
                 $"{nameof(options)}.{nameof(options.Timeout)}");
         }
 
+        if (options.MaxRetries < 0)
+        {
+            throw new ArgumentException(
+                "MaxRetries must not be negative.",
+                $"{nameof(options)}.{nameof(options.MaxRetries)}");
+        }
+
         _timeout = options.Timeout;
+        _maxRetries = options.MaxRetries;
         _httpClient = options.HttpClient ?? SharedHttpClient.Value;
         _onRequest = options.OnRequest;
         _onResponse = options.OnResponse;
@@ -104,7 +127,15 @@ public class VerifiablClient
         CancellationToken cancellationToken = default)
     {
         JsonObject body = Wire.ToWire(request);
-        return PostAsync("/v1/registerNonPII", body, Wire.RegistrationFromWire, cancellationToken);
+        // Single registration: Verifiabl generates the reference and does not
+        // deduplicate, so an ambiguous retry could create a second record. Only
+        // failures that leave the request unprocessed are retried.
+        return PostAsync(
+            "/v1/registerNonPII",
+            body,
+            Wire.RegistrationFromWire,
+            idempotent: false,
+            cancellationToken);
     }
 
     /// <summary>
@@ -119,10 +150,13 @@ public class VerifiablClient
         CancellationToken cancellationToken = default)
     {
         JsonObject body = Wire.ToWire(request);
+        // Same as RegisterNonPiiAsync: the API assigns the reference, so this is
+        // not safe to retry on an ambiguous failure.
         return PostAsync(
             "/v1/registerAndBuildSymbol",
             body,
             Wire.CreateBarcodeFromWire,
+            idempotent: false,
             cancellationToken);
     }
 
@@ -147,51 +181,76 @@ public class VerifiablClient
         }
 
         JsonObject body = Wire.ToWire(records.ToList());
-        return PostAsync("/v1/registerNonPIIBatch", body, Wire.BatchFromWire, cancellationToken);
+        // Batch records carry provider-generated references, which the API treats
+        // as idempotency keys: re-sending returns "duplicate" for stored rows and
+        // writes only the missing ones. So a transient failure is safe to retry.
+        return PostAsync(
+            "/v1/registerNonPIIBatch",
+            body,
+            Wire.BatchFromWire,
+            idempotent: true,
+            cancellationToken);
     }
 
     private async Task<T> PostAsync<T>(
         string path,
         JsonObject body,
         Func<JsonElement, T> parseResponse,
+        bool idempotent,
         CancellationToken cancellationToken)
     {
         string json = body.ToJsonString();
 
-        // One deadline covers the whole operation: token fetch, request, and the
-        // single 401 retry.
+        // One deadline covers the whole operation: token fetches, requests, the
+        // 401 refresh, and every transient retry with its backoff.
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(_timeout);
 
         try
         {
-            HttpResponseMessage response = await SendAsync(path, json, deadline.Token)
-                .ConfigureAwait(false);
-
-            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized
-                && _auth is VerifiablAuth.ClientCredentialsAuth)
+            int attempt = 0;
+            while (true)
             {
-                // The cached token may have been revoked or expired early; fetch a
-                // fresh one and retry exactly once.
-                _tokenCache = null;
-                response.Dispose();
-                response = await SendAsync(path, json, deadline.Token).ConfigureAwait(false);
-            }
-
-            using (response)
-            {
-                string text = await ReadBodyAsync(response).ConfigureAwait(false);
-
-                if (!response.IsSuccessStatusCode)
+                HttpResponseMessage response;
+                try
                 {
-                    throw new VerifiablApiException(
-                        (int)response.StatusCode,
-                        ParseErrorBody(text),
-                        ExtractRequestId(response));
+                    response = await SendWithAuthAsync(path, json, deadline.Token)
+                        .ConfigureAwait(false);
+                }
+                catch (HttpRequestException) when (idempotent && attempt < _maxRetries)
+                {
+                    // A network fault before any response. Safe to retry only for
+                    // idempotent calls, where a re-send cannot duplicate work.
+                    attempt++;
+                    await DelayAsync(BackoffDelay(attempt), deadline.Token).ConfigureAwait(false);
+                    continue;
                 }
 
-                using JsonDocument document = ParseJsonBody(text, (int)response.StatusCode);
-                return parseResponse(document.RootElement);
+                if (attempt < _maxRetries
+                    && IsRetryableStatus((int)response.StatusCode, idempotent))
+                {
+                    TimeSpan delay = RetryAfterOrBackoff(response, attempt + 1);
+                    response.Dispose();
+                    attempt++;
+                    await DelayAsync(delay, deadline.Token).ConfigureAwait(false);
+                    continue;
+                }
+
+                using (response)
+                {
+                    string text = await ReadBodyAsync(response).ConfigureAwait(false);
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        throw new VerifiablApiException(
+                            (int)response.StatusCode,
+                            ParseErrorBody(text),
+                            ExtractRequestId(response));
+                    }
+
+                    using JsonDocument document = ParseJsonBody(text, (int)response.StatusCode);
+                    return parseResponse(document.RootElement);
+                }
             }
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -200,6 +259,32 @@ public class VerifiablClient
                 $"The Verifiabl API call to {path} did not complete within " +
                 $"{_timeout.TotalSeconds:0.###} seconds.");
         }
+    }
+
+    /// <summary>
+    /// Send one request, transparently refreshing the OAuth token and retrying
+    /// exactly once on a 401. Transient-status and network retries are layered on
+    /// top of this by <see cref="PostAsync"/>.
+    /// </summary>
+    private async Task<HttpResponseMessage> SendWithAuthAsync(
+        string path,
+        string json,
+        CancellationToken cancellationToken)
+    {
+        HttpResponseMessage response = await SendAsync(path, json, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized
+            && _auth is VerifiablAuth.ClientCredentialsAuth)
+        {
+            // The cached token may have been revoked or expired early; fetch a
+            // fresh one and retry exactly once.
+            _tokenCache = null;
+            response.Dispose();
+            response = await SendAsync(path, json, cancellationToken).ConfigureAwait(false);
+        }
+
+        return response;
     }
 
     private async Task<HttpResponseMessage> SendAsync(
@@ -215,6 +300,7 @@ public class VerifiablClient
         using var request = new HttpRequestMessage(HttpMethod.Post, url);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        request.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
         request.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
         HttpResponseMessage response;
@@ -290,6 +376,7 @@ public class VerifiablClient
         {
             Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
         };
+        request.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
 
         HttpResponseMessage response;
         try
@@ -339,6 +426,78 @@ public class VerifiablClient
                     issuedAt + TimeSpan.FromSeconds(token.ExpiresInSeconds));
             }
         }
+    }
+
+    private const double RetryBaseDelaySeconds = 0.5;
+    private const double RetryMaxDelaySeconds = 8.0;
+    private static readonly Random JitterRandom = new();
+
+    private static string BuildUserAgent()
+    {
+        Version? version = typeof(VerifiablClient).Assembly.GetName().Version;
+        string v = version is null ? "0.0.0" : $"{version.Major}.{version.Minor}.{version.Build}";
+        return $"verifiabl-dotnet/{v} ({RuntimeInformation.FrameworkDescription})";
+    }
+
+    private static bool IsRetryableStatus(int status, bool idempotent)
+    {
+        // 429 (throttled) and 503 (unavailable) mean the request was not
+        // processed, so they are safe to retry even for a non-idempotent single
+        // registration.
+        if (status == 429 || status == 503)
+        {
+            return true;
+        }
+
+        // Other 5xx and 408 are ambiguous: the server may have processed the
+        // request before failing, which would duplicate a single registration.
+        // Retry them only when the call is idempotent.
+        return idempotent && (status == 408 || (status >= 500 && status <= 599));
+    }
+
+    private static TimeSpan RetryAfterOrBackoff(HttpResponseMessage response, int attempt)
+    {
+        RetryConditionHeaderValue? retryAfter = response.Headers.RetryAfter;
+        if (retryAfter is not null)
+        {
+            if (retryAfter.Delta is TimeSpan delta && delta > TimeSpan.Zero)
+            {
+                return CapDelay(delta);
+            }
+
+            if (retryAfter.Date is DateTimeOffset date)
+            {
+                TimeSpan until = date - DateTimeOffset.UtcNow;
+                if (until > TimeSpan.Zero)
+                {
+                    return CapDelay(until);
+                }
+            }
+        }
+
+        return BackoffDelay(attempt);
+    }
+
+    private static TimeSpan BackoffDelay(int attempt)
+    {
+        // Exponential backoff with equal jitter: half fixed, half random, so
+        // concurrent retries neither thunder together nor collapse to zero.
+        double capped = Math.Min(
+            RetryMaxDelaySeconds,
+            RetryBaseDelaySeconds * Math.Pow(2, attempt - 1));
+        double jitter;
+        lock (JitterRandom)
+        {
+            jitter = JitterRandom.NextDouble();
+        }
+
+        return TimeSpan.FromSeconds(capped / 2 + (capped / 2 * jitter));
+    }
+
+    private static TimeSpan CapDelay(TimeSpan delay)
+    {
+        TimeSpan max = TimeSpan.FromSeconds(RetryMaxDelaySeconds);
+        return delay > max ? max : delay;
     }
 
     private static HttpClient CreateSharedHttpClient()

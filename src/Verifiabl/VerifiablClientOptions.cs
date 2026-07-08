@@ -22,6 +22,23 @@ public sealed class VerifiablClientOptions
     public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
+    /// Maximum automatic retries for a failed request, on top of the first
+    /// attempt. Defaults to 2; set 0 to disable.
+    /// </summary>
+    /// <remarks>
+    /// Retries use exponential backoff with jitter and honour a
+    /// <c>Retry-After</c> header. Batch registration is idempotent (its
+    /// caller-generated references deduplicate on the server), so it retries on
+    /// throttling, timeouts, 5xx, and network faults. The single-record
+    /// endpoints (<see cref="VerifiablClient.RegisterNonPiiAsync"/> and
+    /// <see cref="VerifiablClient.CreateBarcodeAsync"/>) are not deduplicated, so
+    /// they only retry failures that leave the request unprocessed (429 and 503)
+    /// to avoid creating a duplicate record. All retries share the call
+    /// <see cref="Timeout"/> as an overall deadline.
+    /// </remarks>
+    public int MaxRetries { get; set; } = 2;
+
+    /// <summary>
     /// The <see cref="System.Net.Http.HttpClient"/> to send requests with. Supply
     /// one from IHttpClientFactory in long-running services; the SDK never
     /// disposes it. When unset, a shared internal client is used. The SDK manages

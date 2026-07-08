@@ -66,6 +66,10 @@ BarcodeSvgResult badge = VerifiablBarcode.CreateSvg(
 
 Create the client once and reuse it: it caches OAuth tokens and is thread-safe. In services that use dependency injection, supply an `HttpClient` from `IHttpClientFactory` via `VerifiablClientOptions.HttpClient`.
 
+### Retries and idempotency
+
+Failed requests are retried automatically with exponential backoff (`VerifiablClientOptions.MaxRetries`, default 2). The Verifiabl reference is the idempotency key, so retries are only applied where they are safe. Batch registration generates its own references, so the API deduplicates a re-send — it retries on throttling, timeouts, `5xx`, and network faults. The single-record endpoints let the API assign the reference and are not deduplicated, so they retry only failures that leave the request unprocessed (`429`, `503`); use batch when you need fully idempotent retries.
+
 ## Batch registration
 
 For pay runs, register up to 1000 records in one request with `RegisterNonPiiBatchAsync`. The provider generates each Verifiabl reference up-front with `VerifiablReference.Generate()` and includes it on each record, so the whole batch can go in one round trip. Results are returned index-aligned to the input; one bad record never fails the whole batch.

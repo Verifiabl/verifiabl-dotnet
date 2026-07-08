@@ -28,7 +28,7 @@
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
-    <InternalsVisibleTo Include="Verifiabl.Tests" />
+    <InternalsVisibleTo Include="Verifiabl.Tests" Key="$(VerifiablPublicKey)" />
   </ItemGroup>
 
   <ItemGroup>
