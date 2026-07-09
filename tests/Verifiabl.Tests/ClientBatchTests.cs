@@ -42,8 +42,8 @@ public class ClientBatchTests
             Responder = (_, _, _) => Task.FromResult(FakeHttpHandler.Json(
                 HttpStatusCode.OK,
                 "{\"results\":[" +
-                $"{{\"index\":0,\"status\":\"created\",\"verifiabl_reference\":\"{ReferenceA}\"}}," +
-                $"{{\"index\":1,\"status\":\"error\",\"verifiabl_reference\":\"{ReferenceB}\"," +
+                $"{{\"status\":\"created\",\"verifiabl_reference\":\"{ReferenceA}\"}}," +
+                $"{{\"status\":\"error\",\"verifiabl_reference\":\"{ReferenceB}\"," +
                 "\"code\":\"VALIDATION_FAILED\",\"detail\":\"bad record\"}]}")),
         };
         VerifiablClient client = Client(handler);
@@ -70,6 +70,36 @@ public class ClientBatchTests
     }
 
     [Fact]
+    public async Task SendsExternalIdOnTheWireAndMapsItBack()
+    {
+        var handler = new FakeHttpHandler
+        {
+            Responder = (_, _, _) => Task.FromResult(FakeHttpHandler.Json(
+                HttpStatusCode.OK,
+                "{\"results\":[" +
+                $"{{\"status\":\"created\",\"verifiabl_reference\":\"{ReferenceA}\",\"external_id\":\"payslip-1\"}}," +
+                $"{{\"status\":\"created\",\"verifiabl_reference\":\"{ReferenceB}\"}}]}")),
+        };
+        VerifiablClient client = Client(handler);
+
+        BatchRecord recordA = ValidRecord(ReferenceA);
+        recordA.ExternalId = "payslip-1";
+        RegisterNonPiiBatchResponse response = await client.RegisterNonPiiBatchAsync(
+            [recordA, ValidRecord(ReferenceB)]);
+
+        CapturedRequest sent = Assert.Single(handler.Requests);
+        using JsonDocument body = JsonDocument.Parse(sent.Body);
+        JsonElement records = body.RootElement.GetProperty("records");
+        // Sent only when supplied.
+        Assert.Equal("payslip-1", records[0].GetProperty("external_id").GetString());
+        Assert.False(records[1].TryGetProperty("external_id", out _));
+
+        // Echoed back on the matching result; null when the API omits it.
+        Assert.Equal("payslip-1", response.Results[0].ExternalId);
+        Assert.Null(response.Results[1].ExternalId);
+    }
+
+    [Fact]
     public async Task SurfacesDuplicatesAndPassesThroughUnknownStatuses()
     {
         var handler = new FakeHttpHandler
@@ -77,8 +107,8 @@ public class ClientBatchTests
             Responder = (_, _, _) => Task.FromResult(FakeHttpHandler.Json(
                 HttpStatusCode.OK,
                 "{\"results\":[" +
-                $"{{\"index\":0,\"status\":\"duplicate\",\"verifiabl_reference\":\"{ReferenceA}\"}}," +
-                $"{{\"index\":1,\"status\":\"quarantined\",\"verifiabl_reference\":\"{ReferenceB}\"," +
+                $"{{\"status\":\"duplicate\",\"verifiabl_reference\":\"{ReferenceA}\"}}," +
+                $"{{\"status\":\"quarantined\",\"verifiabl_reference\":\"{ReferenceB}\"," +
                 "\"future_field\":true}]}")),
         };
         VerifiablClient client = Client(handler);

@@ -10,6 +10,13 @@ public sealed class BatchRecord
     /// <summary>Provider-generated Verifiabl reference for this record.</summary>
     public string? VerifiablReference { get; set; }
 
+    /// <summary>
+    /// Optional caller-supplied correlation id. The API echoes it back on the
+    /// matching result and never stores it, so you can line up results (and
+    /// error logs) with your own payslip records by your own id.
+    /// </summary>
+    public string? ExternalId { get; set; }
+
     /// <summary>Payslip schema identifier, e.g. "au.payslip.v1".</summary>
     public string? Schema { get; set; }
 

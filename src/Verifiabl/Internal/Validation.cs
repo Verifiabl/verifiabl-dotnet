@@ -20,6 +20,13 @@ internal static class Validation
 
     internal const int MaxCiphertextLength = 10_000;
 
+    internal const int MaxExternalIdLength = 255;
+
+    /// <summary>Printable ASCII only, so an external_id is safe to place in logs.</summary>
+    internal static readonly Regex ExternalIdRegex = new(
+        "^[\\x20-\\x7e]+$",
+        RegexOptions.CultureInvariant);
+
     internal static string ValidateKeyVersion(string? keyVersion, string name)
     {
         if (keyVersion is null || !KeyVersionRegex.IsMatch(keyVersion))
@@ -63,6 +70,30 @@ internal static class Validation
         }
 
         return ciphertext;
+    }
+
+    internal static string ValidateExternalId(string? externalId, string name)
+    {
+        if (externalId is null || externalId.Length == 0)
+        {
+            throw new ArgumentException($"{name} must not be empty.", name);
+        }
+
+        if (externalId.Length > MaxExternalIdLength)
+        {
+            throw new ArgumentException(
+                $"{name} must be at most {MaxExternalIdLength} characters.",
+                name);
+        }
+
+        if (!ExternalIdRegex.IsMatch(externalId))
+        {
+            throw new ArgumentException(
+                $"{name} must contain only printable ASCII characters.",
+                name);
+        }
+
+        return externalId;
     }
 
     /// <summary>Validates a YYYY-MM-DD date string, rejecting impossible dates.</summary>

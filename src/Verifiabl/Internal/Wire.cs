@@ -79,13 +79,21 @@ internal static class Wire
             string reference = VerifiablReference.Validate(
                 record.VerifiablReference,
                 $"{label}.VerifiablReference");
-            wireRecords.Add(RegistrationFields(
+            JsonObject recordBody = RegistrationFields(
                 label,
                 reference,
                 record.Schema,
                 record.IssuedAt,
                 record.PayslipNonPii,
-                record.EncryptionMetadata));
+                record.EncryptionMetadata);
+            if (record.ExternalId is not null)
+            {
+                recordBody["external_id"] = Validation.ValidateExternalId(
+                    record.ExternalId,
+                    $"{label}.ExternalId");
+            }
+
+            wireRecords.Add(recordBody);
         }
 
         return new JsonObject { ["records"] = wireRecords };
@@ -203,13 +211,9 @@ internal static class Wire
         var results = new List<BatchRecordResult>(resultsElement.GetArrayLength());
         foreach (JsonElement item in resultsElement.EnumerateArray())
         {
-            if (item.ValueKind != JsonValueKind.Object
-                || !item.TryGetProperty("index", out JsonElement indexElement)
-                || indexElement.ValueKind != JsonValueKind.Number
-                || !indexElement.TryGetInt32(out int index)
-                || index < 0)
+            if (item.ValueKind != JsonValueKind.Object)
             {
-                throw UnexpectedShape("results[].index");
+                throw UnexpectedShape("results[]");
             }
 
             // Tolerant on purpose: an unknown status must pass through, not throw
@@ -218,9 +222,9 @@ internal static class Wire
             string status = ReadString(item, "status") ?? throw UnexpectedShape("results[].status");
             string reference = ReadReference(item, "verifiabl_reference");
             results.Add(new BatchRecordResult(
-                index,
                 status,
                 reference,
+                ReadString(item, "external_id"),
                 ReadString(item, "code"),
                 ReadString(item, "detail")));
         }
