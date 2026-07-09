@@ -78,7 +78,7 @@ public class ClientBatchTests
                 HttpStatusCode.OK,
                 "{\"results\":[" +
                 $"{{\"status\":\"created\",\"verifiabl_reference\":\"{ReferenceA}\",\"external_id\":\"payslip-1\"}}," +
-                $"{{\"status\":\"created\",\"verifiabl_reference\":\"{ReferenceB}\"}}]}")),
+                $"{{\"status\":\"created\",\"verifiabl_reference\":\"{ReferenceB}\"}}]}}")),
         };
         VerifiablClient client = Client(handler);
 
