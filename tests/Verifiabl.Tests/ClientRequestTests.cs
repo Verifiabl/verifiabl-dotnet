@@ -152,18 +152,18 @@ public class ClientRequestTests
     }
 
     [Fact]
-    public async Task MapsTheApiResponseToABarcodeImageForCreateBarcode()
+    public async Task MapsTheApiResponseToABarcodeImageForRegisterAndBuildBarcode()
     {
         var handler = new FakeHttpHandler
         {
             Responder = (_, _, _) => Task.FromResult(FakeHttpHandler.Json(
                 HttpStatusCode.OK,
                 $"{{\"verifiabl_reference\":\"{Reference}\"," +
-                "\"symbol\":{\"format\":\"png\",\"data\":\"aGVsbG8=\"}}")),
+                "\"barcode\":{\"format\":\"png\",\"data\":\"aGVsbG8=\"}}")),
         };
         VerifiablClient client = Client(handler);
 
-        var request = new CreateBarcodeRequest
+        var request = new RegisterAndBuildBarcodeRequest
         {
             Schema = "au.payslip.v1",
             IssuedAt = DateTimeOffset.UtcNow,
@@ -171,13 +171,13 @@ public class ClientRequestTests
             EncryptionMetadata = ValidRequest().EncryptionMetadata,
             EncryptedPii = "abc123",
         };
-        CreateBarcodeResponse response = await client.CreateBarcodeAsync(request);
+        RegisterAndBuildBarcodeResponse response = await client.RegisterAndBuildBarcodeAsync(request);
 
         Assert.Equal(Reference, response.VerifiablReference);
         Assert.Equal("png", response.Barcode.Format);
         Assert.Equal("aGVsbG8=", response.Barcode.Data);
         Assert.Equal(
-            "https://register.verifiabl.io/v1/registerAndBuildSymbol",
+            "https://register.verifiabl.io/v1/registerAndBuildBarcode",
             Assert.Single(handler.Requests).Uri.ToString());
         using JsonDocument body = JsonDocument.Parse(handler.Requests[0].Body);
         Assert.Equal("abc123", body.RootElement.GetProperty("encrypted_pii").GetString());

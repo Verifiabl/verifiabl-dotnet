@@ -1,10 +1,10 @@
 namespace Verifiabl;
 
 /// <summary>
-/// Request for <see cref="VerifiablClient.CreateBarcodeAsync"/>. This API-managed
+/// Request for <see cref="VerifiablClient.RegisterAndBuildBarcodeAsync"/>. This API-managed
 /// flow also sends the ciphertext, and the server returns a ready-made barcode image.
 /// </summary>
-public sealed class CreateBarcodeRequest
+public sealed class RegisterAndBuildBarcodeRequest
 {
     /// <summary>Payslip schema identifier, e.g. "au.payslip.v1".</summary>
     public string? Schema { get; set; }

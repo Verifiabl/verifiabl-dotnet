@@ -9,7 +9,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Initial release of the Verifiabl .NET SDK.
-- `VerifiablClient` for the issuer API: `RegisterNonPiiAsync`, `CreateBarcodeAsync`,
+- `VerifiablClient` for the issuer API: `RegisterNonPiiAsync`, `RegisterAndBuildBarcodeAsync`,
   and `RegisterNonPiiBatchAsync` (up to 1000 records).
 - OAuth2 client-credentials auth with token caching, single-flight refresh, and a
   transparent retry on `401`.

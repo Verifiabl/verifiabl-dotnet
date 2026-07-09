@@ -11,7 +11,7 @@ public sealed class EncryptedPii
 
     /// <summary>
     /// Base64url ciphertext to embed in the barcode or send with
-    /// <see cref="VerifiablClient.CreateBarcodeAsync"/>.
+    /// <see cref="VerifiablClient.RegisterAndBuildBarcodeAsync"/>.
     /// </summary>
     public string Ciphertext { get; }
 

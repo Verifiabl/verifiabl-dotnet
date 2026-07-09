@@ -16,10 +16,10 @@ public sealed class BarcodeImage
     public string Data { get; }
 }
 
-/// <summary>Response from <see cref="VerifiablClient.CreateBarcodeAsync"/>.</summary>
-public sealed class CreateBarcodeResponse
+/// <summary>Response from <see cref="VerifiablClient.RegisterAndBuildBarcodeAsync"/>.</summary>
+public sealed class RegisterAndBuildBarcodeResponse
 {
-    internal CreateBarcodeResponse(string verifiablReference, BarcodeImage barcode)
+    internal RegisterAndBuildBarcodeResponse(string verifiablReference, BarcodeImage barcode)
     {
         VerifiablReference = verifiablReference;
         Barcode = barcode;

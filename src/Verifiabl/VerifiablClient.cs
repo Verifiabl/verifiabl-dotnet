@@ -145,17 +145,17 @@ public class VerifiablClient
     /// <exception cref="VerifiablApiException">The API returned a non-2xx response.</exception>
     /// <exception cref="VerifiablAuthException">An OAuth token could not be obtained.</exception>
     /// <exception cref="TimeoutException">The call exceeded the configured timeout.</exception>
-    public virtual Task<CreateBarcodeResponse> CreateBarcodeAsync(
-        CreateBarcodeRequest request,
+    public virtual Task<RegisterAndBuildBarcodeResponse> RegisterAndBuildBarcodeAsync(
+        RegisterAndBuildBarcodeRequest request,
         CancellationToken cancellationToken = default)
     {
         JsonObject body = Wire.ToWire(request);
         // Same as RegisterNonPiiAsync: the API assigns the reference, so this is
         // not safe to retry on an ambiguous failure.
         return PostAsync(
-            "/v1/registerAndBuildSymbol",
+            "/v1/registerAndBuildBarcode",
             body,
-            Wire.CreateBarcodeFromWire,
+            Wire.RegisterAndBuildBarcodeFromWire,
             idempotent: false,
             cancellationToken);
     }

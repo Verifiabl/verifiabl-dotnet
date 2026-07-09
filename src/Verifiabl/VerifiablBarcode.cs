@@ -81,7 +81,7 @@ public static class VerifiablBarcode
     /// and the encrypted PII ciphertext from <see cref="VerifiablCrypto.EncryptPii"/>.
     /// SVG scales to any size without losing quality; if you need a raster image,
     /// rasterise the SVG in your own pipeline or let the API build a PNG via
-    /// <see cref="VerifiablClient.CreateBarcodeAsync"/>.
+    /// <see cref="VerifiablClient.RegisterAndBuildBarcodeAsync"/>.
     /// </remarks>
     public static BarcodeSvgResult CreateSvg(BarcodeParts parts, BarcodeSvgOptions? options = null)
     {

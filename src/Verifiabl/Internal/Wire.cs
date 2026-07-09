@@ -36,7 +36,7 @@ internal static class Wire
             request.EncryptionMetadata);
     }
 
-    internal static JsonObject ToWire(CreateBarcodeRequest request)
+    internal static JsonObject ToWire(RegisterAndBuildBarcodeRequest request)
     {
         if (request is null)
         {
@@ -169,27 +169,27 @@ internal static class Wire
         return new RegisterNonPiiResponse(ReadReference(root, "verifiabl_reference"));
     }
 
-    internal static CreateBarcodeResponse CreateBarcodeFromWire(JsonElement root)
+    internal static RegisterAndBuildBarcodeResponse RegisterAndBuildBarcodeFromWire(JsonElement root)
     {
         string reference = ReadReference(root, "verifiabl_reference");
-        if (!TryGetObject(root, "symbol", out JsonElement symbol))
+        if (!TryGetObject(root, "barcode", out JsonElement barcode))
         {
-            throw UnexpectedShape("symbol");
+            throw UnexpectedShape("barcode");
         }
 
-        string format = ReadString(symbol, "format") ?? throw UnexpectedShape("symbol.format");
+        string format = ReadString(barcode, "format") ?? throw UnexpectedShape("barcode.format");
         if (format != "png")
         {
-            throw UnexpectedShape("symbol.format");
+            throw UnexpectedShape("barcode.format");
         }
 
-        string data = ReadString(symbol, "data") ?? throw UnexpectedShape("symbol.data");
+        string data = ReadString(barcode, "data") ?? throw UnexpectedShape("barcode.data");
         if (data.Length == 0)
         {
-            throw UnexpectedShape("symbol.data");
+            throw UnexpectedShape("barcode.data");
         }
 
-        return new CreateBarcodeResponse(reference, new BarcodeImage(format, data));
+        return new RegisterAndBuildBarcodeResponse(reference, new BarcodeImage(format, data));
     }
 
     internal static RegisterNonPiiBatchResponse BatchFromWire(JsonElement root)

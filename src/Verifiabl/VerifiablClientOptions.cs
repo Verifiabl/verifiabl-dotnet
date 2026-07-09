@@ -31,7 +31,7 @@ public sealed class VerifiablClientOptions
     /// caller-generated references deduplicate on the server), so it retries on
     /// throttling, timeouts, 5xx, and network faults. The single-record
     /// endpoints (<see cref="VerifiablClient.RegisterNonPiiAsync"/> and
-    /// <see cref="VerifiablClient.CreateBarcodeAsync"/>) are not deduplicated, so
+    /// <see cref="VerifiablClient.RegisterAndBuildBarcodeAsync"/>) are not deduplicated, so
     /// they only retry failures that leave the request unprocessed (429 and 503)
     /// to avoid creating a duplicate record. All retries share the call
     /// <see cref="Timeout"/> as an overall deadline.
