@@ -62,7 +62,7 @@ BarcodeSvgResult badge = VerifiablBarcode.CreateSvg(
     new BarcodeSvgOptions { Environment = VerifiablEnvironment.Sandbox });
 ```
 
-`VerifiablBarcode.CreateSvg` produces a standalone SVG that scales to any size without losing quality; embed it directly in your PDF pipeline. If you need a raster image instead, let the API build a PNG for you with `client.RegisterAndBuildBarcodeAsync`, or rasterise the SVG with your own renderer. See the [docs](https://docs.verifiabl.io/) for both flows.
+`VerifiablBarcode.CreateSvg` produces a standalone SVG that scales to any size without losing quality; embed it directly in your PDF pipeline when it supports vector images. If it needs a raster image, use `VerifiablBarcode.CreatePng`: it composites the badge deterministically with no native dependencies, so the same record produces the byte-identical raster in every Verifiabl SDK, and QR module edges stay crisp (rasterising the SVG with a general renderer blurs them and costs scannability). PNG output comes in fixed pixel widths (480, 720, 960 or 1440; the physical print size is set where you place the image in the PDF). See the [docs](https://docs.verifiabl.io/) for both flows.
 
 Create the client once and reuse it: it caches OAuth tokens and is thread-safe. In services that use dependency injection, supply an `HttpClient` from `IHttpClientFactory` via `VerifiablClientOptions.HttpClient`.
 

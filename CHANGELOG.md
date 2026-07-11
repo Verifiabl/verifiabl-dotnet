@@ -8,6 +8,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `VerifiablBarcode.CreatePng`: local branded-badge PNG rendering at pixel
+  widths 480/720/960/1440, composited deterministically (pre-rasterised frame +
+  exact pixel-aligned QR modules) with no native dependencies. The raster is
+  byte-identical to the Node SDK's for the same record, enforced by fixture
+  parity tests.
 - Initial release of the Verifiabl .NET SDK.
 - `VerifiablClient` for the issuer API: `RegisterNonPiiAsync`, `RegisterAndBuildBarcodeAsync`,
   and `RegisterNonPiiBatchAsync` (up to 1000 records).

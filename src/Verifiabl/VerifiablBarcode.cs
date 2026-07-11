@@ -79,13 +79,38 @@ public static class VerifiablBarcode
     /// <remarks>
     /// Takes the Verifiabl reference from <see cref="VerifiablClient.RegisterNonPiiAsync"/>
     /// and the encrypted PII ciphertext from <see cref="VerifiablCrypto.EncryptPii"/>.
-    /// SVG scales to any size without losing quality; if you need a raster image,
-    /// rasterise the SVG in your own pipeline or let the API build a PNG via
-    /// <see cref="VerifiablClient.RegisterAndBuildBarcodeAsync"/>.
+    /// SVG scales to any size without losing quality; if your document pipeline
+    /// needs a raster image, use <see cref="CreatePng"/> rather than rasterising
+    /// the SVG yourself, so module edges stay crisp and scannable.
     /// </remarks>
     public static BarcodeSvgResult CreateSvg(BarcodeParts parts, BarcodeSvgOptions? options = null)
     {
         return SvgBadgeRenderer.Render(parts, options ?? new BarcodeSvgOptions());
+    }
+
+    /// <summary>
+    /// Render the branded Verifiabl barcode as a PNG.
+    /// </summary>
+    /// <remarks>
+    /// The PNG is composited deterministically from a pre-rasterised frame plus
+    /// exact pixel-aligned QR modules - no vector rasteriser and no native
+    /// dependencies - so the same record produces the byte-identical raster in
+    /// every Verifiabl SDK. Because the frame is pre-rasterised, PNG output
+    /// exists only at pixel widths 480, 720, 960 and 1440; the physical print
+    /// size is set where the image is placed in the PDF. If you need a
+    /// different size, prefer <see cref="CreateSvg"/>, which scales
+    /// continuously. <see cref="BarcodeSvgOptions.Width"/> is ignored here;
+    /// <paramref name="pixelWidth"/> controls the bitmap size.
+    /// </remarks>
+    /// <param name="parts">The Verifiabl reference and encrypted PII ciphertext.</param>
+    /// <param name="options">Scan URL and error-correction options.</param>
+    /// <param name="pixelWidth">Output bitmap width in pixels (default: 720).</param>
+    public static BarcodePngResult CreatePng(
+        BarcodeParts parts,
+        BarcodeSvgOptions? options = null,
+        int pixelWidth = 720)
+    {
+        return PngBadgeRenderer.Render(parts, options ?? new BarcodeSvgOptions(), pixelWidth);
     }
 
     private static string NormalizeScanBaseUrl(Uri scanBaseUrl)

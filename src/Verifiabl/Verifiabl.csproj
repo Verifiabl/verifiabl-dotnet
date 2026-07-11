@@ -35,6 +35,15 @@
     <PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="3.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Pre-rasterised badge frames for CreatePng, baked by the Node SDK's
+         scripts/bake-frames.mjs (the shared source of truth for PNG parity). -->
+    <EmbeddedResource Include="Assets\frame-480.vfr1" LogicalName="Verifiabl.Assets.frame-480.vfr1" />
+    <EmbeddedResource Include="Assets\frame-720.vfr1" LogicalName="Verifiabl.Assets.frame-720.vfr1" />
+    <EmbeddedResource Include="Assets\frame-960.vfr1" LogicalName="Verifiabl.Assets.frame-960.vfr1" />
+    <EmbeddedResource Include="Assets\frame-1440.vfr1" LogicalName="Verifiabl.Assets.frame-1440.vfr1" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
     <Reference Include="System.Net.Http" />
     <PackageReference Include="Microsoft.Bcl.Cryptography" Version="10.0.5" />
