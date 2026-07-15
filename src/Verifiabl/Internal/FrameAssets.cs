@@ -44,7 +44,16 @@ internal static class FrameAssets
 
     private static ParsedFrame Parse(int pixelWidth)
     {
-        byte[] container = ReadResource($"Verifiabl.Assets.frame-{pixelWidth}.vfr1");
+        return ParseContainer(ReadResource($"Verifiabl.Assets.frame-{pixelWidth}.vfr1"), pixelWidth);
+    }
+
+    /// <summary>
+    /// Decode and validate one VFR1 frame container. Internal so the package's
+    /// own tests can exercise the corruption guards; production callers reach
+    /// frames through <see cref="Load"/>.
+    /// </summary>
+    internal static ParsedFrame ParseContainer(byte[] container, int expectedWidth)
+    {
         if (container.Length < 14
             || container[0] != (byte)'V' || container[1] != (byte)'F'
             || container[2] != (byte)'R' || container[3] != (byte)'1')
@@ -55,8 +64,25 @@ internal static class FrameAssets
         int width = ReadUInt16(container, 4);
         int height = ReadUInt16(container, 6);
         int paletteCount = ReadUInt16(container, 8);
+        // width is validated against the expected size, so width * height cannot
+        // overflow int (max 1440 * 65535). The palette encoder never exceeds 256.
+        if (width != expectedWidth || height <= 0)
+        {
+            throw new InvalidOperationException("Corrupt frame asset: unexpected dimensions.");
+        }
+
+        if (paletteCount is < 1 or > 256)
+        {
+            throw new InvalidOperationException("Corrupt frame asset: implausible palette size.");
+        }
+
         const int paletteStart = 10;
         int deflatedLengthOffset = paletteStart + paletteCount * 4;
+        if (deflatedLengthOffset + 4 > container.Length)
+        {
+            throw new InvalidOperationException("Corrupt frame asset: truncated header.");
+        }
+
         int deflatedLength = checked((int)ReadUInt32(container, deflatedLengthOffset));
         int deflatedStart = deflatedLengthOffset + 4;
         if (deflatedStart + deflatedLength != container.Length)
@@ -86,6 +112,16 @@ internal static class FrameAssets
             if (read != indices.Length || inflate.ReadByte() != -1)
             {
                 throw new InvalidOperationException("Corrupt frame asset: pixel count mismatch.");
+            }
+        }
+
+        // Every index must address a palette entry, so ExpandRgba can never read
+        // past the palette (which would throw an opaque IndexOutOfRangeException).
+        foreach (byte index in indices)
+        {
+            if (index >= paletteCount)
+            {
+                throw new InvalidOperationException("Corrupt frame asset: palette index out of range.");
             }
         }
 

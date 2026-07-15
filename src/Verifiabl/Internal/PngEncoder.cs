@@ -20,7 +20,14 @@ internal static class PngEncoder
 
     internal static byte[] Encode(byte[] rgba, int width, int height)
     {
-        if (rgba.Length != width * height * 4)
+        if (width <= 0 || height <= 0)
+        {
+            throw new ArgumentException("Raster dimensions must be positive.", nameof(width));
+        }
+
+        // long guard so an oversized raster fails the length check rather than
+        // wrapping to a value that spuriously matches rgba.Length.
+        if (rgba.LongLength != (long)width * height * 4)
         {
             throw new ArgumentException("Raster length does not match width * height * 4.", nameof(rgba));
         }

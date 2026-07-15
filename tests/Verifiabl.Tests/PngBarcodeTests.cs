@@ -134,6 +134,21 @@ public class PngBarcodeTests
         Assert.Equal(rgba, decoded.Rgba);
     }
 
+    [Theory]
+    [InlineData(0, 4)]
+    [InlineData(-1, 4)]
+    [InlineData(4, 0)]
+    public void RejectsNonPositiveDimensions(int width, int height)
+    {
+        Assert.Throws<ArgumentException>(() => PngEncoder.Encode(new byte[16], width, height));
+    }
+
+    [Fact]
+    public void RejectsARasterLengthThatDoesNotMatchTheDimensions()
+    {
+        Assert.Throws<ArgumentException>(() => PngEncoder.Encode(new byte[15], 2, 2));
+    }
+
     /// <summary>
     /// Minimal PNG reader for the encoder's own output (filter None only),
     /// verifying chunk CRCs and the zlib adler32 trailer along the way.
