@@ -30,6 +30,7 @@ public class PayloadTests
     [InlineData("")]
     [InlineData("not base64url!")]
     [InlineData("has=padding")]
+    [InlineData("abcde")] // length % 4 == 1 can never decode
     public void RejectsMalformedCiphertext(string ciphertext)
     {
         Assert.Throws<ArgumentException>(

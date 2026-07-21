@@ -10,10 +10,13 @@ internal static class Base64Url
             .Replace('/', '_');
     }
 
-    /// <summary>Matches the base64url alphabet with no padding; empty input does not match.</summary>
+    /// <summary>
+    /// Matches decodable unpadded base64url: alphabet only, non-empty, and a length that a
+    /// byte sequence can actually encode to (length % 4 == 1 is never decodable).
+    /// </summary>
     internal static bool IsBase64Url(string value)
     {
-        if (value.Length == 0)
+        if (value.Length == 0 || value.Length % 4 == 1)
         {
             return false;
         }
