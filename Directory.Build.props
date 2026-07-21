@@ -1,0 +1,30 @@
+<Project>
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- Fail restore on known-vulnerable dependencies, including transitive ones. -->
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <WarningsAsErrors>$(WarningsAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsAsErrors>
+    <!-- Normalise embedded paths so CI builds are reproducible. -->
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <!--
+    Strong-name every assembly with a shared key so the package has a stable
+    identity for enterprise consumers (some locked-down .NET Framework hosts
+    require strong-named dependencies). Strong naming is an identity, not a
+    security boundary, so the key is committed deliberately.
+  -->
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)verifiabl.snk</AssemblyOriginatorKeyFile>
+    <!-- Public key of verifiabl.snk, for strong-named InternalsVisibleTo. -->
+    <VerifiablPublicKey>0024000004800000140100000602000000240000525341310008000001000100c75875d30f83a05dc344b530585965db3ba9d6ee8b677d31d87ce2affb83c2be6b31ccb5369ee283588e2e356d26499b2531855f1c95981ccd48263979863626861add563293088e041b449fd4f0ced9a93fc3dc8eee3f41b8c8073213ea197aec5c950965190ec94f43f6c94b687b995697600af35c26ef9eb251c4b1d8449879aa07ffead6bc0f0455597979e89c0f7e1a391a385e36b97b8b0b3f6a5364908f2837564cb1a7d310127880d4bb976f54e8feb1b4a236f00b52cdbbc9b61174e4bf146a40770d73df30d62248516d710c0312b71575840bebaca212bceb4447a03ed48f48f4e552aadfe59b7796b914e827bfd828cd14a21cae66679da6f6d0</VerifiablPublicKey>
+  </PropertyGroup>
+
+</Project>

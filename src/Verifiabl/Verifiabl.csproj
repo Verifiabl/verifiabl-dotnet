@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      net472 keeps .NET Framework 4.7.2+ providers supported (AES-GCM via
+      Microsoft.Bcl.Cryptography, which ships no netstandard2.0 AesGcm; 4.6.2-4.7.1 leave Microsoft support in Jan 2027 and have known netstandard2.0 facade conflicts);
+      net8.0/net10.0 use the built-in cross-platform crypto and current LTS
+      runtimes.
+    -->
+    <TargetFrameworks>net472;net8.0;net10.0</TargetFrameworks>
+    <PackageId>Verifiabl</PackageId>
+    <Version>0.1.0</Version>
+    <Description>Official Verifiabl .NET SDK for issuing payslip QR codes, formatting PII, AES-256-GCM encryption helpers, and typed issuer API calls.</Description>
+    <Authors>Verifiabl</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://verifiabl.io</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Verifiabl/verifiabl-dotnet</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>verifiabl;payslip;issuer;qr-code;sdk</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EnablePackageValidation>true</EnablePackageValidation>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <InternalsVisibleTo Include="Verifiabl.Tests" Key="$(VerifiablPublicKey)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="3.0.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+    <Reference Include="System.Net.Http" />
+    <PackageReference Include="Microsoft.Bcl.Cryptography" Version="10.0.5" />
+    <PackageReference Include="System.Text.Json" Version="10.0.5" />
+  </ItemGroup>
+
+</Project>

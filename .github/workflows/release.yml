@@ -1,0 +1,65 @@
+name: Release
+
+# Publishes to NuGet.org when a GitHub release is published.
+#
+# Auth uses NuGet.org Trusted Publishing (OIDC): the workflow exchanges a
+# short-lived GitHub OIDC token for a temporary NuGet API key, so there is no
+# long-lived token secret. One-time setup on nuget.org:
+#   profile → Trusted Publishing → add policy:
+#     Repository Owner: Verifiabl
+#     Repository: verifiabl-dotnet
+#     Workflow File: release.yml
+#     Environment: nuget-publish
+# The NUGET_USER repository secret holds the nuget.org profile name that owns
+# the trusted publishing policy (the profile name, not an email address).
+#
+# The nuget-publish GitHub environment (repo Settings → Environments) requires
+# a reviewer approval, so publishing a GitHub release alone cannot push to
+# NuGet.org without a human confirming the deployment.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: nuget-publish
+    permissions:
+      contents: read
+      id-token: write # OIDC token for NuGet trusted publishing
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      # The release tag is the single source of truth for the package version;
+      # the <Version> in the csproj is only a fallback for local builds.
+      - name: Resolve the package version from the release tag
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          VERSION="${TAG#v}"
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "Release tag '$TAG' is not a SemVer version (expected v<major>.<minor>.<patch>[-prerelease])." >&2
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+      - run: dotnet restore
+      - run: dotnet build --configuration Release --no-restore -p:Version="$VERSION"
+      # Tests gate every publish, mirroring the CI pipeline.
+      - run: dotnet test --configuration Release --no-build
+      - run: dotnet pack src/Verifiabl/Verifiabl.csproj --configuration Release --no-build --output artifacts -p:Version="$VERSION"
+      - name: NuGet login (OIDC → temp API key)
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+      - name: Push to NuGet.org
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
