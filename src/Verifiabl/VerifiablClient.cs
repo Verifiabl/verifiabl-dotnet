@@ -568,9 +568,12 @@ public class VerifiablClient
         }
     }
 
+    private static readonly string[] RequestIdHeaders =
+        ["x-request-id", "request-id", "x-verifiabl-request-id"];
+
     private static string? ExtractRequestId(HttpResponseMessage response)
     {
-        foreach (string header in (string[])["x-request-id", "request-id", "x-verifiabl-request-id"])
+        foreach (string header in RequestIdHeaders)
         {
             if (response.Headers.TryGetValues(header, out IEnumerable<string>? values))
             {

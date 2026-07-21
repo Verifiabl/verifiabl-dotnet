@@ -186,7 +186,7 @@ internal static class SvgBadgeRenderer
 
             int size = qr.Size;
             int insetModules = QuietZoneInsetModules(size);
-            double moduleSize = (double)FrameQrBoxSize / (size + insetModules * 2);
+            double moduleSize = FrameQrBoxSize / (size + insetModules * 2.0);
             double modulePx = moduleSize * scale;
             if (modulePx >= MinModulePx)
             {
@@ -230,7 +230,7 @@ internal static class SvgBadgeRenderer
     {
         for (int inset = MinQrInsetModules; inset < QuietZoneModules; inset++)
         {
-            double moduleSize = (double)FrameQrBoxSize / (size + inset * 2);
+            double moduleSize = FrameQrBoxSize / (size + inset * 2.0);
             if (FrameQrGutter / moduleSize + inset >= QuietZoneModules)
             {
                 return inset;
