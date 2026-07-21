@@ -25,7 +25,7 @@ namespace Verifiabl;
 /// keep it in memory only, never log it or persist it.
 /// </para>
 /// <para>
-/// On .NET Framework (via the netstandard2.0 build) AES-GCM is provided by
+/// On .NET Framework (the net472 build) AES-GCM is provided by
 /// Microsoft.Bcl.Cryptography and is supported on Windows only.
 /// </para>
 /// </remarks>
@@ -78,9 +78,19 @@ public static class VerifiablCrypto
         byte[] ciphertext = new byte[plaintextBytes.Length];
         byte[] tag = new byte[TagBytes];
 
-        using (var aes = new AesGcm(key, TagBytes))
+        try
         {
+            using var aes = new AesGcm(key, TagBytes);
             aes.Encrypt(iv, plaintextBytes, ciphertext, tag);
+        }
+        finally
+        {
+            // Best-effort: don't leave the PII plaintext copy lingering in the heap.
+#if NET8_0_OR_GREATER
+            CryptographicOperations.ZeroMemory(plaintextBytes);
+#else
+            Array.Clear(plaintextBytes, 0, plaintextBytes.Length);
+#endif
         }
 
         var metadata = new EncryptionMetadata

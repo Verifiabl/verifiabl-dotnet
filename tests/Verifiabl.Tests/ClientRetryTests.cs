@@ -191,6 +191,28 @@ public class ClientRetryTests
     }
 
     [Fact]
+    public async Task HonoursARetryAfterLongerThanTheBackoffCap()
+    {
+        var delays = new List<TimeSpan>();
+        FakeHttpHandler handler = QueuedHandler(
+            () =>
+            {
+                HttpResponseMessage response = FakeHttpHandler.Json((HttpStatusCode)429, "{}");
+                response.Headers.RetryAfter =
+                    new RetryConditionHeaderValue(TimeSpan.FromSeconds(60));
+                return response;
+            },
+            BatchOk);
+        VerifiablClient client = Client(handler, delays);
+
+        await client.RegisterNonPiiBatchAsync([BatchRecordItem()]);
+
+        // The server's backpressure request wins over the internal backoff cap.
+        Assert.Single(delays);
+        Assert.Equal(TimeSpan.FromSeconds(60), delays[0]);
+    }
+
+    [Fact]
     public async Task DisablingRetriesSurfacesTheFirstFailure()
     {
         var delays = new List<TimeSpan>();

@@ -25,9 +25,21 @@ internal sealed class CapturedRequest
 
 internal sealed class FakeHttpHandler : HttpMessageHandler
 {
+    private readonly List<CapturedRequest> _requests = [];
+
     internal Func<HttpRequestMessage, string, CancellationToken, Task<HttpResponseMessage>>? Responder { get; set; }
 
-    internal List<CapturedRequest> Requests { get; } = [];
+    // Snapshot under the lock: tests issue concurrent requests.
+    internal IReadOnlyList<CapturedRequest> Requests
+    {
+        get
+        {
+            lock (_requests)
+            {
+                return _requests.ToList();
+            }
+        }
+    }
 
     internal IEnumerable<CapturedRequest> TokenRequests =>
         Requests.Where(r => r.Uri.AbsolutePath.Contains("oauth"));
@@ -60,11 +72,14 @@ internal sealed class FakeHttpHandler : HttpMessageHandler
         string? userAgent = request.Headers.TryGetValues("User-Agent", out IEnumerable<string>? ua)
             ? string.Join(" ", ua)
             : null;
-        Requests.Add(new CapturedRequest(
-            request.RequestUri!,
-            body,
-            request.Headers.Authorization?.ToString(),
-            userAgent));
+        lock (_requests)
+        {
+            _requests.Add(new CapturedRequest(
+                request.RequestUri!,
+                body,
+                request.Headers.Authorization?.ToString(),
+                userAgent));
+        }
         return await Responder!(request, body, cancellationToken).ConfigureAwait(false);
     }
 }

@@ -122,6 +122,8 @@ public class VerifiablClient
     /// <exception cref="VerifiablApiException">The API returned a non-2xx response.</exception>
     /// <exception cref="VerifiablAuthException">An OAuth token could not be obtained.</exception>
     /// <exception cref="TimeoutException">The call exceeded the configured timeout.</exception>
+    /// <exception cref="HttpRequestException">A network fault prevented a response (for retryable calls, only after retries are exhausted).</exception>
+    /// <exception cref="FormatException">The API returned a success status with an empty or non-JSON body.</exception>
     public virtual Task<RegisterNonPiiResponse> RegisterNonPiiAsync(
         RegisterNonPiiRequest request,
         CancellationToken cancellationToken = default)
@@ -145,6 +147,8 @@ public class VerifiablClient
     /// <exception cref="VerifiablApiException">The API returned a non-2xx response.</exception>
     /// <exception cref="VerifiablAuthException">An OAuth token could not be obtained.</exception>
     /// <exception cref="TimeoutException">The call exceeded the configured timeout.</exception>
+    /// <exception cref="HttpRequestException">A network fault prevented a response (for retryable calls, only after retries are exhausted).</exception>
+    /// <exception cref="FormatException">The API returned a success status with an empty or non-JSON body.</exception>
     public virtual Task<RegisterAndBuildBarcodeResponse> RegisterAndBuildBarcodeAsync(
         RegisterAndBuildBarcodeRequest request,
         CancellationToken cancellationToken = default)
@@ -171,6 +175,8 @@ public class VerifiablClient
     /// <exception cref="VerifiablApiException">The API returned a non-2xx response.</exception>
     /// <exception cref="VerifiablAuthException">An OAuth token could not be obtained.</exception>
     /// <exception cref="TimeoutException">The call exceeded the configured timeout.</exception>
+    /// <exception cref="HttpRequestException">A network fault prevented a response (for retryable calls, only after retries are exhausted).</exception>
+    /// <exception cref="FormatException">The API returned a success status with an empty or non-JSON body.</exception>
     public virtual Task<RegisterNonPiiBatchResponse> RegisterNonPiiBatchAsync(
         IEnumerable<BatchRecord> records,
         CancellationToken cancellationToken = default)
@@ -271,23 +277,29 @@ public class VerifiablClient
         string json,
         CancellationToken cancellationToken)
     {
-        HttpResponseMessage response = await SendAsync(path, json, cancellationToken)
-            .ConfigureAwait(false);
+        (HttpResponseMessage response, string bearerToken) =
+            await SendAsync(path, json, cancellationToken).ConfigureAwait(false);
 
         if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized
             && _auth is VerifiablAuth.ClientCredentialsAuth)
         {
             // The cached token may have been revoked or expired early; fetch a
-            // fresh one and retry exactly once.
-            _tokenCache = null;
+            // fresh one and retry exactly once. Only drop the cache if it still
+            // holds the rejected token, so a concurrent refresh isn't wiped.
+            CachedToken? current = _tokenCache;
+            if (current is not null && current.AccessToken == bearerToken)
+            {
+                _tokenCache = null;
+            }
+
             response.Dispose();
-            response = await SendAsync(path, json, cancellationToken).ConfigureAwait(false);
+            (response, _) = await SendAsync(path, json, cancellationToken).ConfigureAwait(false);
         }
 
         return response;
     }
 
-    private async Task<HttpResponseMessage> SendAsync(
+    private async Task<(HttpResponseMessage Response, string BearerToken)> SendAsync(
         string path,
         string json,
         CancellationToken cancellationToken)
@@ -322,7 +334,7 @@ public class VerifiablClient
             (int)response.StatusCode,
             stopwatch.Elapsed.TotalMilliseconds,
             ExtractRequestId(response)));
-        return response;
+        return (response, token);
     }
 
     private async Task<string> GetBearerTokenAsync(CancellationToken cancellationToken)
@@ -457,12 +469,14 @@ public class VerifiablClient
 
     private static TimeSpan RetryAfterOrBackoff(HttpResponseMessage response, int attempt)
     {
+        // A server-provided Retry-After is honoured in full (the overall deadline
+        // still bounds the wait); only the computed backoff is capped.
         RetryConditionHeaderValue? retryAfter = response.Headers.RetryAfter;
         if (retryAfter is not null)
         {
             if (retryAfter.Delta is TimeSpan delta && delta > TimeSpan.Zero)
             {
-                return CapDelay(delta);
+                return delta;
             }
 
             if (retryAfter.Date is DateTimeOffset date)
@@ -470,7 +484,7 @@ public class VerifiablClient
                 TimeSpan until = date - DateTimeOffset.UtcNow;
                 if (until > TimeSpan.Zero)
                 {
-                    return CapDelay(until);
+                    return until;
                 }
             }
         }
@@ -492,12 +506,6 @@ public class VerifiablClient
         }
 
         return TimeSpan.FromSeconds(capped / 2 + (capped / 2 * jitter));
-    }
-
-    private static TimeSpan CapDelay(TimeSpan delay)
-    {
-        TimeSpan max = TimeSpan.FromSeconds(RetryMaxDelaySeconds);
-        return delay > max ? max : delay;
     }
 
     private static HttpClient CreateSharedHttpClient()

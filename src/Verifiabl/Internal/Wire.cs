@@ -302,7 +302,8 @@ internal static class Wire
         string? tokenType = ReadString(root, "token_type");
         if (accessToken is null
             || accessToken.Length == 0
-            || tokenType != "Bearer"
+            // RFC 6749 §7.1: token_type is case-insensitive.
+            || !string.Equals(tokenType, "Bearer", StringComparison.OrdinalIgnoreCase)
             || !root.TryGetProperty("expires_in", out JsonElement expiresElement)
             || expiresElement.ValueKind != JsonValueKind.Number)
         {

@@ -234,17 +234,35 @@ public class ClientOAuthTests
     }
 
     [Fact]
+    public async Task AcceptsALowercaseBearerTokenType()
+    {
+        var handler = new FakeHttpHandler();
+        handler.Responder = (request, _, _) => Task.FromResult(IsTokenRequest(request)
+            ? FakeHttpHandler.Json(
+                HttpStatusCode.OK,
+                "{\"access_token\":\"t\",\"token_type\":\"bearer\",\"expires_in\":3600}")
+            : FakeHttpHandler.Json(HttpStatusCode.OK, RegistrationJson));
+        VerifiablClient client = Client(handler);
+
+        // RFC 6749 §7.1: token_type is case-insensitive.
+        await client.RegisterNonPiiAsync(ValidRequest());
+
+        Assert.Equal("Bearer t", handler.ApiRequests.Single().Authorization);
+    }
+
+    [Fact]
     public async Task RequestsAFreshTokenOnceTheCachedOneNearsExpiry()
     {
         var handler = new FakeHttpHandler();
         handler.Responder = (request, _, _) => Task.FromResult(IsTokenRequest(request)
-            ? FakeHttpHandler.Token(expiresIn: 1)
+            ? FakeHttpHandler.Token(expiresIn: 2)
             : FakeHttpHandler.Json(HttpStatusCode.OK, RegistrationJson));
         VerifiablClient client = Client(handler);
 
         await client.RegisterNonPiiAsync(ValidRequest());
-        // A 1-second token has a 0.5-second refresh buffer; after 700ms it is stale.
-        await Task.Delay(700);
+        // A 2-second token has a 1-second refresh buffer; after 1.5s it is
+        // comfortably stale even on a slow CI runner.
+        await Task.Delay(1500);
         await client.RegisterNonPiiAsync(ValidRequest());
 
         Assert.Equal(2, handler.TokenRequests.Count());
