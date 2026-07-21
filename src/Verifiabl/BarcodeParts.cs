@@ -3,6 +3,7 @@ namespace Verifiabl;
 /// <summary>The two values embedded in every locally generated barcode.</summary>
 public sealed class BarcodeParts
 {
+    /// <summary>Pairs a Verifiabl reference with its encrypted PII ciphertext.</summary>
     /// <param name="verifiablReference">
     /// Verifiabl reference returned by <see cref="VerifiablClient.RegisterNonPiiAsync"/>
     /// (or generated with <see cref="VerifiablReference.Generate"/> for batches).

@@ -55,6 +55,14 @@ internal sealed class FakeHttpHandler : HttpMessageHandler
         };
     }
 
+    internal static HttpResponseMessage Html(HttpStatusCode status, string html)
+    {
+        return new HttpResponseMessage(status)
+        {
+            Content = new StringContent(html, Encoding.UTF8, "text/html"),
+        };
+    }
+
     internal static HttpResponseMessage Token(string accessToken = "token-1", double expiresIn = 3600)
     {
         return Json(

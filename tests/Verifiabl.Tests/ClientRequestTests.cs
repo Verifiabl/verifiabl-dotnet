@@ -267,10 +267,8 @@ public class ClientRequestTests
     {
         var handler = new FakeHttpHandler
         {
-            Responder = (_, _, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadGateway)
-            {
-                Content = new StringContent("<html>gateway error</html>"),
-            }),
+            Responder = (_, _, _) => Task.FromResult(
+                FakeHttpHandler.Html(HttpStatusCode.BadGateway, "<html>gateway error</html>")),
         };
         VerifiablClient client = Client(handler);
 

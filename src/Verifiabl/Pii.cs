@@ -150,14 +150,6 @@ public static class Pii
     /// </summary>
     private static bool IsPrintableWithoutPipe(string value)
     {
-        foreach (char c in value)
-        {
-            if (c == '|' || char.IsControl(c))
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return !value.Any(c => c == '|' || char.IsControl(c));
     }
 }

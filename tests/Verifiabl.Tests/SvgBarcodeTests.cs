@@ -245,9 +245,10 @@ public class SvgBarcodeTests
     private static bool IsFinderRegion(int row, int col, int size)
     {
         const int finder = 7;
-        return (row < finder && col < finder)
-            || (row < finder && col >= size - finder)
-            || (row >= size - finder && col < finder);
+        bool topLeft = row < finder && col < finder;
+        bool topRight = row < finder && col >= size - finder;
+        bool bottomLeft = row >= size - finder && col < finder;
+        return topLeft || topRight || bottomLeft;
     }
 
     private static string DecodeMatrix(QrCode qr)

@@ -21,19 +21,13 @@ internal static class Base64Url
             return false;
         }
 
-        foreach (char c in value)
-        {
-            bool valid = (c >= 'A' && c <= 'Z')
-                || (c >= 'a' && c <= 'z')
-                || (c >= '0' && c <= '9')
-                || c == '-'
-                || c == '_';
-            if (!valid)
-            {
-                return false;
-            }
-        }
+        return value.All(IsBase64UrlChar);
+    }
 
-        return true;
+    private static bool IsBase64UrlChar(char c)
+    {
+        bool letter = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+        bool digit = c >= '0' && c <= '9';
+        return letter || digit || c == '-' || c == '_';
     }
 }

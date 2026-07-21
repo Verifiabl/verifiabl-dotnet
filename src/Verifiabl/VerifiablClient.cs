@@ -573,18 +573,12 @@ public class VerifiablClient
 
     private static string? ExtractRequestId(HttpResponseMessage response)
     {
-        foreach (string header in RequestIdHeaders)
-        {
-            if (response.Headers.TryGetValues(header, out IEnumerable<string>? values))
-            {
-                foreach (string value in values)
-                {
-                    return value;
-                }
-            }
-        }
-
-        return null;
+        return RequestIdHeaders
+            .SelectMany(header =>
+                response.Headers.TryGetValues(header, out IEnumerable<string>? values)
+                    ? values
+                    : Enumerable.Empty<string>())
+            .FirstOrDefault();
     }
 
     private static void CallHook<T>(Action<T>? hook, T eventArgs)
@@ -615,16 +609,23 @@ public class VerifiablClient
 
     private static string ValidateTokenUrl(Uri url)
     {
-        bool allowed = url.IsAbsoluteUri
-            && ((url.Scheme == Uri.UriSchemeHttps
-                    && Array.IndexOf(VerifiablAuthHosts, url.Host) >= 0)
-                || ((url.Scheme == Uri.UriSchemeHttp || url.Scheme == Uri.UriSchemeHttps)
-                    && url.IsLoopback));
-        if (!allowed)
+        static ArgumentException Invalid() => new(
+            "tokenUrl must use a Verifiabl auth host, or localhost for development.",
+            "tokenUrl");
+
+        // Host/IsLoopback throw on a relative Uri, so check this first.
+        if (!url.IsAbsoluteUri)
         {
-            throw new ArgumentException(
-                "tokenUrl must use a Verifiabl auth host, or localhost for development.",
-                "tokenUrl");
+            throw Invalid();
+        }
+
+        bool verifiablHost = url.Scheme == Uri.UriSchemeHttps
+            && Array.IndexOf(VerifiablAuthHosts, url.Host) >= 0;
+        bool loopbackDev = url.IsLoopback
+            && (url.Scheme == Uri.UriSchemeHttp || url.Scheme == Uri.UriSchemeHttps);
+        if (!verifiablHost && !loopbackDev)
+        {
+            throw Invalid();
         }
 
         return url.AbsoluteUri;

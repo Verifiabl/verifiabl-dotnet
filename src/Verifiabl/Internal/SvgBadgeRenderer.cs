@@ -279,11 +279,10 @@ internal static class SvgBadgeRenderer
 
     private static bool IsFinderModule(int row, int col, int size)
     {
-        bool inTop = row < FinderSize;
-        bool inLeft = col < FinderSize;
-        bool inRight = col >= size - FinderSize;
-        bool inBottom = row >= size - FinderSize;
-        return (inTop && inLeft) || (inTop && inRight) || (inBottom && inLeft);
+        bool topLeft = row < FinderSize && col < FinderSize;
+        bool topRight = row < FinderSize && col >= size - FinderSize;
+        bool bottomLeft = row >= size - FinderSize && col < FinderSize;
+        return topLeft || topRight || bottomLeft;
     }
 
     private static string RenderFinders(int size, double moduleSize, string color)
