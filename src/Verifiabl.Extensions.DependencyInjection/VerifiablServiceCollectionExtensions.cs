@@ -46,6 +46,8 @@ public static class VerifiablServiceCollectionExtensions
     /// The registration is a singleton because the client caches OAuth access
     /// tokens; a scoped or transient lifetime would fetch a token per resolve.
     /// Option validation therefore surfaces on the first resolve, not here.
+    /// Registration uses TryAdd semantics: once <see cref="IVerifiablClient"/>
+    /// is registered, later <c>AddVerifiablClient</c> calls are no-ops.
     /// </remarks>
     public static IServiceCollection AddVerifiablClient(
         this IServiceCollection services,
@@ -61,22 +63,25 @@ public static class VerifiablServiceCollectionExtensions
             throw new ArgumentNullException(nameof(configureOptions));
         }
 
-        IHttpClientBuilder builder = services
-            .AddHttpClient(HttpClientName)
-            // The SDK applies its own per-call deadline covering retries.
-            .ConfigureHttpClient(client => client.Timeout = Timeout.InfiniteTimeSpan);
-
 #if NET8_0_OR_GREATER
         // Microsoft's documented pairing for a client held for the process lifetime:
         // stop the factory rotating handlers and let PooledConnectionLifetime recycle
         // connections, so DNS changes are still picked up. net472 has no SocketsHttpHandler.
         // https://learn.microsoft.com/dotnet/core/extensions/httpclient-factory#avoid-typed-clients-in-singleton-services
-        builder
+        services
+            .AddHttpClient(HttpClientName)
+            // The SDK applies its own per-call deadline covering retries.
+            .ConfigureHttpClient(client => client.Timeout = Timeout.InfiniteTimeSpan)
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {
                 PooledConnectionLifetime = TimeSpan.FromMinutes(2),
             })
             .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
+#else
+        services
+            .AddHttpClient(HttpClientName)
+            // The SDK applies its own per-call deadline covering retries.
+            .ConfigureHttpClient(client => client.Timeout = Timeout.InfiniteTimeSpan);
 #endif
 
         // Singleton: the OAuth token cache lives on the client instance.

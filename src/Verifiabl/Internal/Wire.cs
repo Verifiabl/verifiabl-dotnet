@@ -203,7 +203,10 @@ internal static class Wire
                 return JsonValue.Create(f);
             case decimal m:
                 return JsonValue.Create(m);
-            case IDictionary<string, object?> nested:
+            // Covers IDictionary<string, object?> and IReadOnlyDictionary-only
+            // implementations (immutable/frozen wrappers) that would otherwise
+            // fall into the array arm as KeyValuePair sequences.
+            case IEnumerable<KeyValuePair<string, object?>> nested:
                 {
                     var obj = new JsonObject();
                     foreach (KeyValuePair<string, object?> entry in nested)

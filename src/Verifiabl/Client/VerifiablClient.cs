@@ -246,7 +246,7 @@ public sealed class VerifiablClient : IVerifiablClient
         catch (HttpRequestException exception)
         {
             throw new VerifiablTransportException(
-                $"The Verifiabl API call to {path} failed before a response was received.",
+                $"The Verifiabl API call to {path} failed with a transport error: {exception.Message}",
                 exception);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)

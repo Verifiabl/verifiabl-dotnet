@@ -167,6 +167,58 @@ public class ClientRequestTests
     }
 
     [Fact]
+    public async Task MapsAReadOnlyDictionaryNestedValueAsAnObject()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.PayslipNonPii.AdditionalData = new Dictionary<string, object?>
+        {
+            ["employer"] = new ReadOnlyPairs(new Dictionary<string, object?>
+            {
+                ["abn"] = "12345678901",
+            }),
+        };
+
+        await client.RegisterNonPiiAsync(request);
+
+        using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
+        JsonElement employer = body.RootElement
+            .GetProperty("payslip_non_pii")
+            .GetProperty("employer");
+        Assert.Equal(JsonValueKind.Object, employer.ValueKind);
+        Assert.Equal("12345678901", employer.GetProperty("abn").GetString());
+    }
+
+    /// <summary>
+    /// Implements only the read-only dictionary surface, unlike
+    /// Dictionary/ReadOnlyDictionary/ImmutableDictionary which all also carry
+    /// non-generic IDictionary — the shape that regressed to an array.
+    /// </summary>
+    private sealed class ReadOnlyPairs(Dictionary<string, object?> inner)
+        : IReadOnlyDictionary<string, object?>
+    {
+        public object? this[string key] => inner[key];
+
+        public IEnumerable<string> Keys => inner.Keys;
+
+        public IEnumerable<object?> Values => inner.Values;
+
+        public int Count => inner.Count;
+
+        public bool ContainsKey(string key) => inner.ContainsKey(key);
+
+        public bool TryGetValue(string key, out object? value) =>
+            inner.TryGetValue(key, out value);
+
+        public IEnumerator<KeyValuePair<string, object?>> GetEnumerator() =>
+            inner.GetEnumerator();
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() =>
+            GetEnumerator();
+    }
+
+    [Fact]
     public async Task RejectsUnsupportedAdditionalDataValuesNamingTheKey()
     {
         FakeHttpHandler handler = RegistrationHandler();
