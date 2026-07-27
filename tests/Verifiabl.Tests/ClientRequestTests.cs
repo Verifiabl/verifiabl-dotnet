@@ -129,6 +129,50 @@ public class ClientRequestTests
     }
 
     [Fact]
+    public async Task GeneratesAClientSideReferenceForSingleRegistration()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+
+        await client.RegisterNonPiiAsync(ValidRequest());
+
+        using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
+        string? reference = body.RootElement.GetProperty("verifiabl_reference").GetString();
+        Assert.True(VerifiablReference.IsValid(reference));
+    }
+
+    [Fact]
+    public async Task UsesTheCallerSuppliedReferenceVerbatim()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.VerifiablReference = "u0FE9WLIS7GYKQnpJPygBw";
+
+        await client.RegisterNonPiiAsync(request);
+
+        using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
+        Assert.Equal(
+            "u0FE9WLIS7GYKQnpJPygBw",
+            body.RootElement.GetProperty("verifiabl_reference").GetString());
+    }
+
+    [Fact]
+    public async Task RejectsAMalformedCallerSuppliedReference()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.VerifiablReference = "not-a-reference";
+
+        ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(
+            () => client.RegisterNonPiiAsync(request));
+
+        Assert.Contains("VerifiablReference", exception.Message);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
     public async Task MapsNestedNumericAndNullAdditionalDataOntoTheWireBody()
     {
         FakeHttpHandler handler = RegistrationHandler();
@@ -466,7 +510,12 @@ public class ClientRequestTests
                 Task.FromException<HttpResponseMessage>(new HttpRequestException("socket closed")),
         };
         var errors = new List<VerifiablErrorEvent>();
-        VerifiablClient client = Client(handler, options => options.OnError = errors.Add);
+        // Retries are disabled so the hook count maps to exactly one attempt.
+        VerifiablClient client = Client(handler, options =>
+        {
+            options.OnError = errors.Add;
+            options.MaxRetries = 0;
+        });
 
         VerifiablTransportException thrown = await Assert.ThrowsAsync<VerifiablTransportException>(
             () => client.RegisterNonPiiAsync(ValidRequest()));

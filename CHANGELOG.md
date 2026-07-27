@@ -7,12 +7,26 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.2.0]
 
 A breaking rework of the public API surface in response to a .NET ergonomics
-review. No behaviour on the wire changed. The package had no published
-consumers, so no migration shim is provided; the changes below are all
-source-breaking.
+review, plus a retry-safety fix verified against the Verifiabl API source. The
+package had no published consumers, so no migration shim is provided.
+
+### Fixed
+
+- Single-record registration could double-register a payslip: the SDK retried
+  `503` on the assumption the request was never processed, but the API can
+  emit `503` after the row commits (a database connection lost in the
+  commit-acknowledgement window, or a platform `503` around a completed
+  request). `RegisterNonPiiAsync` now mints a client-side
+  `verifiabl_reference` (or uses `RegisterNonPiiRequest.VerifiablReference`
+  when set), which puts the API on its idempotent path — an identical resend
+  returns the stored record as a duplicate — and retries broadly like batch.
+  `RegisterAndBuildBarcodeAsync`, whose reference is server-minted, now
+  retries only `429`, which the API enforces before any processing.
 
 ### Added
 
+- Optional `RegisterNonPiiRequest.VerifiablReference` for callers who want to
+  pin the registration's idempotency key themselves.
 - New package `Verifiabl.Extensions.DependencyInjection`, with
   `IServiceCollection.AddVerifiablClient(...)` overloads that register
   `IVerifiablClient` as a singleton wired to `IHttpClientFactory`. The core

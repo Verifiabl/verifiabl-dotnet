@@ -125,15 +125,26 @@ public sealed class VerifiablClient : IVerifiablClient
         RegisterNonPiiRequest request,
         CancellationToken cancellationToken = default)
     {
-        JsonObject body = Wire.ToWire(request);
-        // Single registration: Verifiabl generates the reference and does not
-        // deduplicate, so an ambiguous retry could create a second record. Only
-        // failures that leave the request unprocessed are retried.
+        if (request is null)
+        {
+            throw new ArgumentNullException(nameof(request));
+        }
+
+        // The reference is minted client-side (or taken from the request), which
+        // puts the API on its idempotent path: replaying the same reference with
+        // identical content returns the stored record as "duplicate" instead of
+        // creating a second one, so ambiguous failures are safe to retry.
+        string reference = request.VerifiablReference is null
+            ? Verifiabl.VerifiablReference.Generate()
+            : Verifiabl.VerifiablReference.Validate(
+                request.VerifiablReference,
+                $"{nameof(request)}.{nameof(request.VerifiablReference)}");
+        JsonObject body = Wire.ToWire(request, reference);
         return PostAsync(
             "/v1/registerNonPII",
             body,
             Wire.RegistrationFromWire,
-            idempotent: false,
+            idempotent: true,
             cancellationToken);
     }
 
@@ -143,8 +154,8 @@ public sealed class VerifiablClient : IVerifiablClient
         CancellationToken cancellationToken = default)
     {
         JsonObject body = Wire.ToWire(request);
-        // Same as RegisterNonPiiAsync: the API assigns the reference, so this is
-        // not safe to retry on an ambiguous failure.
+        // The API mints this endpoint's reference and cannot deduplicate a
+        // resend, so only failures enforced before processing (429) are retried.
         return PostAsync(
             "/v1/registerAndBuildBarcode",
             body,
@@ -444,17 +455,17 @@ public sealed class VerifiablClient : IVerifiablClient
 
     private static bool IsRetryableStatus(int status, bool idempotent)
     {
-        // 429 (throttled) and 503 (unavailable) mean the request was not
-        // processed, so they are safe to retry even for a non-idempotent single
-        // registration.
-        if (status == 429 || status == 503)
+        // Rate limits are enforced before any processing (at the edge and in
+        // pre-controller middleware), so 429 is safe to retry without
+        // idempotency.
+        if (status == 429)
         {
             return true;
         }
 
-        // Other 5xx and 408 are ambiguous: the server may have processed the
-        // request before failing, which would duplicate a single registration.
-        // Retry them only when the call is idempotent.
+        // Everything else — 503 included — can arrive after the server has
+        // committed the write (a connection lost in the commit-ack window, or a
+        // platform 503 wrapping a completed request), so it needs idempotency.
         return idempotent && (status == 408 || (status >= 500 && status <= 599));
     }
 

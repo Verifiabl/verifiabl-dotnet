@@ -7,6 +7,16 @@ namespace Verifiabl.Client;
 /// </summary>
 public sealed class RegisterNonPiiRequest
 {
+    /// <summary>
+    /// Optional provider-generated Verifiabl reference (from
+    /// <see cref="Verifiabl.VerifiablReference.Generate"/>). When unset, the SDK
+    /// generates one per call. Sending the reference makes registration
+    /// idempotent: resending identical data under the same reference returns
+    /// the stored record instead of creating a duplicate, which is what lets
+    /// the SDK retry ambiguous failures safely.
+    /// </summary>
+    public string? VerifiablReference { get; set; }
+
     /// <summary>Payslip schema identifier, e.g. "au.payslip.v1".</summary>
     public required string Schema { get; set; }
 

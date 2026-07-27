@@ -125,7 +125,7 @@ The compiler enforces the mandatory fields: `Schema`, `IssuedAt`, `PayslipNonPii
 
 ### Retries and idempotency
 
-Failed requests are retried automatically with exponential backoff (`VerifiablClientOptions.MaxRetries`, default 2). The Verifiabl reference is the idempotency key, so retries are only applied where they are safe. Batch registration generates its own references, so the API deduplicates a re-send — it retries on throttling, timeouts, `5xx`, and network faults. The single-record endpoints let the API assign the reference and are not deduplicated, so they retry only failures that leave the request unprocessed (`429`, `503`); use batch when you need fully idempotent retries.
+Failed requests are retried automatically with exponential backoff (`VerifiablClientOptions.MaxRetries`, default 2). The Verifiabl reference is the idempotency key, so retries are only applied where they are safe. `RegisterNonPiiAsync` generates a reference client-side (or uses the one you set on the request), so the API deduplicates a re-send and the SDK retries it on throttling, timeouts, `5xx`, and network faults — same as batch registration. `RegisterAndBuildBarcodeAsync` lets the API assign the reference and cannot be deduplicated, so it retries only `429`, which is enforced before any processing.
 
 ## Batch registration
 

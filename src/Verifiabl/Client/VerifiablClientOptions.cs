@@ -27,14 +27,14 @@ public sealed class VerifiablClientOptions
     /// </summary>
     /// <remarks>
     /// Retries use exponential backoff with jitter and honour a
-    /// <c>Retry-After</c> header. Batch registration is idempotent (its
-    /// caller-generated references deduplicate on the server), so it retries on
-    /// throttling, timeouts, 5xx, and network faults. The single-record
-    /// endpoints (<see cref="IVerifiablClient.RegisterNonPiiAsync"/> and
-    /// <see cref="IVerifiablClient.RegisterAndBuildBarcodeAsync"/>) are not deduplicated, so
-    /// they only retry failures that leave the request unprocessed (429 and 503)
-    /// to avoid creating a duplicate record. All retries share the call
-    /// <see cref="Timeout"/> as an overall deadline.
+    /// <c>Retry-After</c> header. Calls that carry a client-generated reference
+    /// (<see cref="IVerifiablClient.RegisterNonPiiAsync"/>, which mints one per
+    /// call, and <see cref="IVerifiablClient.RegisterNonPiiBatchAsync"/>)
+    /// deduplicate on the server, so they retry on throttling, timeouts, 5xx,
+    /// and network faults. <see cref="IVerifiablClient.RegisterAndBuildBarcodeAsync"/>
+    /// uses a server-minted reference that cannot deduplicate a resend, so it
+    /// retries only 429, which the API enforces before any processing. All
+    /// retries share the call <see cref="Timeout"/> as an overall deadline.
     /// </remarks>
     public int MaxRetries { get; set; } = 2;
 

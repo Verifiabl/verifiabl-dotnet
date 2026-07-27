@@ -21,7 +21,7 @@ internal static class Wire
 {
     internal const int MaxBatchRecords = 1000;
 
-    internal static JsonObject ToWire(RegisterNonPiiRequest request)
+    internal static JsonObject ToWire(RegisterNonPiiRequest request, string verifiablReference)
     {
         if (request is null)
         {
@@ -30,7 +30,7 @@ internal static class Wire
 
         return RegistrationFields(
             "request",
-            null,
+            verifiablReference,
             request.Schema,
             request.IssuedAt,
             request.PayslipNonPii,
