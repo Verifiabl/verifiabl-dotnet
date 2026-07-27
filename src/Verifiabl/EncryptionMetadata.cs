@@ -7,10 +7,10 @@ namespace Verifiabl;
 public sealed class EncryptionMetadata
 {
     /// <summary>96-bit IV, exactly 16 base64url characters.</summary>
-    public string? Iv { get; set; }
+    public required string Iv { get; set; }
 
     /// <summary>128-bit GCM authentication tag, exactly 22 base64url characters.</summary>
-    public string? Tag { get; set; }
+    public required string Tag { get; set; }
 
     /// <summary>
     /// Provider key version in <c>&lt;provider-id&gt;.&lt;n&gt;</c> format, where
@@ -19,5 +19,5 @@ public sealed class EncryptionMetadata
     /// this value at verification time. Note this provider ID is distinct from
     /// your OAuth client ID.
     /// </summary>
-    public string? KeyVersion { get; set; }
+    public required string KeyVersion { get; set; }
 }

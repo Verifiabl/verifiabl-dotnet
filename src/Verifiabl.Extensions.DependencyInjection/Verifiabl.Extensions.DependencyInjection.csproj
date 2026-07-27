@@ -1,22 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!--
-      net472 keeps .NET Framework 4.7.2+ providers supported (AES-GCM via
-      Microsoft.Bcl.Cryptography, which ships no netstandard2.0 AesGcm; 4.6.2-4.7.1 leave Microsoft support in Jan 2027 and have known netstandard2.0 facade conflicts);
-      net8.0/net10.0 use the built-in cross-platform crypto and current LTS
-      runtimes.
-    -->
+    <!-- Same targets as the core package, so DI registration is available everywhere the SDK is. -->
     <TargetFrameworks>net472;net8.0;net10.0</TargetFrameworks>
-    <PackageId>Verifiabl</PackageId>
+    <PackageId>Verifiabl.Extensions.DependencyInjection</PackageId>
     <Version>0.2.0</Version>
-    <Description>Official Verifiabl .NET SDK for issuing payslip QR codes, formatting PII, AES-256-GCM encryption helpers, and typed issuer API calls.</Description>
+    <Description>Microsoft.Extensions.DependencyInjection integration for the Verifiabl .NET SDK: registers IVerifiablClient as a singleton wired to IHttpClientFactory.</Description>
     <Authors>Verifiabl</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://verifiabl.io</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Verifiabl/verifiabl-dotnet</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>verifiabl;payslip;issuer;qr-code;sdk</PackageTags>
+    <PackageTags>verifiabl;payslip;issuer;dependency-injection;aspnetcore</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -27,18 +22,25 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
     <InternalsVisibleTo Include="Verifiabl.Tests" Key="$(VerifiablPublicKey)" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="3.0.0" />
+    <!--
+      8.0.x is the lowest line that still ships net462 and netstandard2.0 assets,
+      so consumers are never forced onto a newer Microsoft.Extensions major.
+    -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Verifiabl\Verifiabl.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
     <Reference Include="System.Net.Http" />
-    <PackageReference Include="Microsoft.Bcl.Cryptography" Version="10.0.5" />
-    <PackageReference Include="System.Text.Json" Version="10.0.5" />
   </ItemGroup>
 
 </Project>

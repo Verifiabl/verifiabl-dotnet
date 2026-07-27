@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
+using Verifiabl.Client;
 using Xunit;
 
 namespace Verifiabl.Tests;
@@ -286,7 +287,11 @@ public class ClientOAuthTests
             handler,
             options => options.Timeout = TimeSpan.FromMilliseconds(200));
 
-        await Assert.ThrowsAsync<TimeoutException>(() => client.RegisterNonPiiAsync(ValidRequest()));
+        VerifiablTimeoutException exception =
+            await Assert.ThrowsAsync<VerifiablTimeoutException>(
+                () => client.RegisterNonPiiAsync(ValidRequest()));
+
+        Assert.Equal(TimeSpan.FromMilliseconds(200), exception.Timeout);
     }
 
     [Fact]
@@ -307,7 +312,7 @@ public class ClientOAuthTests
             handler,
             options => options.Timeout = TimeSpan.FromMilliseconds(200));
 
-        await Assert.ThrowsAsync<TimeoutException>(() => client.RegisterNonPiiAsync(ValidRequest()));
+        await Assert.ThrowsAsync<VerifiablTimeoutException>(() => client.RegisterNonPiiAsync(ValidRequest()));
     }
 
     [Fact]

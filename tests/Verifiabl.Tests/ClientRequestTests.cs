@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Verifiabl.Client;
 using Xunit;
 
 namespace Verifiabl.Tests;
@@ -99,10 +100,10 @@ public class ClientRequestTests
         FakeHttpHandler handler = RegistrationHandler();
         VerifiablClient client = Client(handler);
         RegisterNonPiiRequest request = ValidRequest();
-        request.PayslipNonPii!.AdditionalData = new JsonObject
+        request.PayslipNonPii.AdditionalData = new Dictionary<string, object?>
         {
             ["total_hours"] = 152,
-            ["allowances"] = new JsonArray("meal", "travel"),
+            ["allowances"] = new[] { "meal", "travel" },
         };
 
         await client.RegisterNonPiiAsync(request);
@@ -114,12 +115,69 @@ public class ClientRequestTests
     }
 
     [Fact]
+    public async Task MapsNestedNumericAndNullAdditionalDataOntoTheWireBody()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.PayslipNonPii.AdditionalData = new Dictionary<string, object?>
+        {
+            ["currency"] = "AUD",
+            ["gross_cents"] = 1_234_500L,
+            ["rate"] = 42.5m,
+            ["hours"] = 7.6,
+            ["final"] = true,
+            ["comment"] = null,
+            ["counts"] = new[] { 1, 2, 3 },
+            ["employer"] = new Dictionary<string, object?>
+            {
+                ["abn"] = "12345678901",
+                ["branches"] = new object?[] { 1, "two", null },
+            },
+        };
+
+        await client.RegisterNonPiiAsync(request);
+
+        using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
+        JsonElement nonPii = body.RootElement.GetProperty("payslip_non_pii");
+        Assert.Equal("AUD", nonPii.GetProperty("currency").GetString());
+        Assert.Equal(1_234_500L, nonPii.GetProperty("gross_cents").GetInt64());
+        Assert.Equal(42.5m, nonPii.GetProperty("rate").GetDecimal());
+        Assert.Equal(7.6, nonPii.GetProperty("hours").GetDouble());
+        Assert.True(nonPii.GetProperty("final").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, nonPii.GetProperty("comment").ValueKind);
+        Assert.Equal(3, nonPii.GetProperty("counts").GetArrayLength());
+        JsonElement employer = nonPii.GetProperty("employer");
+        Assert.Equal("12345678901", employer.GetProperty("abn").GetString());
+        Assert.Equal(JsonValueKind.Null, employer.GetProperty("branches")[2].ValueKind);
+    }
+
+    [Fact]
+    public async Task RejectsUnsupportedAdditionalDataValuesNamingTheKey()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.PayslipNonPii.AdditionalData = new Dictionary<string, object?>
+        {
+            ["payment_date"] = new DateTime(2026, 5, 31),
+        };
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(
+            () => client.RegisterNonPiiAsync(request));
+
+        Assert.Contains("payment_date", exception.Message);
+        Assert.Contains("System.DateTime", exception.Message);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
     public async Task DoesNotLetPassthroughKeysOverrideTheMappedPeriodDates()
     {
         FakeHttpHandler handler = RegistrationHandler();
         VerifiablClient client = Client(handler);
         RegisterNonPiiRequest request = ValidRequest();
-        request.PayslipNonPii!.AdditionalData = new JsonObject
+        request.PayslipNonPii.AdditionalData = new Dictionary<string, object?>
         {
             ["period_start"] = "1999-01-01",
             ["period_end"] = "1999-01-31",
@@ -344,12 +402,29 @@ public class ClientRequestTests
         var errors = new List<VerifiablErrorEvent>();
         VerifiablClient client = Client(handler, options => options.OnError = errors.Add);
 
-        await Assert.ThrowsAsync<HttpRequestException>(
+        VerifiablTransportException thrown = await Assert.ThrowsAsync<VerifiablTransportException>(
             () => client.RegisterNonPiiAsync(ValidRequest()));
 
+        Assert.IsType<HttpRequestException>(thrown.InnerException);
         VerifiablErrorEvent error = Assert.Single(errors);
         Assert.Equal("/v1/registerNonPII", error.Path);
         Assert.IsType<HttpRequestException>(error.Error);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not json at all")]
+    [InlineData("{\"verifiabl_reference\":\"nope\"}")]
+    public async Task WrapsUnusableSuccessBodiesAsTransportFailures(string body)
+    {
+        var handler = new FakeHttpHandler
+        {
+            Responder = (_, _, _) => Task.FromResult(FakeHttpHandler.Json(HttpStatusCode.OK, body)),
+        };
+        VerifiablClient client = Client(handler);
+
+        await Assert.ThrowsAsync<VerifiablTransportException>(
+            () => client.RegisterNonPiiAsync(ValidRequest()));
     }
 
     [Theory]
@@ -374,7 +449,7 @@ public class ClientRequestTests
         FakeHttpHandler handler = RegistrationHandler();
         VerifiablClient client = Client(handler);
         RegisterNonPiiRequest request = ValidRequest();
-        request.EncryptionMetadata!.KeyVersion = "not-a-key-version";
+        request.EncryptionMetadata.KeyVersion = "not-a-key-version";
 
         await Assert.ThrowsAsync<ArgumentException>(() => client.RegisterNonPiiAsync(request));
 
@@ -390,20 +465,7 @@ public class ClientRequestTests
         FakeHttpHandler handler = RegistrationHandler();
         VerifiablClient client = Client(handler);
         RegisterNonPiiRequest request = ValidRequest();
-        request.PayslipNonPii!.PeriodStart = periodStart;
-
-        await Assert.ThrowsAsync<ArgumentException>(() => client.RegisterNonPiiAsync(request));
-
-        Assert.Empty(handler.Requests);
-    }
-
-    [Fact]
-    public async Task RequiresIssuedAt()
-    {
-        FakeHttpHandler handler = RegistrationHandler();
-        VerifiablClient client = Client(handler);
-        RegisterNonPiiRequest request = ValidRequest();
-        request.IssuedAt = null;
+        request.PayslipNonPii.PeriodStart = periodStart;
 
         await Assert.ThrowsAsync<ArgumentException>(() => client.RegisterNonPiiAsync(request));
 

@@ -7,7 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Verifiabl.Internal;
 
-namespace Verifiabl;
+namespace Verifiabl.Client;
 
 /// <summary>
 /// Typed client for the Verifiabl issuer API.
@@ -20,10 +20,15 @@ namespace Verifiabl;
 /// once and reused.
 /// </para>
 /// <para>
-/// API methods are virtual so the client can be mocked in tests.
+/// Every failure an API call reports derives from <see cref="VerifiablException"/>,
+/// so one <c>catch (VerifiablException)</c> covers API errors, auth failures,
+/// timeouts, and transport faults.
+/// </para>
+/// <para>
+/// Depend on <see cref="IVerifiablClient"/> where you need to substitute a fake.
 /// </para>
 /// </remarks>
-public class VerifiablClient
+public sealed class VerifiablClient : IVerifiablClient
 {
     /// <summary>Maximum records per batch request. Matches the API's limit.</summary>
     public const int MaxBatchRecords = Wire.MaxBatchRecords;
@@ -115,16 +120,8 @@ public class VerifiablClient
         _onError = options.OnError;
     }
 
-    /// <summary>
-    /// Register non-PII payslip data and decryption metadata. Returns the
-    /// Verifiabl reference to embed in a locally generated barcode.
-    /// </summary>
-    /// <exception cref="VerifiablApiException">The API returned a non-2xx response.</exception>
-    /// <exception cref="VerifiablAuthException">An OAuth token could not be obtained.</exception>
-    /// <exception cref="TimeoutException">The call exceeded the configured timeout.</exception>
-    /// <exception cref="HttpRequestException">A network fault prevented a response (for retryable calls, only after retries are exhausted).</exception>
-    /// <exception cref="FormatException">The API returned a success status with an empty or non-JSON body.</exception>
-    public virtual Task<RegisterNonPiiResponse> RegisterNonPiiAsync(
+    /// <inheritdoc />
+    public Task<RegisterNonPiiResponse> RegisterNonPiiAsync(
         RegisterNonPiiRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -140,16 +137,8 @@ public class VerifiablClient
             cancellationToken);
     }
 
-    /// <summary>
-    /// Register non-PII payslip data and have the API build the barcode. Sends the
-    /// encrypted PII alongside the non-PII data.
-    /// </summary>
-    /// <exception cref="VerifiablApiException">The API returned a non-2xx response.</exception>
-    /// <exception cref="VerifiablAuthException">An OAuth token could not be obtained.</exception>
-    /// <exception cref="TimeoutException">The call exceeded the configured timeout.</exception>
-    /// <exception cref="HttpRequestException">A network fault prevented a response (for retryable calls, only after retries are exhausted).</exception>
-    /// <exception cref="FormatException">The API returned a success status with an empty or non-JSON body.</exception>
-    public virtual Task<RegisterAndBuildBarcodeResponse> RegisterAndBuildBarcodeAsync(
+    /// <inheritdoc />
+    public Task<RegisterAndBuildBarcodeResponse> RegisterAndBuildBarcodeAsync(
         RegisterAndBuildBarcodeRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -164,20 +153,8 @@ public class VerifiablClient
             cancellationToken);
     }
 
-    /// <summary>
-    /// Register a batch of non-PII payslip records in a single request, up to
-    /// <see cref="MaxBatchRecords"/> records. Each record carries a
-    /// provider-generated Verifiabl reference (from
-    /// <see cref="VerifiablReference.Generate"/>) and the same fields as
-    /// <see cref="RegisterNonPiiAsync"/>. The response contains a per-record
-    /// result index-aligned to the input: one bad record never fails the batch.
-    /// </summary>
-    /// <exception cref="VerifiablApiException">The API returned a non-2xx response.</exception>
-    /// <exception cref="VerifiablAuthException">An OAuth token could not be obtained.</exception>
-    /// <exception cref="TimeoutException">The call exceeded the configured timeout.</exception>
-    /// <exception cref="HttpRequestException">A network fault prevented a response (for retryable calls, only after retries are exhausted).</exception>
-    /// <exception cref="FormatException">The API returned a success status with an empty or non-JSON body.</exception>
-    public virtual Task<RegisterNonPiiBatchResponse> RegisterNonPiiBatchAsync(
+    /// <inheritdoc />
+    public Task<RegisterNonPiiBatchResponse> RegisterNonPiiBatchAsync(
         IEnumerable<BatchRecord> records,
         CancellationToken cancellationToken = default)
     {
@@ -255,15 +232,29 @@ public class VerifiablClient
                     }
 
                     using JsonDocument document = ParseJsonBody(text, (int)response.StatusCode);
-                    return parseResponse(document.RootElement);
+                    try
+                    {
+                        return parseResponse(document.RootElement);
+                    }
+                    catch (FormatException exception)
+                    {
+                        throw new VerifiablTransportException(exception.Message, exception);
+                    }
                 }
             }
         }
+        catch (HttpRequestException exception)
+        {
+            throw new VerifiablTransportException(
+                $"The Verifiabl API call to {path} failed before a response was received.",
+                exception);
+        }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            throw new TimeoutException(
+            throw new VerifiablTimeoutException(
                 $"The Verifiabl API call to {path} did not complete within " +
-                $"{_timeout.TotalSeconds:0.###} seconds.");
+                $"{_timeout.TotalSeconds:0.###} seconds.",
+                _timeout);
         }
     }
 
@@ -536,7 +527,7 @@ public class VerifiablClient
     {
         if (string.IsNullOrWhiteSpace(text))
         {
-            throw new FormatException(
+            throw new VerifiablTransportException(
                 $"Verifiabl API returned an empty response body with status {status}.");
         }
 
@@ -544,9 +535,11 @@ public class VerifiablClient
         {
             return JsonDocument.Parse(text);
         }
-        catch (JsonException)
+        catch (JsonException exception)
         {
-            throw new FormatException($"Verifiabl API returned invalid JSON with status {status}.");
+            throw new VerifiablTransportException(
+                $"Verifiabl API returned invalid JSON with status {status}.",
+                exception);
         }
     }
 

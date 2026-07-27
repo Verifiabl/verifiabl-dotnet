@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Verifiabl.Client;
 
 namespace Verifiabl.Internal;
 
@@ -103,16 +104,11 @@ internal static class Wire
         string label,
         string? verifiablReference,
         string? schema,
-        DateTimeOffset? issuedAt,
+        DateTimeOffset issuedAt,
         PayslipNonPii? payslipNonPii,
         EncryptionMetadata? encryptionMetadata)
     {
         Validation.ValidateSchema(schema, $"{label}.Schema");
-        if (issuedAt is null)
-        {
-            throw new ArgumentException($"{label}.IssuedAt is required.", $"{label}.IssuedAt");
-        }
-
         if (payslipNonPii is null)
         {
             throw new ArgumentException(
@@ -134,7 +130,7 @@ internal static class Wire
         // Millisecond-precision UTC, matching JavaScript's Date.toISOString(): the
         // API accepts arbitrary sub-second precision, but this keeps the wire value
         // identical to the Node SDK's.
-        body["issued_at"] = issuedAt.Value.ToUniversalTime()
+        body["issued_at"] = issuedAt.ToUniversalTime()
             .ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture);
         body["payslip_non_pii"] = PayslipNonPiiFields(payslipNonPii, $"{label}.PayslipNonPii");
         body["encryption_metadata"] = new JsonObject
@@ -154,7 +150,7 @@ internal static class Wire
         var body = new JsonObject();
         if (data.AdditionalData is not null)
         {
-            foreach (KeyValuePair<string, JsonNode?> field in data.AdditionalData)
+            foreach (KeyValuePair<string, object?> field in data.AdditionalData)
             {
                 // The SDK-mapped period keys always win, even if a caller put a
                 // stray snake_case copy in AdditionalData.
@@ -163,13 +159,88 @@ internal static class Wire
                     continue;
                 }
 
-                body[field.Key] = field.Value?.DeepClone();
+                body[field.Key] = ToJsonNode(field.Value, $"{label}.AdditionalData[\"{field.Key}\"]");
             }
         }
 
         body["period_start"] = data.PeriodStart;
         body["period_end"] = data.PeriodEnd;
         return body;
+    }
+
+    /// <summary>
+    /// Maps a caller-supplied pass-through value onto the JSON tree, so the
+    /// public surface never asks integrators to reference System.Text.Json.
+    /// </summary>
+    private static JsonNode? ToJsonNode(object? value, string label)
+    {
+        switch (value)
+        {
+            case null:
+                return null;
+            case string text:
+                return JsonValue.Create(text);
+            case bool flag:
+                return JsonValue.Create(flag);
+            case sbyte or byte or short or ushort or int or uint or long:
+                return JsonValue.Create(Convert.ToInt64(value, CultureInfo.InvariantCulture));
+            case ulong unsigned:
+                return JsonValue.Create(unsigned);
+            case double d:
+                return JsonValue.Create(d);
+            // Widening a float to double would print its binary noise, so keep it single.
+            case float f:
+                return JsonValue.Create(f);
+            case decimal m:
+                return JsonValue.Create(m);
+            case IDictionary<string, object?> nested:
+                {
+                    var obj = new JsonObject();
+                    foreach (KeyValuePair<string, object?> entry in nested)
+                    {
+                        obj[entry.Key] = ToJsonNode(entry.Value, $"{label}[\"{entry.Key}\"]");
+                    }
+
+                    return obj;
+                }
+
+            case System.Collections.IDictionary rawMap:
+                {
+                    var obj = new JsonObject();
+                    foreach (System.Collections.DictionaryEntry entry in rawMap)
+                    {
+                        if (entry.Key is not string key)
+                        {
+                            throw new ArgumentException(
+                                $"{label} has a non-string key; nested objects must be keyed by string.",
+                                label);
+                        }
+
+                        obj[key] = ToJsonNode(entry.Value, $"{label}[\"{key}\"]");
+                    }
+
+                    return obj;
+                }
+
+            case System.Collections.IEnumerable items:
+                {
+                    var array = new JsonArray();
+                    int index = 0;
+                    foreach (object? item in items)
+                    {
+                        array.Add(ToJsonNode(item, $"{label}[{index}]"));
+                        index++;
+                    }
+
+                    return array;
+                }
+
+            default:
+                throw new ArgumentException(
+                    $"{label} has unsupported type {value.GetType().FullName}. Supported values are " +
+                    "null, string, bool, numbers, nested dictionaries, and sequences of those.",
+                    label);
+        }
     }
 
     internal static RegisterNonPiiResponse RegistrationFromWire(JsonElement root)

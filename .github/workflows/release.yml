@@ -53,7 +53,9 @@ jobs:
       - run: dotnet build --configuration Release --no-restore -p:Version="$VERSION"
       # Tests gate every publish, mirroring the CI pipeline.
       - run: dotnet test --configuration Release --no-build
+      # Both packages ship from the same tag, so they always carry the same version.
       - run: dotnet pack src/Verifiabl/Verifiabl.csproj --configuration Release --no-build --output artifacts -p:Version="$VERSION"
+      - run: dotnet pack src/Verifiabl.Extensions.DependencyInjection/Verifiabl.Extensions.DependencyInjection.csproj --configuration Release --no-build --output artifacts -p:Version="$VERSION"
       - name: NuGet login (OIDC → temp API key)
         uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1
         id: login

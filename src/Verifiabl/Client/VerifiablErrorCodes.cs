@@ -1,4 +1,4 @@
-namespace Verifiabl;
+namespace Verifiabl.Client;
 
 /// <summary>
 /// Error codes the API is known to return today, for matching against

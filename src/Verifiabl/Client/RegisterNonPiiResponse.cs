@@ -1,6 +1,6 @@
-namespace Verifiabl;
+namespace Verifiabl.Client;
 
-/// <summary>Response from <see cref="VerifiablClient.RegisterNonPiiAsync"/>.</summary>
+/// <summary>Response from <see cref="IVerifiablClient.RegisterNonPiiAsync"/>.</summary>
 public sealed class RegisterNonPiiResponse
 {
     internal RegisterNonPiiResponse(string verifiablReference)

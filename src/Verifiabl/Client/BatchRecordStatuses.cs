@@ -1,4 +1,4 @@
-namespace Verifiabl;
+namespace Verifiabl.Client;
 
 /// <summary>
 /// Per-record outcome statuses the API returns today. The API may add statuses

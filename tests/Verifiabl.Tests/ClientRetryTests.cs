@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using Verifiabl.Client;
 using Xunit;
 
 namespace Verifiabl.Tests;
@@ -148,7 +149,7 @@ public class ClientRetryTests
             () => throw new HttpRequestException("connection reset"));
         VerifiablClient client = Client(handler, delays);
 
-        await Assert.ThrowsAsync<HttpRequestException>(
+        await Assert.ThrowsAsync<VerifiablTransportException>(
             () => client.RegisterNonPiiAsync(SingleRequest()));
 
         Assert.Single(handler.ApiRequests);

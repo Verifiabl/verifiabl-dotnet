@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Verifiabl\Verifiabl.csproj" />
+    <ProjectReference Include="..\..\src\Verifiabl.Extensions.DependencyInjection\Verifiabl.Extensions.DependencyInjection.csproj" />
   </ItemGroup>
 
   <ItemGroup>

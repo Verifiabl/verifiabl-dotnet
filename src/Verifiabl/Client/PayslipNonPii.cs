@@ -1,6 +1,4 @@
-using System.Text.Json.Nodes;
-
-namespace Verifiabl;
+namespace Verifiabl.Client;
 
 /// <summary>
 /// Non-PII payslip data. <see cref="PeriodStart"/> and <see cref="PeriodEnd"/>
@@ -16,11 +14,19 @@ namespace Verifiabl;
 public sealed class PayslipNonPii
 {
     /// <summary>First day of the pay period, YYYY-MM-DD.</summary>
-    public string? PeriodStart { get; set; }
+    public required string PeriodStart { get; set; }
 
     /// <summary>Last day of the pay period, YYYY-MM-DD.</summary>
-    public string? PeriodEnd { get; set; }
+    public required string PeriodEnd { get; set; }
 
-    /// <summary>Provider-specific payslip fields, sent to the API verbatim.</summary>
-    public JsonObject? AdditionalData { get; set; }
+    /// <summary>
+    /// Provider-specific payslip fields, sent to the API verbatim.
+    /// </summary>
+    /// <remarks>
+    /// Values may be <see langword="null"/>, <see cref="string"/>,
+    /// <see cref="bool"/>, any common numeric type, a nested
+    /// <see cref="IDictionary{TKey,TValue}"/> of the same, or a sequence of them.
+    /// Anything else throws an <see cref="ArgumentException"/> naming the key.
+    /// </remarks>
+    public IDictionary<string, object?>? AdditionalData { get; set; }
 }

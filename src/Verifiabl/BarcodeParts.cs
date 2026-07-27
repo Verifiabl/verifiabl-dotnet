@@ -5,7 +5,7 @@ public sealed class BarcodeParts
 {
     /// <summary>Pairs a Verifiabl reference with its encrypted PII ciphertext.</summary>
     /// <param name="verifiablReference">
-    /// Verifiabl reference returned by <see cref="VerifiablClient.RegisterNonPiiAsync"/>
+    /// Verifiabl reference returned by <see cref="Client.VerifiablClient.RegisterNonPiiAsync"/>
     /// (or generated with <see cref="VerifiablReference.Generate"/> for batches).
     /// </param>
     /// <param name="encryptedPii">

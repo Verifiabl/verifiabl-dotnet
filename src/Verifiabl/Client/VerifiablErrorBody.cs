@@ -1,4 +1,4 @@
-namespace Verifiabl;
+namespace Verifiabl.Client;
 
 /// <summary>A per-field validation error returned by the API.</summary>
 public sealed class VerifiablFieldError

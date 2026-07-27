@@ -77,11 +77,11 @@ public static class VerifiablBarcode
     /// embedding in a payslip PDF.
     /// </summary>
     /// <remarks>
-    /// Takes the Verifiabl reference from <see cref="VerifiablClient.RegisterNonPiiAsync"/>
+    /// Takes the Verifiabl reference from <see cref="Client.VerifiablClient.RegisterNonPiiAsync"/>
     /// and the encrypted PII ciphertext from <see cref="VerifiablCrypto.EncryptPii"/>.
     /// SVG scales to any size without losing quality; if you need a raster image,
     /// rasterise the SVG in your own pipeline or let the API build a PNG via
-    /// <see cref="VerifiablClient.RegisterAndBuildBarcodeAsync"/>.
+    /// <see cref="Client.VerifiablClient.RegisterAndBuildBarcodeAsync"/>.
     /// </remarks>
     public static BarcodeSvgResult CreateSvg(BarcodeParts parts, BarcodeSvgOptions? options = null)
     {
