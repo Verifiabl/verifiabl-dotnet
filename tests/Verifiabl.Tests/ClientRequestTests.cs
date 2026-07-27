@@ -12,6 +12,20 @@ public class ClientRequestTests
     private const string Reference = "u0FE9WLIS7GYKQnpJPygBw";
     private const string KeyVersion = "0f8fad5b-d9cb-469f-a165-70867728950e.1";
 
+    [Fact]
+    public async Task RejectsADefaultIssuedAt()
+    {
+        var handler = new FakeHttpHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.IssuedAt = default;
+
+        ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(
+            () => client.RegisterNonPiiAsync(request));
+
+        Assert.Contains("IssuedAt is required", exception.Message);
+    }
+
     private static RegisterNonPiiRequest ValidRequest() => new()
     {
         Schema = "au.payslip.v1",

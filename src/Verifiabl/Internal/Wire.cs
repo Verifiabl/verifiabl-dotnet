@@ -109,6 +109,16 @@ internal static class Wire
         EncryptionMetadata? encryptionMetadata)
     {
         Validation.ValidateSchema(schema, $"{label}.Schema");
+
+        // `required DateTimeOffset` stops a forgotten IssuedAt at compile time,
+        // but an explicit `default` would otherwise serialize as year 0001.
+        if (issuedAt == default)
+        {
+            throw new ArgumentException(
+                $"{label}.IssuedAt is required.",
+                $"{label}.IssuedAt");
+        }
+
         if (payslipNonPii is null)
         {
             throw new ArgumentException(
