@@ -1,4 +1,4 @@
-namespace Verifiabl;
+namespace Verifiabl.Client;
 
 /// <summary>
 /// Per-record outcome of a batch registration, in the same order as the
@@ -43,7 +43,7 @@ public sealed class BatchRecordResult
     public string? Detail { get; }
 }
 
-/// <summary>Response from <see cref="VerifiablClient.RegisterNonPiiBatchAsync"/>.</summary>
+/// <summary>Response from <see cref="IVerifiablClient.RegisterNonPiiBatchAsync"/>.</summary>
 public sealed class RegisterNonPiiBatchResponse
 {
     internal RegisterNonPiiBatchResponse(IReadOnlyList<BatchRecordResult> results)

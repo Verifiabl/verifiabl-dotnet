@@ -1,14 +1,14 @@
-namespace Verifiabl;
+namespace Verifiabl.Client;
 
 /// <summary>
-/// One record in a <see cref="VerifiablClient.RegisterNonPiiBatchAsync"/> request:
+/// One record in a <see cref="IVerifiablClient.RegisterNonPiiBatchAsync"/> request:
 /// the same fields as <see cref="RegisterNonPiiRequest"/> plus a provider-generated
-/// Verifiabl reference from <see cref="VerifiablReference.Generate"/>.
+/// Verifiabl reference from <see cref="Verifiabl.VerifiablReference.Generate"/>.
 /// </summary>
 public sealed class BatchRecord
 {
     /// <summary>Provider-generated Verifiabl reference for this record.</summary>
-    public string? VerifiablReference { get; set; }
+    public required string VerifiablReference { get; set; }
 
     /// <summary>
     /// Optional caller-supplied correlation id. The API echoes it back on the
@@ -18,17 +18,17 @@ public sealed class BatchRecord
     public string? ExternalId { get; set; }
 
     /// <summary>Payslip schema identifier, e.g. "au.payslip.v1".</summary>
-    public string? Schema { get; set; }
+    public required string Schema { get; set; }
 
     /// <summary>
     /// When the payslip was issued. Sent to the API as an ISO 8601 UTC timestamp;
     /// values with an offset are converted to UTC first.
     /// </summary>
-    public DateTimeOffset? IssuedAt { get; set; }
+    public required DateTimeOffset IssuedAt { get; set; }
 
     /// <summary>Non-PII payslip data.</summary>
-    public PayslipNonPii? PayslipNonPii { get; set; }
+    public required PayslipNonPii PayslipNonPii { get; set; }
 
     /// <summary>Decryption metadata from <see cref="VerifiablCrypto.EncryptPii"/>.</summary>
-    public EncryptionMetadata? EncryptionMetadata { get; set; }
+    public required EncryptionMetadata EncryptionMetadata { get; set; }
 }

@@ -12,7 +12,54 @@ Verifiabl is for accredited payroll providers. You receive sandbox credentials a
 dotnet add package Verifiabl
 ```
 
+In an app that uses dependency injection, add the integration package too:
+
+```bash
+dotnet add package Verifiabl.Extensions.DependencyInjection
+```
+
 Supported targets: .NET 8+, and .NET Framework 4.7.2+ (Windows). On .NET Framework, AES-GCM is provided by the bundled `Microsoft.Bcl.Cryptography` dependency.
+
+## Two namespaces: offline and networked
+
+The split is deliberate, so you can see at a glance which half of the SDK touches the network.
+
+| Namespace | Contents | Network |
+| --- | --- | --- |
+| `Verifiabl` | `Pii`, `PiiFields`, `VerifiablCrypto`, `EncryptedPii`, `EncryptionMetadata`, `VerifiablBarcode`, `BarcodeParts`, `BarcodeSvgOptions`, `VerifiablReference`, `VerifiablEnvironment`, `VerifiablEndpoints` | None. Pure functions you can call from anywhere, including a hot PDF-rendering loop. |
+| `Verifiabl.Client` | `IVerifiablClient`, `VerifiablClient`, `VerifiablClientOptions`, `VerifiablAuth`, the request/response types, `VerifiablApiException` and friends | Calls the Verifiabl issuer API. |
+
+Encryption, PII formatting, reference generation, and barcode rendering all happen on your infrastructure with no network call — the `Verifiabl` namespace has no client in it to make one.
+
+## Registering the client
+
+With dependency injection, using `Verifiabl.Extensions.DependencyInjection`:
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Verifiabl;
+using Verifiabl.Client;
+
+builder.Services.AddVerifiablClient(options =>
+{
+    options.Environment = VerifiablEnvironment.Sandbox;
+    options.Auth = VerifiablAuth.ClientCredentials(
+        builder.Configuration["Verifiabl:ClientId"]!,
+        builder.Configuration["Verifiabl:ClientSecret"]!);
+});
+```
+
+`IVerifiablClient` is registered as a **singleton** — it caches OAuth access tokens, so a shorter lifetime would fetch a new token on every resolve — and its `HttpClient` comes from `IHttpClientFactory`. Inject `IVerifiablClient` wherever you need it; substitute your own implementation in tests.
+
+Without dependency injection, construct it once and reuse it (it is thread-safe):
+
+```csharp
+var client = new VerifiablClient(new VerifiablClientOptions
+{
+    Environment = VerifiablEnvironment.Sandbox,
+    Auth = VerifiablAuth.ClientCredentials(clientId, clientSecret),
+});
+```
 
 ## Getting started
 
@@ -20,14 +67,7 @@ This is the self-managed flow: register the payslip, encrypt the personal detail
 
 ```csharp
 using Verifiabl;
-
-var client = new VerifiablClient(new VerifiablClientOptions
-{
-    Environment = VerifiablEnvironment.Sandbox,
-    Auth = VerifiablAuth.ClientCredentials(
-        Environment.GetEnvironmentVariable("VERIFIABL_CLIENT_ID")!,
-        Environment.GetEnvironmentVariable("VERIFIABL_CLIENT_SECRET")!),
-});
+using Verifiabl.Client;
 
 // Your 32-byte key and key version, from onboarding. Load the key from a secrets manager.
 byte[] key = Convert.FromBase64String(
@@ -52,7 +92,22 @@ RegisterNonPiiResponse registration = await client.RegisterNonPiiAsync(new Regis
 {
     Schema = "au.payslip.v1",
     IssuedAt = DateTimeOffset.UtcNow,
-    PayslipNonPii = new PayslipNonPii { PeriodStart = "2026-05-01", PeriodEnd = "2026-05-31" },
+    PayslipNonPii = new PayslipNonPii
+    {
+        PeriodStart = "2026-05-01",
+        PeriodEnd = "2026-05-31",
+        // au.payslip.v1 requires these; keys and value types are set by the schema.
+        AdditionalData = new Dictionary<string, object?>
+        {
+            ["payment_date"] = "2026-06-04",
+            ["currency"] = "AUD",
+            ["gross_cents"] = 812_500,
+            ["paygw_cents"] = 203_000,
+            ["net_cents"] = 609_500,
+            ["ytd_gross_cents"] = 8_937_500,
+            ["ytd_paygw_cents"] = 2_233_000,
+        },
+    },
     EncryptionMetadata = encrypted.Metadata,
 });
 
@@ -62,13 +117,15 @@ BarcodeSvgResult badge = VerifiablBarcode.CreateSvg(
     new BarcodeSvgOptions { Environment = VerifiablEnvironment.Sandbox });
 ```
 
-`VerifiablBarcode.CreateSvg` produces a standalone SVG that scales to any size without losing quality; embed it directly in your PDF pipeline. If you need a raster image instead, let the API build a PNG for you with `client.RegisterAndBuildBarcodeAsync`, or rasterise the SVG with your own renderer. See the [docs](https://docs.verifiabl.io/) for both flows.
+The compiler enforces the mandatory fields: `Schema`, `IssuedAt`, `PayslipNonPii`, and `EncryptionMetadata` are `required`, so an incomplete request will not build.
 
-Create the client once and reuse it: it caches OAuth tokens and is thread-safe. In services that use dependency injection, supply an `HttpClient` from `IHttpClientFactory` via `VerifiablClientOptions.HttpClient`.
+`AdditionalData` is passed to the API verbatim under the exact keys you supply. Values may be strings, booleans, numbers, `null`, nested dictionaries, or sequences of those; anything else throws an `ArgumentException` naming the key. Which keys your schema requires is documented per schema — the `au.payslip.v1` set is shown above.
+
+`VerifiablBarcode.CreateSvg` produces a standalone SVG that scales to any size without losing quality; embed it directly in your PDF pipeline. If you need a raster image instead, let the API build a PNG for you with `client.RegisterAndBuildBarcodeAsync`, or rasterise the SVG with your own renderer. See the [docs](https://docs.verifiabl.io/) for both flows.
 
 ### Retries and idempotency
 
-Failed requests are retried automatically with exponential backoff (`VerifiablClientOptions.MaxRetries`, default 2). The Verifiabl reference is the idempotency key, so retries are only applied where they are safe. Batch registration generates its own references, so the API deduplicates a re-send — it retries on throttling, timeouts, `5xx`, and network faults. The single-record endpoints let the API assign the reference and are not deduplicated, so they retry only failures that leave the request unprocessed (`429`, `503`); use batch when you need fully idempotent retries.
+Failed requests are retried automatically with exponential backoff (`VerifiablClientOptions.MaxRetries`, default 2). The Verifiabl reference is the idempotency key, so retries are only applied where they are safe. `RegisterNonPiiAsync` generates a reference client-side (or uses the one you set on the request), so the API deduplicates a re-send and the SDK retries it on throttling, timeouts, `5xx`, and network faults — same as batch registration. `RegisterAndBuildBarcodeAsync` lets the API assign the reference and cannot be deduplicated, so it retries only `429`, which is enforced before any processing.
 
 ## Batch registration
 
@@ -94,6 +151,7 @@ RegisterNonPiiBatchResponse batch = await client.RegisterNonPiiBatchAsync(
         {
             PeriodStart = item.payslip.PeriodStart,
             PeriodEnd = item.payslip.PeriodEnd,
+            AdditionalData = item.payslip.SchemaFields,
         },
         EncryptionMetadata = item.encrypted.Metadata,
     }));
@@ -115,7 +173,7 @@ Set `Environment` to `VerifiablEnvironment.Production` (the default) or `Verifia
 
 ## Errors
 
-Failed requests throw `VerifiablApiException` with a stable `Code` and a `RequestId` to quote to support. Auth failures throw `VerifiablAuthException`. Calls that exceed the configured timeout throw `TimeoutException`.
+Every failure an API call reports derives from `VerifiablException`, so one catch clause covers the client. Match the specific types when you want to react differently.
 
 ```csharp
 try
@@ -126,7 +184,22 @@ catch (VerifiablApiException exception) when (exception.Code == VerifiablErrorCo
 {
     logger.LogWarning("Validation failed, request id {RequestId}", exception.RequestId);
 }
+catch (VerifiablException exception)
+{
+    // VerifiablApiException, VerifiablAuthException, VerifiablTimeoutException,
+    // and VerifiablTransportException all land here.
+    logger.LogError(exception, "Verifiabl registration failed");
+}
 ```
+
+| Exception | Raised when |
+| --- | --- |
+| `VerifiablApiException` | The API returned a non-2xx response. Carries `Status`, a stable `Code`, the parsed `Body`, and a `RequestId` to quote to support. |
+| `VerifiablAuthException` | An OAuth access token could not be obtained. |
+| `VerifiablTimeoutException` | The call exceeded `VerifiablClientOptions.Timeout`, which covers the token fetch, the request, and every retry. |
+| `VerifiablTransportException` | A network fault prevented a response (the `HttpRequestException` is the `InnerException`), or a 2xx response was not usable JSON. |
+
+Two things are deliberately *not* `VerifiablException`: an `ArgumentException` for an incomplete or malformed request, thrown before anything is sent, and an `OperationCanceledException` when you cancel the `CancellationToken` you passed in.
 
 ## Security
 

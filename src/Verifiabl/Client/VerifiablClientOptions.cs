@@ -1,6 +1,6 @@
 using System.Net.Http;
 
-namespace Verifiabl;
+namespace Verifiabl.Client;
 
 /// <summary>Options for constructing a <see cref="VerifiablClient"/>.</summary>
 public sealed class VerifiablClientOptions
@@ -27,24 +27,27 @@ public sealed class VerifiablClientOptions
     /// </summary>
     /// <remarks>
     /// Retries use exponential backoff with jitter and honour a
-    /// <c>Retry-After</c> header. Batch registration is idempotent (its
-    /// caller-generated references deduplicate on the server), so it retries on
-    /// throttling, timeouts, 5xx, and network faults. The single-record
-    /// endpoints (<see cref="VerifiablClient.RegisterNonPiiAsync"/> and
-    /// <see cref="VerifiablClient.RegisterAndBuildBarcodeAsync"/>) are not deduplicated, so
-    /// they only retry failures that leave the request unprocessed (429 and 503)
-    /// to avoid creating a duplicate record. All retries share the call
-    /// <see cref="Timeout"/> as an overall deadline.
+    /// <c>Retry-After</c> header. Calls that carry a client-generated reference
+    /// (<see cref="IVerifiablClient.RegisterNonPiiAsync"/>, which mints one per
+    /// call, and <see cref="IVerifiablClient.RegisterNonPiiBatchAsync"/>)
+    /// deduplicate on the server, so they retry on throttling, timeouts, 5xx,
+    /// and network faults. <see cref="IVerifiablClient.RegisterAndBuildBarcodeAsync"/>
+    /// uses a server-minted reference that cannot deduplicate a resend, so it
+    /// retries only 429, which the API enforces before any processing. All
+    /// retries share the call <see cref="Timeout"/> as an overall deadline.
     /// </remarks>
     public int MaxRetries { get; set; } = 2;
 
     /// <summary>
-    /// The <see cref="System.Net.Http.HttpClient"/> to send requests with. Supply
-    /// one from IHttpClientFactory in long-running services; the SDK never
-    /// disposes it. When unset, a shared internal client is used. The SDK manages
-    /// its own per-request timeouts, so the supplied client's Timeout should be
-    /// left at its default or set to infinite.
+    /// The <see cref="System.Net.Http.HttpClient"/> to send requests with; the SDK
+    /// never disposes it. When unset, a shared internal client is used. The SDK
+    /// manages its own per-request timeouts, so the supplied client's Timeout
+    /// should be left at its default or set to infinite.
     /// </summary>
+    /// <remarks>
+    /// The Verifiabl.Extensions.DependencyInjection package wires this to
+    /// IHttpClientFactory for you.
+    /// </remarks>
     public HttpClient? HttpClient { get; set; }
 
     /// <summary>Called before each Verifiabl API request. Bodies are not included.</summary>

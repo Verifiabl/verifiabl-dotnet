@@ -7,7 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Verifiabl.Internal;
 
-namespace Verifiabl;
+namespace Verifiabl.Client;
 
 /// <summary>
 /// Typed client for the Verifiabl issuer API.
@@ -20,10 +20,15 @@ namespace Verifiabl;
 /// once and reused.
 /// </para>
 /// <para>
-/// API methods are virtual so the client can be mocked in tests.
+/// Every failure an API call reports derives from <see cref="VerifiablException"/>,
+/// so one <c>catch (VerifiablException)</c> covers API errors, auth failures,
+/// timeouts, and transport faults.
+/// </para>
+/// <para>
+/// Depend on <see cref="IVerifiablClient"/> where you need to substitute a fake.
 /// </para>
 /// </remarks>
-public class VerifiablClient
+public sealed class VerifiablClient : IVerifiablClient
 {
     /// <summary>Maximum records per batch request. Matches the API's limit.</summary>
     public const int MaxBatchRecords = Wire.MaxBatchRecords;
@@ -115,47 +120,42 @@ public class VerifiablClient
         _onError = options.OnError;
     }
 
-    /// <summary>
-    /// Register non-PII payslip data and decryption metadata. Returns the
-    /// Verifiabl reference to embed in a locally generated barcode.
-    /// </summary>
-    /// <exception cref="VerifiablApiException">The API returned a non-2xx response.</exception>
-    /// <exception cref="VerifiablAuthException">An OAuth token could not be obtained.</exception>
-    /// <exception cref="TimeoutException">The call exceeded the configured timeout.</exception>
-    /// <exception cref="HttpRequestException">A network fault prevented a response (for retryable calls, only after retries are exhausted).</exception>
-    /// <exception cref="FormatException">The API returned a success status with an empty or non-JSON body.</exception>
-    public virtual Task<RegisterNonPiiResponse> RegisterNonPiiAsync(
+    /// <inheritdoc />
+    public Task<RegisterNonPiiResponse> RegisterNonPiiAsync(
         RegisterNonPiiRequest request,
         CancellationToken cancellationToken = default)
     {
-        JsonObject body = Wire.ToWire(request);
-        // Single registration: Verifiabl generates the reference and does not
-        // deduplicate, so an ambiguous retry could create a second record. Only
-        // failures that leave the request unprocessed are retried.
+        if (request is null)
+        {
+            throw new ArgumentNullException(nameof(request));
+        }
+
+        // The reference is minted client-side (or taken from the request), which
+        // puts the API on its idempotent path: replaying the same reference with
+        // identical content returns the stored record as "duplicate" instead of
+        // creating a second one, so ambiguous failures are safe to retry.
+        string reference = request.VerifiablReference is null
+            ? Verifiabl.VerifiablReference.Generate()
+            : Verifiabl.VerifiablReference.Validate(
+                request.VerifiablReference,
+                $"{nameof(request)}.{nameof(request.VerifiablReference)}");
+        JsonObject body = Wire.ToWire(request, reference);
         return PostAsync(
             "/v1/registerNonPII",
             body,
             Wire.RegistrationFromWire,
-            idempotent: false,
+            idempotent: true,
             cancellationToken);
     }
 
-    /// <summary>
-    /// Register non-PII payslip data and have the API build the barcode. Sends the
-    /// encrypted PII alongside the non-PII data.
-    /// </summary>
-    /// <exception cref="VerifiablApiException">The API returned a non-2xx response.</exception>
-    /// <exception cref="VerifiablAuthException">An OAuth token could not be obtained.</exception>
-    /// <exception cref="TimeoutException">The call exceeded the configured timeout.</exception>
-    /// <exception cref="HttpRequestException">A network fault prevented a response (for retryable calls, only after retries are exhausted).</exception>
-    /// <exception cref="FormatException">The API returned a success status with an empty or non-JSON body.</exception>
-    public virtual Task<RegisterAndBuildBarcodeResponse> RegisterAndBuildBarcodeAsync(
+    /// <inheritdoc />
+    public Task<RegisterAndBuildBarcodeResponse> RegisterAndBuildBarcodeAsync(
         RegisterAndBuildBarcodeRequest request,
         CancellationToken cancellationToken = default)
     {
         JsonObject body = Wire.ToWire(request);
-        // Same as RegisterNonPiiAsync: the API assigns the reference, so this is
-        // not safe to retry on an ambiguous failure.
+        // The API mints this endpoint's reference and cannot deduplicate a
+        // resend, so only failures enforced before processing (429) are retried.
         return PostAsync(
             "/v1/registerAndBuildBarcode",
             body,
@@ -164,20 +164,8 @@ public class VerifiablClient
             cancellationToken);
     }
 
-    /// <summary>
-    /// Register a batch of non-PII payslip records in a single request, up to
-    /// <see cref="MaxBatchRecords"/> records. Each record carries a
-    /// provider-generated Verifiabl reference (from
-    /// <see cref="VerifiablReference.Generate"/>) and the same fields as
-    /// <see cref="RegisterNonPiiAsync"/>. The response contains a per-record
-    /// result index-aligned to the input: one bad record never fails the batch.
-    /// </summary>
-    /// <exception cref="VerifiablApiException">The API returned a non-2xx response.</exception>
-    /// <exception cref="VerifiablAuthException">An OAuth token could not be obtained.</exception>
-    /// <exception cref="TimeoutException">The call exceeded the configured timeout.</exception>
-    /// <exception cref="HttpRequestException">A network fault prevented a response (for retryable calls, only after retries are exhausted).</exception>
-    /// <exception cref="FormatException">The API returned a success status with an empty or non-JSON body.</exception>
-    public virtual Task<RegisterNonPiiBatchResponse> RegisterNonPiiBatchAsync(
+    /// <inheritdoc />
+    public Task<RegisterNonPiiBatchResponse> RegisterNonPiiBatchAsync(
         IEnumerable<BatchRecord> records,
         CancellationToken cancellationToken = default)
     {
@@ -255,15 +243,29 @@ public class VerifiablClient
                     }
 
                     using JsonDocument document = ParseJsonBody(text, (int)response.StatusCode);
-                    return parseResponse(document.RootElement);
+                    try
+                    {
+                        return parseResponse(document.RootElement);
+                    }
+                    catch (FormatException exception)
+                    {
+                        throw new VerifiablTransportException(exception.Message, exception);
+                    }
                 }
             }
         }
+        catch (HttpRequestException exception)
+        {
+            throw new VerifiablTransportException(
+                $"The Verifiabl API call to {path} failed with a transport error: {exception.Message}",
+                exception);
+        }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            throw new TimeoutException(
+            throw new VerifiablTimeoutException(
                 $"The Verifiabl API call to {path} did not complete within " +
-                $"{_timeout.TotalSeconds:0.###} seconds.");
+                $"{_timeout.TotalSeconds:0.###} seconds.",
+                _timeout);
         }
     }
 
@@ -453,17 +455,17 @@ public class VerifiablClient
 
     private static bool IsRetryableStatus(int status, bool idempotent)
     {
-        // 429 (throttled) and 503 (unavailable) mean the request was not
-        // processed, so they are safe to retry even for a non-idempotent single
-        // registration.
-        if (status == 429 || status == 503)
+        // Rate limits are enforced before any processing (at the edge and in
+        // pre-controller middleware), so 429 is safe to retry without
+        // idempotency.
+        if (status == 429)
         {
             return true;
         }
 
-        // Other 5xx and 408 are ambiguous: the server may have processed the
-        // request before failing, which would duplicate a single registration.
-        // Retry them only when the call is idempotent.
+        // Everything else — 503 included — can arrive after the server has
+        // committed the write (a connection lost in the commit-ack window, or a
+        // platform 503 wrapping a completed request), so it needs idempotency.
         return idempotent && (status == 408 || (status >= 500 && status <= 599));
     }
 
@@ -536,7 +538,7 @@ public class VerifiablClient
     {
         if (string.IsNullOrWhiteSpace(text))
         {
-            throw new FormatException(
+            throw new VerifiablTransportException(
                 $"Verifiabl API returned an empty response body with status {status}.");
         }
 
@@ -544,9 +546,11 @@ public class VerifiablClient
         {
             return JsonDocument.Parse(text);
         }
-        catch (JsonException)
+        catch (JsonException exception)
         {
-            throw new FormatException($"Verifiabl API returned invalid JSON with status {status}.");
+            throw new VerifiablTransportException(
+                $"Verifiabl API returned invalid JSON with status {status}.",
+                exception);
         }
     }
 

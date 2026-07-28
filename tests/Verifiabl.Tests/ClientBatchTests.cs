@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
+using Verifiabl.Client;
 using Xunit;
 
 namespace Verifiabl.Tests;

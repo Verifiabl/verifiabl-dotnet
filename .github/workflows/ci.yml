@@ -27,7 +27,7 @@ jobs:
       - run: dotnet build --configuration Release --no-restore
       - run: dotnet test --configuration Release --no-build
       # Packing validates the NuGet metadata and package layout on every change.
-      - run: dotnet pack src/Verifiabl/Verifiabl.csproj --configuration Release --no-build --output artifacts
+      - run: dotnet pack --configuration Release --no-build --output artifacts
         if: runner.os == 'Linux'
 
   format:
