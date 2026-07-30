@@ -64,9 +64,9 @@ internal static class FrameAssets
         int width = ReadUInt16(container, 4);
         int height = ReadUInt16(container, 6);
         int paletteCount = ReadUInt16(container, 8);
-        // width is validated against the expected size, so width * height cannot
-        // overflow int (max 1440 * 65535). The palette encoder never exceeds 256.
-        if (width != expectedWidth || height <= 0)
+        // Baked frames sit near height = 1.57 * width, so 2x bounds the raster
+        // allocation (max 1440 * 2880) before a tampered height can force it.
+        if (width != expectedWidth || height <= 0 || height > width * 2)
         {
             throw new InvalidOperationException("Corrupt frame asset: unexpected dimensions.");
         }

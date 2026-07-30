@@ -67,6 +67,17 @@ public class FrameAssetTests
     }
 
     [Fact]
+    public void RejectsAnImplausibleHeight()
+    {
+        // Height beyond 2x width would let a tampered asset force a huge
+        // raster allocation before the pixel-count check runs.
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+            () => FrameAssets.ParseContainer(Container(2, 5, 1, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), expectedWidth: 2));
+
+        Assert.Contains("unexpected dimensions", error.Message);
+    }
+
+    [Fact]
     public void RejectsAPixelCountMismatch()
     {
         // Claim width 5 for a 2-pixel payload.
