@@ -105,15 +105,16 @@ jobs:
             const truncationNotice =
               "\n\n> Review truncated because it exceeded the safe GitHub comment size.";
             const maximumCommentBytes = 60_000;
-            // Only an @ that GitHub would turn into a notification is broken up, and only
-            // outside code, so scoped package names, decorators, emails and URLs survive
-            // copy-paste intact. GitHub does not linkify mentions inside code in any case.
-            const codeSegments = /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/;
-            const mentionStart = /(^|[^\w/])@(?=[A-Za-z0-9])/g;
-            const finalMessage = (process.env.CODEX_FINAL_MESSAGE ?? "")
-              .split(codeSegments)
-              .map((segment, index) => (index % 2 === 0 ? segment.replace(mentionStart, "$1@\u200b") : segment))
-              .join("");
+            // Only an @ that GitHub would turn into a notification is broken up, so scoped
+            // package names, decorators, emails and URLs survive copy-paste intact. Code is
+            // skipped because GitHub never linkifies a mention inside it; a backslash escape
+            // is not an option, as GitHub renders \@name as a live mention anyway.
+            const codeOrMention = /(`+)[\s\S]*?\1|^~~~[\s\S]*?^~~~|(^|[^\w/])@(?=[A-Za-z0-9])/gm;
+            const finalMessage = (process.env.CODEX_FINAL_MESSAGE ?? "").replace(
+              codeOrMention,
+              (segment, backticks, beforeMention) =>
+                beforeMention === undefined ? segment : `${beforeMention}@\u200b`,
+            );
             const maximumUntruncatedMessageBytes = maximumCommentBytes - Buffer.byteLength(header, "utf8");
             const isTruncated = Buffer.byteLength(finalMessage, "utf8") > maximumUntruncatedMessageBytes;
             const maximumMessageBytes =
