@@ -4,6 +4,16 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `VerifiablBarcode.CreatePng`: local branded-badge PNG rendering at pixel
+  widths 480/720/960/1440, composited deterministically (pre-rasterised frame +
+  exact pixel-aligned QR modules) with no native dependencies. The raster is
+  byte-identical to the Node SDK's for the same record, enforced by fixture
+  parity tests.
+
 ## [0.2.0]
 
 A breaking rework of the public API surface in response to a .NET ergonomics
