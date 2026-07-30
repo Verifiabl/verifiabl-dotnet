@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows also runs the net472 test target, which cannot run elsewhere.
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - run: dotnet restore
+      - run: dotnet build --configuration Release --no-restore
+      - run: dotnet test --configuration Release --no-build
+      # Packing validates the NuGet metadata and package layout on every change.
+      - run: dotnet pack --configuration Release --no-build --output artifacts
+        if: runner.os == 'Linux'
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet format --verify-no-changes
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      # Dependency scanning (SCA): fail on known vulnerabilities, including
+      # transitive dependencies. Restore also enforces this via NuGetAuditMode
+      # in Directory.Build.props; this job keeps the gate explicit.
+      - run: dotnet restore
+      - name: Check for vulnerable dependencies
+        run: |
+          dotnet list package --vulnerable --include-transitive | tee audit.txt
+          if grep -q "has the following vulnerable packages" audit.txt; then
+            exit 1
+          fi
