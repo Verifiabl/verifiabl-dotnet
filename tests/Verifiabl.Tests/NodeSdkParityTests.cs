@@ -62,6 +62,76 @@ public class NodeSdkParityTests
         Assert.Equal(Fixture("node-svg-sandbox-q-720.svg"), result.Svg);
     }
 
+    /// <summary>
+    /// PNG parity is raster parity: the fixtures are the exact RGBA pixels the
+    /// Node compositor produced (PNG file bytes differ across SDKs because the
+    /// DEFLATE encoders differ). The Node test suite decodes these same rasters
+    /// with an independent QR reader, so byte equality here is also the
+    /// scannability proof.
+    /// </summary>
+    [Theory]
+    [InlineData("png-default-720", 720, false, false)]
+    [InlineData("png-sandbox-q-480", 480, true, true)]
+    [InlineData("png-default-1440", 1440, false, false)]
+    public void PngRasterMatchesTheNodeCompositor(
+        string caseName,
+        int pixelWidth,
+        bool sandbox,
+        bool quartile)
+    {
+        var options = new BarcodeSvgOptions
+        {
+            Environment = sandbox ? VerifiablEnvironment.Sandbox : VerifiablEnvironment.Production,
+            MaxErrorCorrection = quartile
+                ? BarcodeErrorCorrectionLevel.Quartile
+                : BarcodeErrorCorrectionLevel.Medium,
+        };
+        Internal.PngBadgeRenderer.CompositedBadge badge = Internal.PngBadgeRenderer.Compose(
+            new BarcodeParts(Reference, Ciphertext()),
+            options,
+            pixelWidth);
+
+        using JsonDocument meta = JsonDocument.Parse(Fixture("node-png-meta.json"));
+        JsonElement expected = meta.RootElement.GetProperty(caseName);
+        Assert.Equal(expected.GetProperty("content").GetString(), badge.Content);
+        Assert.Equal(expected.GetProperty("width").GetInt32(), badge.Width);
+        Assert.Equal(expected.GetProperty("height").GetInt32(), badge.Height);
+        Assert.Equal(
+            expected.GetProperty("errorCorrectionLevel").GetString(),
+            ToNodeLevel(badge.ErrorCorrectionLevel));
+        Assert.Equal(expected.GetProperty("modulePx").GetDouble(), badge.ModulePx);
+        Assert.Equal(expected.GetProperty("degraded").GetBoolean(), badge.Degraded);
+
+        byte[] nodeRaster = InflateFixture($"node-{caseName}.rgba.deflate");
+        AssertRastersEqual(nodeRaster, badge.Rgba, badge.Width);
+    }
+
+    private static byte[] InflateFixture(string name)
+    {
+        byte[] deflated = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", name));
+        using var inflate = new System.IO.Compression.DeflateStream(
+            new MemoryStream(deflated, writable: false),
+            System.IO.Compression.CompressionMode.Decompress);
+        using var buffer = new MemoryStream();
+        inflate.CopyTo(buffer);
+        return buffer.ToArray();
+    }
+
+    private static void AssertRastersEqual(byte[] expected, byte[] actual, int width)
+    {
+        Assert.Equal(expected.Length, actual.Length);
+        for (int i = 0; i < expected.Length; i++)
+        {
+            if (expected[i] != actual[i])
+            {
+                int pixel = i / 4;
+                Assert.Fail(
+                    $"raster differs at byte {i} (pixel {pixel % width},{pixel / width}, "
+                    + $"channel {i % 4}): expected {expected[i]}, got {actual[i]}");
+            }
+        }
+    }
+
     private static string ToNodeLevel(BarcodeErrorCorrectionLevel level) => level switch
     {
         BarcodeErrorCorrectionLevel.Quartile => "Q",

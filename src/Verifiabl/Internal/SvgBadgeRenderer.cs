@@ -24,21 +24,21 @@ internal static class SvgBadgeRenderer
     // host document. The fill follows the rounded border path (rx=7), so the four
     // corners outside that radius stay transparent.
     private const string FrameBackground = "#FFFFFF";
-    private const int FrameViewboxWidth = 96;
+    internal const int FrameViewboxWidth = 96;
     private const int FrameViewboxHeight = 151;
     private const int FrameHeaderHeight = 47;
-    private const int FrameQrBoxX = 8;
-    private const int FrameQrBoxY = 59;
+    internal const int FrameQrBoxX = 8;
+    internal const int FrameQrBoxY = 59;
     private const int FrameQrBoxSize = 80;
 
     // At this width, a realistic fully-populated PII record renders QR modules at
     // or above IdealModulePx at the default Medium ceiling (the pristine tier).
     private const double MinBadgeWidth = 480;
-    private const int FinderSize = 7;
+    internal const int FinderSize = 7;
 
     // Pristine target: at or above this module size (px) at the chosen ceiling,
     // the code is not considered degraded.
-    private const double IdealModulePx = 4;
+    internal const double IdealModulePx = 4;
 
     // Absolute floor: a module smaller than this (px) is unreliable for
     // real-world scans, so we hard-error rather than emit it. Evaluated at the
@@ -136,7 +136,7 @@ internal static class SvgBadgeRenderer
     /// [Medium, Low]. Low is a real ladder entry but not a valid ceiling: allowing
     /// it would silently force the weakest level, so it fails loudly instead.
     /// </summary>
-    private static BarcodeErrorCorrectionLevel[] ErrorCorrectionLadder(
+    internal static BarcodeErrorCorrectionLevel[] ErrorCorrectionLadder(
         BarcodeErrorCorrectionLevel ceiling)
     {
         if (ceiling != BarcodeErrorCorrectionLevel.Quartile
@@ -161,7 +161,7 @@ internal static class SvgBadgeRenderer
     /// lowest level cannot fit, so an over-long payload fails loudly at issuance
     /// instead of producing an unscannable code.
     /// </summary>
-    private static SelectedQrRendering SelectQrRendering(
+    internal static SelectedQrRendering SelectQrRendering(
         string content,
         double badgeWidth,
         BarcodeErrorCorrectionLevel[] ladder)
@@ -277,7 +277,7 @@ internal static class SvgBadgeRenderer
         return parts.ToString();
     }
 
-    private static bool IsFinderModule(int row, int col, int size)
+    internal static bool IsFinderModule(int row, int col, int size)
     {
         bool topLeft = row < FinderSize && col < FinderSize;
         bool topRight = row < FinderSize && col >= size - FinderSize;
@@ -325,7 +325,7 @@ internal static class SvgBadgeRenderer
             + $"V{F(Round2(y + radius))}A{F(r)} {F(r)} 0 0 1 {F(Round2(x + radius))} {F(top)}Z";
     }
 
-    private static double Round2(double n) =>
+    internal static double Round2(double n) =>
         Math.Round(n * 100, MidpointRounding.AwayFromZero) / 100;
 
     /// <summary>Formats like JavaScript number printing: no trailing zeros.</summary>
@@ -350,7 +350,7 @@ internal static class SvgBadgeRenderer
         return value;
     }
 
-    private readonly struct SelectedQrRendering
+    internal readonly struct SelectedQrRendering
     {
         internal SelectedQrRendering(
             QrCode qr,
