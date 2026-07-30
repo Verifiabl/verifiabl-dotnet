@@ -105,11 +105,16 @@ jobs:
             const truncationNotice =
               "\n\n> Review truncated because it exceeded the safe GitHub comment size.";
             const maximumCommentBytes = 60_000;
+            // One definition of a code span serves both the sanitiser and the post-trim check
+            // below; if the two drifted apart, a cut span could revive a mention. A closing
+            // backtick run must be exactly as long as the opener, as GFM requires, or a lone
+            // opener would pair with part of a longer run and shield the text between them.
+            const codeSpanSource = "(`+)[\\s\\S]*?(?<!`)\\1(?!`)|^ {0,3}~~~[\\s\\S]*?^ {0,3}~~~";
             // Only an @ that GitHub would turn into a notification is broken up, so scoped
             // package names, decorators, emails and URLs survive copy-paste intact. Code is
             // skipped because GitHub never linkifies a mention inside it; a backslash escape
             // is not an option, as GitHub renders \@name as a live mention anyway.
-            const codeOrMention = /(`+)[\s\S]*?\1|^~~~[\s\S]*?^~~~|(^|[^\w/])@(?=[A-Za-z0-9])/gm;
+            const codeOrMention = new RegExp(`${codeSpanSource}|(^|[^\\w/])@(?=[A-Za-z0-9])`, "gm");
             const finalMessage = (process.env.CODEX_FINAL_MESSAGE ?? "").replace(
               codeOrMention,
               (segment, backticks, beforeMention) =>
@@ -133,6 +138,21 @@ jobs:
                 }
                 reviewMessage += character;
                 reviewMessageBytes += characterBytes;
+              }
+
+              // Trimming can drop a code span's closing run. GitHub then renders the opener
+              // literally, reviving a mention that was left alone for being inside code, so
+              // cut back to the dangling opener. This only removes bytes, so the budget holds.
+              let closedCodeEnd = 0;
+
+              for (const codeSpan of reviewMessage.matchAll(new RegExp(codeSpanSource, "gm"))) {
+                closedCodeEnd = codeSpan.index + codeSpan[0].length;
+              }
+
+              const danglingOpener = reviewMessage.slice(closedCodeEnd).search(/`|^ {0,3}~~~/m);
+
+              if (danglingOpener !== -1) {
+                reviewMessage = reviewMessage.slice(0, closedCodeEnd + danglingOpener);
               }
             }
 
