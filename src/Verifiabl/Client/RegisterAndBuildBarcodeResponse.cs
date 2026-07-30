@@ -1,4 +1,4 @@
-namespace Verifiabl;
+namespace Verifiabl.Client;
 
 /// <summary>A barcode image returned by the API.</summary>
 public sealed class BarcodeImage
@@ -16,7 +16,7 @@ public sealed class BarcodeImage
     public string Data { get; }
 }
 
-/// <summary>Response from <see cref="VerifiablClient.RegisterAndBuildBarcodeAsync"/>.</summary>
+/// <summary>Response from <see cref="IVerifiablClient.RegisterAndBuildBarcodeAsync"/>.</summary>
 public sealed class RegisterAndBuildBarcodeResponse
 {
     internal RegisterAndBuildBarcodeResponse(string verifiablReference, BarcodeImage barcode)

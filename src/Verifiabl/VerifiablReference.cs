@@ -20,7 +20,7 @@ public static class VerifiablReference
     /// from one issued by the API.
     /// </summary>
     /// <remarks>
-    /// Use this for <see cref="VerifiablClient.RegisterNonPiiBatchAsync"/>, where
+    /// Use this for <see cref="Client.VerifiablClient.RegisterNonPiiBatchAsync"/>, where
     /// providers generate their own references up-front so a whole pay run can be
     /// submitted in one request. Single-record registration does not need it; the
     /// API generates a reference for you and returns it.

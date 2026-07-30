@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using Net.Codecrete.QrCodeGenerator;
 using Xunit;
@@ -22,10 +23,13 @@ public class SvgBarcodeTests
             AccountNumber = "12345678",
             AccountName = "Jane A Doe",
         });
-        return VerifiablCrypto.EncryptPii(
-            pii,
-            new byte[32],
-            "0f8fad5b-d9cb-469f-a165-70867728950e.1").Ciphertext;
+        // Deterministic bytes with the exact length EncryptPii would emit (GCM
+        // ciphertext length equals plaintext length). EncryptPii's random IV made
+        // this fixture differ per run, and rare payloads rendered a matrix ZXing
+        // failed to decode at this test's synthetic scale.
+        byte[] bytes = new byte[Encoding.UTF8.GetByteCount(pii)];
+        new Random(20260727).NextBytes(bytes);
+        return Internal.Base64Url.Encode(bytes);
     }
 
     [Fact]
@@ -245,9 +249,10 @@ public class SvgBarcodeTests
     private static bool IsFinderRegion(int row, int col, int size)
     {
         const int finder = 7;
-        return (row < finder && col < finder)
-            || (row < finder && col >= size - finder)
-            || (row >= size - finder && col < finder);
+        bool topLeft = row < finder && col < finder;
+        bool topRight = row < finder && col >= size - finder;
+        bool bottomLeft = row >= size - finder && col < finder;
+        return topLeft || topRight || bottomLeft;
     }
 
     private static string DecodeMatrix(QrCode qr)

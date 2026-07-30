@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using Verifiabl.Client;
 using Xunit;
 
 namespace Verifiabl.Tests;
@@ -72,6 +73,15 @@ public class ClientRetryTests
     private static HttpResponseMessage RegistrationOk() =>
         FakeHttpHandler.Json(HttpStatusCode.OK, $"{{\"verifiabl_reference\":\"{Reference}\"}}");
 
+    private static RegisterAndBuildBarcodeRequest BarcodeRequest() => new()
+    {
+        Schema = "au.payslip.v1",
+        IssuedAt = new DateTimeOffset(2026, 5, 31, 0, 0, 0, TimeSpan.Zero),
+        PayslipNonPii = new PayslipNonPii { PeriodStart = "2026-05-01", PeriodEnd = "2026-05-31" },
+        EncryptionMetadata = Metadata(),
+        EncryptedPii = "abc123DEF456-_",
+    };
+
     [Fact]
     public async Task RetriesBatchOn503ThenSucceeds()
     {
@@ -124,32 +134,85 @@ public class ClientRetryTests
     }
 
     [Fact]
-    public async Task DoesNotRetrySingleRegistrationOnAmbiguous5xx()
+    public async Task RetriesSingleRegistrationOnAmbiguous5xxResendingTheSameReference()
     {
         var delays = new List<TimeSpan>();
         FakeHttpHandler handler = QueuedHandler(
-            () => FakeHttpHandler.Json(HttpStatusCode.InternalServerError, "{}"));
+            () => FakeHttpHandler.Json(HttpStatusCode.ServiceUnavailable, "{}"),
+            RegistrationOk);
+        VerifiablClient client = Client(handler, delays);
+
+        await client.RegisterNonPiiAsync(SingleRequest());
+
+        // The client-minted reference makes the endpoint idempotent, and every
+        // attempt must carry the same reference or the dedupe cannot work.
+        List<CapturedRequest> attempts = handler.ApiRequests.ToList();
+        Assert.Equal(2, attempts.Count);
+        Assert.Equal(attempts[0].Body, attempts[1].Body);
+        Assert.Single(delays);
+    }
+
+    [Fact]
+    public async Task RetriesSingleRegistrationOnNetworkFault()
+    {
+        var delays = new List<TimeSpan>();
+        FakeHttpHandler handler = QueuedHandler(
+            () => throw new HttpRequestException("connection reset"),
+            RegistrationOk);
+        VerifiablClient client = Client(handler, delays);
+
+        await client.RegisterNonPiiAsync(SingleRequest());
+
+        Assert.Equal(2, handler.ApiRequests.Count());
+        Assert.Single(delays);
+    }
+
+    [Fact]
+    public async Task DoesNotRetryBuildBarcodeOnAmbiguous5xx()
+    {
+        var delays = new List<TimeSpan>();
+        FakeHttpHandler handler = QueuedHandler(
+            () => FakeHttpHandler.Json(HttpStatusCode.ServiceUnavailable, "{}"));
         VerifiablClient client = Client(handler, delays);
 
         VerifiablApiException error = await Assert.ThrowsAsync<VerifiablApiException>(
-            () => client.RegisterNonPiiAsync(SingleRequest()));
+            () => client.RegisterAndBuildBarcodeAsync(BarcodeRequest()));
 
-        Assert.Equal(500, error.Status);
-        // A 500 might mean the record was created; retrying could duplicate it.
+        Assert.Equal(503, error.Status);
+        // The API mints this endpoint's reference, so a 503 after a committed
+        // write cannot be deduplicated; retrying could double-register.
         Assert.Single(handler.ApiRequests);
         Assert.Empty(delays);
     }
 
     [Fact]
-    public async Task DoesNotRetrySingleRegistrationOnNetworkFault()
+    public async Task RetriesBuildBarcodeOn429WhichIsEnforcedBeforeProcessing()
+    {
+        var delays = new List<TimeSpan>();
+        FakeHttpHandler handler = QueuedHandler(
+            () => FakeHttpHandler.Json((HttpStatusCode)429, "{}"),
+            () => FakeHttpHandler.Json(
+                HttpStatusCode.OK,
+                $"{{\"verifiabl_reference\":\"{Reference}\",\"barcode\":{{\"format\":\"png\",\"data\":\"aGk=\"}}}}"));
+        VerifiablClient client = Client(handler, delays);
+
+        RegisterAndBuildBarcodeResponse response =
+            await client.RegisterAndBuildBarcodeAsync(BarcodeRequest());
+
+        Assert.Equal(Reference, response.VerifiablReference);
+        Assert.Equal(2, handler.ApiRequests.Count());
+    }
+
+    [Fact]
+    public async Task DoesNotRetryBuildBarcodeOnNetworkFault()
     {
         var delays = new List<TimeSpan>();
         FakeHttpHandler handler = QueuedHandler(
             () => throw new HttpRequestException("connection reset"));
         VerifiablClient client = Client(handler, delays);
 
-        await Assert.ThrowsAsync<HttpRequestException>(
-            () => client.RegisterNonPiiAsync(SingleRequest()));
+        await Assert.ThrowsAsync<VerifiablTransportException>(
+            () => client.RegisterAndBuildBarcodeAsync(BarcodeRequest()));
 
         Assert.Single(handler.ApiRequests);
         Assert.Empty(delays);
@@ -188,6 +251,28 @@ public class ClientRetryTests
 
         Assert.Single(delays);
         Assert.Equal(TimeSpan.FromSeconds(2), delays[0]);
+    }
+
+    [Fact]
+    public async Task HonoursARetryAfterLongerThanTheBackoffCap()
+    {
+        var delays = new List<TimeSpan>();
+        FakeHttpHandler handler = QueuedHandler(
+            () =>
+            {
+                HttpResponseMessage response = FakeHttpHandler.Json((HttpStatusCode)429, "{}");
+                response.Headers.RetryAfter =
+                    new RetryConditionHeaderValue(TimeSpan.FromSeconds(60));
+                return response;
+            },
+            BatchOk);
+        VerifiablClient client = Client(handler, delays);
+
+        await client.RegisterNonPiiBatchAsync([BatchRecordItem()]);
+
+        // The server's backpressure request wins over the internal backoff cap.
+        Assert.Single(delays);
+        Assert.Equal(TimeSpan.FromSeconds(60), delays[0]);
     }
 
     [Fact]

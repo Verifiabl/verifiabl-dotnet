@@ -1,4 +1,5 @@
 using System.Net.Http;
+using Verifiabl.Client;
 using Xunit;
 
 namespace Verifiabl.Tests;

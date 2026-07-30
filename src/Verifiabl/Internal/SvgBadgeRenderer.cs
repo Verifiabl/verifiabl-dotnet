@@ -186,7 +186,7 @@ internal static class SvgBadgeRenderer
 
             int size = qr.Size;
             int insetModules = QuietZoneInsetModules(size);
-            double moduleSize = (double)FrameQrBoxSize / (size + insetModules * 2);
+            double moduleSize = FrameQrBoxSize / (size + insetModules * 2.0);
             double modulePx = moduleSize * scale;
             if (modulePx >= MinModulePx)
             {
@@ -230,7 +230,7 @@ internal static class SvgBadgeRenderer
     {
         for (int inset = MinQrInsetModules; inset < QuietZoneModules; inset++)
         {
-            double moduleSize = (double)FrameQrBoxSize / (size + inset * 2);
+            double moduleSize = FrameQrBoxSize / (size + inset * 2.0);
             if (FrameQrGutter / moduleSize + inset >= QuietZoneModules)
             {
                 return inset;
@@ -279,11 +279,10 @@ internal static class SvgBadgeRenderer
 
     internal static bool IsFinderModule(int row, int col, int size)
     {
-        bool inTop = row < FinderSize;
-        bool inLeft = col < FinderSize;
-        bool inRight = col >= size - FinderSize;
-        bool inBottom = row >= size - FinderSize;
-        return (inTop && inLeft) || (inTop && inRight) || (inBottom && inLeft);
+        bool topLeft = row < FinderSize && col < FinderSize;
+        bool topRight = row < FinderSize && col >= size - FinderSize;
+        bool bottomLeft = row >= size - FinderSize && col < FinderSize;
+        return topLeft || topRight || bottomLeft;
     }
 
     private static string RenderFinders(int size, double moduleSize, string color)

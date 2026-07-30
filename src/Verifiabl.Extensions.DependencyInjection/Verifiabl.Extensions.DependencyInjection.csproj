@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Same targets as the core package, so DI registration is available everywhere the SDK is. -->
+    <TargetFrameworks>net472;net8.0;net10.0</TargetFrameworks>
+    <PackageId>Verifiabl.Extensions.DependencyInjection</PackageId>
+    <Version>0.2.0</Version>
+    <Description>Microsoft.Extensions.DependencyInjection integration for the Verifiabl .NET SDK: registers IVerifiablClient as a singleton wired to IHttpClientFactory.</Description>
+    <Authors>Verifiabl</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://verifiabl.io</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Verifiabl/verifiabl-dotnet</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>verifiabl;payslip;issuer;dependency-injection;aspnetcore</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EnablePackageValidation>true</EnablePackageValidation>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <InternalsVisibleTo Include="Verifiabl.Tests" Key="$(VerifiablPublicKey)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      8.0.x is the lowest line that still ships net462 and netstandard2.0 assets,
+      so consumers are never forced onto a newer Microsoft.Extensions major.
+    -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Verifiabl\Verifiabl.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
+</Project>

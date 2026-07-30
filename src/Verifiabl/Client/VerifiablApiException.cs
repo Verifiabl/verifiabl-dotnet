@@ -1,4 +1,4 @@
-namespace Verifiabl;
+namespace Verifiabl.Client;
 
 /// <summary>
 /// Thrown for any non-2xx Verifiabl API response. Match on <see cref="Code"/>
@@ -9,7 +9,7 @@ namespace Verifiabl;
 /// response carried no parseable Verifiabl error body (e.g. a gateway error
 /// page); check <see cref="Status"/> for the raw HTTP status in that case.
 /// </remarks>
-public sealed class VerifiablApiException : Exception
+public sealed class VerifiablApiException : VerifiablException
 {
     internal VerifiablApiException(int status, VerifiablErrorBody? body, string? requestId)
         : base(body?.Error ?? $"Verifiabl API request failed with status {status}")
