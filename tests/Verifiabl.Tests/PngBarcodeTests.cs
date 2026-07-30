@@ -213,6 +213,12 @@ public class PngBarcodeTests
         int bytesPerPixel = colorType == 3 ? 1 : 4;
         int stride = width * bytesPerPixel + 1;
         Assert.Equal(stride * height, raw.Length);
+        if (colorType == 3)
+        {
+            // PNG requires PLTE ahead of IDAT, so an indexed image always has one here.
+            Assert.NotNull(plte);
+        }
+
         for (int y = 0; y < height; y++)
         {
             Assert.Equal(0, raw[y * stride]); // filter: None
