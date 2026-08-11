@@ -6,6 +6,22 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0]
+
+A breaking change to the encryption helper: the key version is retired. The
+package had no published consumers on 0.2.0, so no migration shim is provided.
+
+### Removed
+
+- `EncryptionMetadata.KeyVersion` and the `keyVersion` parameter of
+  `VerifiablCrypto.EncryptPii`, which is now `EncryptPii(plaintext, key)`.
+  Verifiabl resolves the decryption key at verification time by testing the
+  provider's active keys against the GCM authentication tag, so the value this
+  SDK collected, validated, and sent was discarded server-side. The API now
+  rejects `key_version` outright, so a request built by 0.2.0 fails validation.
+  `KEY_VERSION_UNAVAILABLE` remains in the error codes: the verification API
+  still returns it.
+
 ### Added
 
 - `VerifiablBarcode.CreatePng`: local branded-badge PNG rendering at pixel
