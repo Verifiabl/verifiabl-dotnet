@@ -69,10 +69,9 @@ This is the self-managed flow: register the payslip, encrypt the personal detail
 using Verifiabl;
 using Verifiabl.Client;
 
-// Your 32-byte key and key version, from onboarding. Load the key from a secrets manager.
+// Your 32-byte key, from onboarding. Load it from a secrets manager.
 byte[] key = Convert.FromBase64String(
     Environment.GetEnvironmentVariable("VERIFIABL_ENCRYPTION_KEY_BASE64")!);
-string keyVersion = Environment.GetEnvironmentVariable("VERIFIABL_KEY_VERSION")!; // e.g. "0f8fad5b-...e.1"
 
 // 1. Format and encrypt the employee's details locally.
 string pii = Pii.Format(new PiiFields
@@ -85,7 +84,7 @@ string pii = Pii.Format(new PiiFields
     AccountNumber = "12345678",
     AccountName = "Jane A Doe",
 });
-EncryptedPii encrypted = VerifiablCrypto.EncryptPii(pii, key, keyVersion);
+EncryptedPii encrypted = VerifiablCrypto.EncryptPii(pii, key);
 
 // 2. Register the non-PII data. Verifiabl returns a Verifiabl reference.
 RegisterNonPiiResponse registration = await client.RegisterNonPiiAsync(new RegisterNonPiiRequest
@@ -136,7 +135,7 @@ DateTimeOffset issuedAt = DateTimeOffset.UtcNow;
 var prepared = payslips.Select(payslip =>
 {
     string verifiablReference = VerifiablReference.Generate();
-    EncryptedPii encrypted = VerifiablCrypto.EncryptPii(Pii.Format(payslip.Pii), key, keyVersion);
+    EncryptedPii encrypted = VerifiablCrypto.EncryptPii(Pii.Format(payslip.Pii), key);
     // Keep the ciphertext alongside the reference locally: you need both to render the barcode.
     return (verifiablReference, encrypted, payslip);
 }).ToList();

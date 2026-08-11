@@ -42,12 +42,7 @@ public static class VerifiablCrypto
     /// </summary>
     /// <param name="plaintext">The formatted string from <see cref="Pii.Format"/>.</param>
     /// <param name="key">Your 32-byte provider encryption key.</param>
-    /// <param name="keyVersion">
-    /// The key version assigned during onboarding: <c>&lt;provider-id&gt;.&lt;n&gt;</c>,
-    /// where provider-id is your provider ID and n starts at 1 and increments each
-    /// time you rotate your key (e.g. "0f8fad5b-d9cb-469f-a165-70867728950e.1").
-    /// </param>
-    public static EncryptedPii EncryptPii(string plaintext, byte[] key, string keyVersion)
+    public static EncryptedPii EncryptPii(string plaintext, byte[] key)
     {
         if (plaintext is null)
         {
@@ -65,8 +60,6 @@ public static class VerifiablCrypto
                 $"Encryption key must be exactly {KeyBytes} bytes (AES-256).",
                 nameof(key));
         }
-
-        Validation.ValidateKeyVersion(keyVersion, nameof(keyVersion));
 
         byte[] iv = new byte[IvBytes];
         using (var rng = RandomNumberGenerator.Create())
@@ -97,7 +90,6 @@ public static class VerifiablCrypto
         {
             Iv = Base64Url.Encode(iv),
             Tag = Base64Url.Encode(tag),
-            KeyVersion = keyVersion,
         };
 
         return new EncryptedPii(Base64Url.Encode(ciphertext), metadata);

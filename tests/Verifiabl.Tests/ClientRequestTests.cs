@@ -10,7 +10,6 @@ namespace Verifiabl.Tests;
 public class ClientRequestTests
 {
     private const string Reference = "u0FE9WLIS7GYKQnpJPygBw";
-    private const string KeyVersion = "0f8fad5b-d9cb-469f-a165-70867728950e.1";
 
     [Fact]
     public async Task RejectsADefaultIssuedAt()
@@ -39,7 +38,6 @@ public class ClientRequestTests
         {
             Iv = "AAAAAAAAAAAAAAAA",
             Tag = "AAAAAAAAAAAAAAAAAAAAAA",
-            KeyVersion = KeyVersion,
         },
     };
 
@@ -90,7 +88,8 @@ public class ClientRequestTests
         Assert.Equal("2026-05-01", nonPii.GetProperty("period_start").GetString());
         Assert.Equal("2026-05-31", nonPii.GetProperty("period_end").GetString());
         JsonElement metadata = body.RootElement.GetProperty("encryption_metadata");
-        Assert.Equal(KeyVersion, metadata.GetProperty("key_version").GetString());
+        Assert.Equal("AAAAAAAAAAAAAAAA", metadata.GetProperty("iv").GetString());
+        Assert.False(metadata.TryGetProperty("key_version", out _));
     }
 
     [Fact]
@@ -552,19 +551,6 @@ public class ClientRequestTests
         VerifiablClient client = Client(handler);
         RegisterNonPiiRequest request = ValidRequest();
         request.Schema = schema;
-
-        await Assert.ThrowsAsync<ArgumentException>(() => client.RegisterNonPiiAsync(request));
-
-        Assert.Empty(handler.Requests);
-    }
-
-    [Fact]
-    public async Task ValidatesKeyVersionsBeforeSending()
-    {
-        FakeHttpHandler handler = RegistrationHandler();
-        VerifiablClient client = Client(handler);
-        RegisterNonPiiRequest request = ValidRequest();
-        request.EncryptionMetadata.KeyVersion = "not-a-key-version";
 
         await Assert.ThrowsAsync<ArgumentException>(() => client.RegisterNonPiiAsync(request));
 

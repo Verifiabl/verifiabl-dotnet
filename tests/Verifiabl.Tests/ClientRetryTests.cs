@@ -9,13 +9,11 @@ namespace Verifiabl.Tests;
 public class ClientRetryTests
 {
     private const string Reference = "u0FE9WLIS7GYKQnpJPygBw";
-    private const string KeyVersion = "0f8fad5b-d9cb-469f-a165-70867728950e.1";
 
     private static EncryptionMetadata Metadata() => new()
     {
         Iv = "AAAAAAAAAAAAAAAA",
         Tag = "AAAAAAAAAAAAAAAAAAAAAA",
-        KeyVersion = KeyVersion,
     };
 
     private static RegisterNonPiiRequest SingleRequest() => new()

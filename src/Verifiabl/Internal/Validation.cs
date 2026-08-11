@@ -5,14 +5,6 @@ namespace Verifiabl.Internal;
 
 internal static class Validation
 {
-    /// <summary>
-    /// Key version contract: <c>&lt;provider-id&gt;.&lt;n&gt;</c> where provider-id is the
-    /// provider's lowercase ID and n increments on each key rotation, starting at 1.
-    /// </summary>
-    internal static readonly Regex KeyVersionRegex = new(
-        "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.[1-9][0-9]{0,5}$",
-        RegexOptions.CultureInvariant);
-
     /// <summary>Payslip schema identifier: <c>xx.type.vN</c>, e.g. "au.payslip.v1".</summary>
     internal static readonly Regex SchemaRegex = new(
         "^[a-z]{2}\\.[a-z]+\\.v[0-9]+$",
@@ -26,19 +18,6 @@ internal static class Validation
     internal static readonly Regex ExternalIdRegex = new(
         "^[\\x20-\\x7e]+$",
         RegexOptions.CultureInvariant);
-
-    internal static string ValidateKeyVersion(string? keyVersion, string name)
-    {
-        if (keyVersion is null || !KeyVersionRegex.IsMatch(keyVersion))
-        {
-            throw new ArgumentException(
-                $"{name} must be '<provider-id>.<n>' (lowercase provider ID, rotation counter " +
-                "from 1), e.g. \"0f8fad5b-d9cb-469f-a165-70867728950e.1\".",
-                name);
-        }
-
-        return keyVersion;
-    }
 
     internal static string ValidateSchema(string? schema, string name)
     {
@@ -134,7 +113,5 @@ internal static class Validation
                 $"{name}.Tag must be exactly 22 base64url characters (128-bit GCM tag).",
                 name);
         }
-
-        ValidateKeyVersion(metadata.KeyVersion, $"{name}.KeyVersion");
     }
 }
