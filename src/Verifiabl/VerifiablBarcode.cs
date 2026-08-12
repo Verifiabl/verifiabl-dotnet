@@ -28,6 +28,13 @@ public static class VerifiablBarcode
     public const string PdfPayloadXmpProperty = "payload";
 
     /// <summary>
+    /// Protocol version carried by both wire formats. The bare payload spells it
+    /// <c>1|</c> and the scan URL spells it <c>#1.</c>, so a version bump that
+    /// touched only one would emit a payload and a scan URL that disagree.
+    /// </summary>
+    private const string ProtocolVersion = "1";
+
+    /// <summary>
     /// Build the v1 barcode payload: <c>1|&lt;verifiablReference&gt;|&lt;ciphertext&gt;</c>.
     /// </summary>
     /// <remarks>
@@ -50,7 +57,7 @@ public static class VerifiablBarcode
             parts.EncryptedPii,
             nameof(parts.EncryptedPii));
 
-        return $"1|{reference}|{ciphertext}";
+        return $"{ProtocolVersion}|{reference}|{ciphertext}";
     }
 
     /// <summary>
@@ -88,7 +95,7 @@ public static class VerifiablBarcode
             parts.EncryptedPii,
             nameof(parts.EncryptedPii));
 
-        return $"{baseUrl}/v/{reference}#1.{ciphertext}";
+        return $"{baseUrl}/v/{reference}#{ProtocolVersion}.{ciphertext}";
     }
 
     /// <summary>
