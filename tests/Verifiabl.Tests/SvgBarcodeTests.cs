@@ -38,8 +38,7 @@ public class SvgBarcodeTests
         BarcodeSvgResult result = VerifiablBarcode.CreateSvg(
             new BarcodeParts(Reference, RealisticCiphertext()));
 
-        Assert.StartsWith("https://verify.verifiabl.io/v/1%7C", result.Content);
-        Assert.Contains(Reference, result.Content);
+        Assert.StartsWith($"https://verify.verifiabl.io/v/{Reference}#1.", result.Content);
     }
 
     [Fact]
