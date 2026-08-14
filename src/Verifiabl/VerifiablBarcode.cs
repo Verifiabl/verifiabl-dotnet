@@ -28,12 +28,20 @@ public static class VerifiablBarcode
     public const string PdfPayloadXmpProperty = "payload";
 
     /// <summary>
+    /// Protocol version carried by both wire formats. The bare payload spells it
+    /// <c>1|</c> and the scan URL spells it <c>#1.</c>, so a version bump that
+    /// touched only one would emit a payload and a scan URL that disagree.
+    /// </summary>
+    private const string ProtocolVersion = "1";
+
+    /// <summary>
     /// Build the v1 barcode payload: <c>1|&lt;verifiablReference&gt;|&lt;ciphertext&gt;</c>.
     /// </summary>
     /// <remarks>
-    /// This is the bare wire format. For QR codes intended to be scanned by
-    /// phones, prefer <see cref="BuildScanUrl"/>, which wraps this payload in the
-    /// public scan-redirect URL.
+    /// This is the bare wire format, and the value to write into the PDF's XMP
+    /// metadata. For QR codes intended to be scanned by phones, prefer
+    /// <see cref="BuildScanUrl"/>, which carries the same reference and
+    /// ciphertext as a public scan-redirect URL.
     /// </remarks>
     public static string BuildPayload(BarcodeParts parts)
     {
@@ -49,15 +57,22 @@ public static class VerifiablBarcode
             parts.EncryptedPii,
             nameof(parts.EncryptedPii));
 
-        return $"1|{reference}|{ciphertext}";
+        return $"{ProtocolVersion}|{reference}|{ciphertext}";
     }
 
     /// <summary>
     /// Build the URL encoded into Verifiabl QR codes:
-    /// <c>https://verify.verifiabl.io/v/&lt;urlencoded payload&gt;</c>.
+    /// <c>https://verify.verifiabl.io/v/&lt;verifiablReference&gt;#1.&lt;ciphertext&gt;</c>.
     /// The scan URL sends scanners to Verifiabl instead of exposing raw ciphertext
     /// in a phone camera preview.
     /// </summary>
+    /// <remarks>
+    /// The ciphertext rides in the fragment, which no client transmits to a
+    /// server, so it cannot reach a request log at Verifiabl or at any
+    /// intermediary. Every character stays inside the URI-safe set (base64url
+    /// plus <c>.</c>), which is what keeps scanners treating this as a URL and
+    /// offering tap-to-open rather than showing it as plain text.
+    /// </remarks>
     public static string BuildScanUrl(BarcodeParts parts, ScanUrlOptions? options = null)
     {
         options ??= new ScanUrlOptions();
@@ -68,8 +83,19 @@ public static class VerifiablBarcode
             ? VerifiablEndpoints.ScanBaseUrlFor(environment)
             : NormalizeScanBaseUrl(options.ScanBaseUrl);
 
-        string payload = BuildPayload(parts);
-        return $"{baseUrl}/v/{Uri.EscapeDataString(payload)}";
+        if (parts is null)
+        {
+            throw new ArgumentNullException(nameof(parts));
+        }
+
+        string reference = VerifiablReference.Validate(
+            parts.VerifiablReference,
+            nameof(parts.VerifiablReference));
+        string ciphertext = Validation.ValidateCiphertext(
+            parts.EncryptedPii,
+            nameof(parts.EncryptedPii));
+
+        return $"{baseUrl}/v/{reference}#{ProtocolVersion}.{ciphertext}";
     }
 
     /// <summary>
