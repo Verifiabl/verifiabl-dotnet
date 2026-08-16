@@ -50,8 +50,20 @@ public class PayloadTests
         string url = VerifiablBarcode.BuildScanUrl(new BarcodeParts(Reference, Ciphertext));
 
         Assert.Equal(
-            $"https://verify.verifiabl.io/v/1%7C{Reference}%7C{Ciphertext}",
+            $"https://verify.verifiabl.io/v/{Reference}#1.{Ciphertext}",
             url);
+    }
+
+    // The ciphertext must never sit in a part of the URL that a client sends to
+    // a server, or it lands in request logs we do not control (VER-369).
+    [Fact]
+    public void KeepsTheCiphertextOutOfEverythingTheServerReceives()
+    {
+        var url = new Uri(VerifiablBarcode.BuildScanUrl(new BarcodeParts(Reference, Ciphertext)));
+
+        Assert.DoesNotContain(Ciphertext, url.AbsolutePath);
+        Assert.Empty(url.Query);
+        Assert.Equal($"#1.{Ciphertext}", url.Fragment);
     }
 
     [Fact]
