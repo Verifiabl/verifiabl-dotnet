@@ -147,7 +147,6 @@ internal static class Wire
         {
             ["iv"] = encryptionMetadata!.Iv,
             ["tag"] = encryptionMetadata.Tag,
-            ["key_version"] = encryptionMetadata.KeyVersion,
         };
         return body;
     }

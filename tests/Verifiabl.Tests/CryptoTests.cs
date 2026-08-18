@@ -6,8 +6,6 @@ namespace Verifiabl.Tests;
 
 public class CryptoTests
 {
-    private const string KeyVersion = "0f8fad5b-d9cb-469f-a165-70867728950e.1";
-
     private static byte[] NewKey()
     {
         byte[] key = new byte[32];
@@ -38,12 +36,11 @@ public class CryptoTests
         byte[] key = NewKey();
         string plaintext = Pii.Format(new PiiFields { EmployeeName = "Jane A. Doe" });
 
-        EncryptedPii encrypted = VerifiablCrypto.EncryptPii(plaintext, key, KeyVersion);
+        EncryptedPii encrypted = VerifiablCrypto.EncryptPii(plaintext, key);
 
         // 96-bit IV = 16 base64url chars; 128-bit tag = 22 base64url chars.
         Assert.Equal(16, encrypted.Metadata.Iv!.Length);
         Assert.Equal(22, encrypted.Metadata.Tag!.Length);
-        Assert.Equal(KeyVersion, encrypted.Metadata.KeyVersion);
         Assert.Matches("^[A-Za-z0-9_-]+$", encrypted.Ciphertext);
         Assert.Matches("^[A-Za-z0-9_-]+$", encrypted.Metadata.Iv);
         Assert.Matches("^[A-Za-z0-9_-]+$", encrypted.Metadata.Tag);
@@ -60,7 +57,7 @@ public class CryptoTests
             AccountNumber = "12345678",
         });
 
-        EncryptedPii encrypted = VerifiablCrypto.EncryptPii(plaintext, key, KeyVersion);
+        EncryptedPii encrypted = VerifiablCrypto.EncryptPii(plaintext, key);
 
         byte[] ciphertext = FromBase64Url(encrypted.Ciphertext);
         byte[] decrypted = new byte[ciphertext.Length];
@@ -78,7 +75,7 @@ public class CryptoTests
     public void TamperedCiphertextFailsAuthentication()
     {
         byte[] key = NewKey();
-        EncryptedPii encrypted = VerifiablCrypto.EncryptPii("P1|Jane||||||", key, KeyVersion);
+        EncryptedPii encrypted = VerifiablCrypto.EncryptPii("P1|Jane||||||", key);
 
         byte[] ciphertext = FromBase64Url(encrypted.Ciphertext);
         ciphertext[0] ^= 0xFF;
@@ -97,8 +94,8 @@ public class CryptoTests
     {
         byte[] key = NewKey();
 
-        EncryptedPii first = VerifiablCrypto.EncryptPii("P1|Jane||||||", key, KeyVersion);
-        EncryptedPii second = VerifiablCrypto.EncryptPii("P1|Jane||||||", key, KeyVersion);
+        EncryptedPii first = VerifiablCrypto.EncryptPii("P1|Jane||||||", key);
+        EncryptedPii second = VerifiablCrypto.EncryptPii("P1|Jane||||||", key);
 
         Assert.NotEqual(first.Metadata.Iv, second.Metadata.Iv);
         Assert.NotEqual(first.Ciphertext, second.Ciphertext);
@@ -112,21 +109,8 @@ public class CryptoTests
     public void RejectsKeysThatAreNot32Bytes(int keyLength)
     {
         var exception = Assert.Throws<ArgumentException>(
-            () => VerifiablCrypto.EncryptPii("P1|||||||", new byte[keyLength], KeyVersion));
+            () => VerifiablCrypto.EncryptPii("P1|||||||", new byte[keyLength]));
 
         Assert.Contains("32 bytes", exception.Message);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("provider.1")]
-    [InlineData("0f8fad5b-d9cb-469f-a165-70867728950e")]
-    [InlineData("0f8fad5b-d9cb-469f-a165-70867728950e.0")]
-    [InlineData("0F8FAD5B-D9CB-469F-A165-70867728950E.1")]
-    [InlineData("0f8fad5b-d9cb-469f-a165-70867728950e.1000000")]
-    public void RejectsKeyVersionsOutsideTheDeployedContract(string keyVersion)
-    {
-        Assert.Throws<ArgumentException>(
-            () => VerifiablCrypto.EncryptPii("P1|||||||", new byte[32], keyVersion));
     }
 }
