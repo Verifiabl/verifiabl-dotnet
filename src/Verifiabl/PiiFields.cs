@@ -30,4 +30,7 @@ public sealed class PiiFields
 
     /// <summary>Payment account name.</summary>
     public string? AccountName { get; set; }
+
+    /// <summary>Employee address, as a single line exactly as printed on the payslip.</summary>
+    public string? Address { get; set; }
 }

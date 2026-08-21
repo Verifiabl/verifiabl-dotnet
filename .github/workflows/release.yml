@@ -10,6 +10,8 @@ name: Release
 #     Repository: verifiabl-dotnet
 #     Workflow File: release.yml
 #     Environment: nuget-publish
+# A trusted publishing policy is per package id, so it must cover both
+# Verifiabl.Issuer and Verifiabl.Issuer.Extensions.DependencyInjection.
 # The NUGET_USER repository secret holds the nuget.org profile name that owns
 # the trusted publishing policy (the profile name, not an email address).
 #

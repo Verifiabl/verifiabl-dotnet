@@ -1,9 +1,9 @@
-# Verifiabl.Extensions.DependencyInjection
+# Verifiabl.Issuer.Extensions.DependencyInjection
 
-Dependency-injection wiring for the [Verifiabl .NET SDK](https://www.nuget.org/packages/Verifiabl). Registers `IVerifiablClient` and connects it to `IHttpClientFactory`, so the core `Verifiabl` package stays dependency-light.
+Dependency-injection wiring for the [Verifiabl .NET SDK](https://www.nuget.org/packages/Verifiabl.Issuer). Registers `IVerifiablClient` and connects it to `IHttpClientFactory`, so the core `Verifiabl.Issuer` package stays dependency-light.
 
 ```bash
-dotnet add package Verifiabl.Extensions.DependencyInjection
+dotnet add package Verifiabl.Issuer.Extensions.DependencyInjection
 ```
 
 ```csharp

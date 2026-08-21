@@ -8,8 +8,8 @@
       runtimes.
     -->
     <TargetFrameworks>net472;net8.0;net10.0</TargetFrameworks>
-    <PackageId>Verifiabl</PackageId>
-    <Version>0.3.0</Version>
+    <PackageId>Verifiabl.Issuer</PackageId>
+    <Version>0.4.0</Version>
     <Description>Official Verifiabl .NET SDK for issuing payslip QR codes, formatting PII, AES-256-GCM encryption helpers, and typed issuer API calls.</Description>
     <Authors>Verifiabl</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

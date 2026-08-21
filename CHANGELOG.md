@@ -6,6 +6,31 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0]
+
+The package ids change, and the PII wire format gains an address field.
+
+To upgrade, change the package reference. Assembly names, namespaces, and types
+are unchanged, so no source in a consuming project changes. The old `Verifiabl`
+and `Verifiabl.Extensions.DependencyInjection` packages stay on nuget.org, with
+0.2.0 as their last release.
+
+### Changed
+
+- Package ids are now `Verifiabl.Issuer` and
+  `Verifiabl.Issuer.Extensions.DependencyInjection`. The name states which side
+  of Verifiabl the package serves, matches the npm SDK's `@verifiabl/issuer`,
+  and keeps the plain `Verifiabl` name free for a future package.
+- `Pii.Format` emits the `P2` wire format, which appends an address field to the
+  seven `P1` fields. `Pii.Parse` reads `P2` and `P1`. Documents issued before
+  `P2` carry `P1` and cannot be reissued, so `P1` stays supported.
+
+### Added
+
+- `PiiFields.Address`, an optional single-line address. It obeys the same rules
+  as the other fields: no pipe character, no control characters, and a limit of
+  256 characters.
+
 ## [0.3.0]
 
 A breaking change to the encryption helper: the key version is retired.
