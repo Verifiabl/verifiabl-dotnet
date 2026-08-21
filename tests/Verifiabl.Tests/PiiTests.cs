@@ -91,6 +91,16 @@ public class PiiTests
     }
 
     [Fact]
+    public void RejectsLineSeparatorsThatAreNotControlCharacters()
+    {
+        // U+2028 and U+2029 are separators, so char.IsControl would let them through.
+        Assert.Throws<ArgumentException>(
+            () => Pii.Format(new PiiFields { Address = "12 Example St\u2028Sydney" }));
+        Assert.Throws<ArgumentException>(
+            () => Pii.Format(new PiiFields { Address = "12 Example St\u2029Sydney" }));
+    }
+
+    [Fact]
     public void RejectsOverlongFields()
     {
         Assert.Throws<ArgumentException>(

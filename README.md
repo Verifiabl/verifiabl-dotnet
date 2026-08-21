@@ -33,7 +33,7 @@ Encryption, PII formatting, reference generation, and barcode rendering all happ
 
 ## Registering the client
 
-With dependency injection, using `Verifiabl.Extensions.DependencyInjection`:
+With dependency injection, using `Verifiabl.Issuer.Extensions.DependencyInjection`:
 
 ```csharp
 using Microsoft.Extensions.DependencyInjection;

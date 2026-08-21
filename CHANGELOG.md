@@ -30,6 +30,10 @@ packages stay on nuget.org, with 0.2.0 as their last release.
 - `Pii.FieldOrder` has eight entries, because it gives the field order of the
   format that `Pii.Format` writes. Code that uses its length to read a `P1`
   string must use seven instead, or let `Pii.Parse` select the layout.
+- Field values must not contain U+2028 or U+2029. These two characters are
+  separators, not control characters, so the previous check let them through
+  although they break a field in the same way as a newline. A value that
+  contains one now throws, as a value with a newline always did.
 
 ### Added
 

@@ -5,8 +5,8 @@ namespace Verifiabl;
 /// optional; omitted fields are encoded as empty segments and skipped by Verifiabl.
 /// </summary>
 /// <remarks>
-/// Values must not contain the pipe character <c>|</c> (the wire delimiter) or
-/// control characters, and each is limited to 256 characters.
+/// Values must not contain the pipe character <c>|</c> (the wire delimiter),
+/// control characters or line separators, and each is limited to 256 characters.
 /// </remarks>
 public sealed class PiiFields
 {

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 
 namespace Verifiabl;
 
@@ -135,7 +136,7 @@ public static class Pii
         if (!IsPrintableWithoutPipe(value))
         {
             throw new ArgumentException(
-                $"{name} must not contain '|' or control characters.",
+                $"{name} must not contain '|', control characters or line separators.",
                 name);
         }
 
@@ -159,11 +160,20 @@ public static class Pii
 
     /// <summary>
     /// Allow-list for a single PII field value: any printable character except the
-    /// pipe delimiter and control characters. Pipes would corrupt the positional
-    /// layout; control characters have no place in PII fields.
+    /// pipe delimiter, control characters and line separators. Pipes would corrupt
+    /// the positional layout; the rest have no place in PII fields.
     /// </summary>
     private static bool IsPrintableWithoutPipe(string value)
     {
-        return !value.Any(c => c == '|' || char.IsControl(c));
+        return !value.Any(c => c == '|' || char.IsControl(c) || IsLineSeparator(c));
+    }
+
+    // U+2028 and U+2029 are separators, not control characters, so char.IsControl
+    // misses them even though they break a field just as a newline would.
+    private static bool IsLineSeparator(char c)
+    {
+        UnicodeCategory category = char.GetUnicodeCategory(c);
+        return category == UnicodeCategory.LineSeparator
+            || category == UnicodeCategory.ParagraphSeparator;
     }
 }
