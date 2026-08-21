@@ -9,14 +9,16 @@ Verifiabl is for accredited payroll providers. You receive sandbox credentials a
 ## Installation
 
 ```bash
-dotnet add package Verifiabl
+dotnet add package Verifiabl.Issuer
 ```
 
 In an app that uses dependency injection, add the integration package too:
 
 ```bash
-dotnet add package Verifiabl.Extensions.DependencyInjection
+dotnet add package Verifiabl.Issuer.Extensions.DependencyInjection
 ```
+
+The package id is `Verifiabl.Issuer` (issuer is the role this SDK serves, matching the Node SDK's `@verifiabl/issuer`); the root namespace stays `Verifiabl`.
 
 Supported targets: .NET 8+, and .NET Framework 4.7.2+ (Windows). On .NET Framework, AES-GCM is provided by the bundled `Microsoft.Bcl.Cryptography` dependency.
 
@@ -33,7 +35,7 @@ Encryption, PII formatting, reference generation, and barcode rendering all happ
 
 ## Registering the client
 
-With dependency injection, using `Verifiabl.Extensions.DependencyInjection`:
+With dependency injection, using `Verifiabl.Issuer.Extensions.DependencyInjection`:
 
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
