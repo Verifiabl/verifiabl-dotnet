@@ -96,7 +96,8 @@ package had no published consumers, so no migration shim is provided.
 
 - Optional `RegisterNonPiiRequest.VerifiablReference` for callers who want to
   pin the registration's idempotency key themselves.
-- New package `Verifiabl.Extensions.DependencyInjection`, with
+- New package `Verifiabl.Extensions.DependencyInjection` (renamed to
+  `Verifiabl.Issuer.Extensions.DependencyInjection` in a later release), with
   `IServiceCollection.AddVerifiablClient(...)` overloads that register
   `IVerifiablClient` as a singleton wired to `IHttpClientFactory`. The core
   package stays free of `Microsoft.Extensions.*` dependencies.
