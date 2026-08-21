@@ -16,7 +16,9 @@ reference, do not add the new package next to the old one: the two packages
 contain the same assembly names, so a project that references both gets two
 copies of `Verifiabl.dll` and the build fails or resolves to an unexpected
 version. The old `Verifiabl` and `Verifiabl.Extensions.DependencyInjection`
-packages stay on nuget.org, with 0.2.0 as their last release.
+packages stay on nuget.org, with 0.2.0 as their last release. 0.3.0 is tagged
+in this repository but was never published to nuget.org, so nothing in the wild
+uses those package ids beyond 0.2.0.
 
 ### Changed
 
