@@ -10,10 +10,13 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 The package ids change, and the PII wire format gains an address field.
 
-To upgrade, change the package reference. Assembly names, namespaces, and types
-are unchanged, so no source in a consuming project changes. The old `Verifiabl`
-and `Verifiabl.Extensions.DependencyInjection` packages stay on nuget.org, with
-0.2.0 as their last release.
+To upgrade, replace the package reference. Assembly names, namespaces, and types
+are unchanged, so no source in a consuming project changes. Replace the
+reference, do not add the new package next to the old one: the two packages
+contain the same assembly names, so a project that references both gets two
+copies of `Verifiabl.dll` and the build fails or resolves to an unexpected
+version. The old `Verifiabl` and `Verifiabl.Extensions.DependencyInjection`
+packages stay on nuget.org, with 0.2.0 as their last release.
 
 ### Changed
 
@@ -24,6 +27,9 @@ and `Verifiabl.Extensions.DependencyInjection` packages stay on nuget.org, with
 - `Pii.Format` emits the `P2` wire format, which appends an address field to the
   seven `P1` fields. `Pii.Parse` reads `P2` and `P1`. Documents issued before
   `P2` carry `P1` and cannot be reissued, so `P1` stays supported.
+- `Pii.FieldOrder` has eight entries, because it gives the field order of the
+  format that `Pii.Format` writes. Code that uses its length to read a `P1`
+  string must use seven instead, or let `Pii.Parse` select the layout.
 
 ### Added
 
