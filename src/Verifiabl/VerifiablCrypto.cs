@@ -40,6 +40,14 @@ public static class VerifiablCrypto
     /// tag, returned in the metadata, lets the verifier detect any tampering with
     /// the ciphertext at scan time.
     /// </summary>
+    /// <remarks>
+    /// Every call draws a fresh random IV, which is what keeps AES-256-GCM safe
+    /// under one key. Never store the returned
+    /// <see cref="EncryptedPii.Metadata"/> and send it again with different
+    /// content: registration rejects a repeated IV as
+    /// <see cref="Client.VerifiablIvReuseException"/>, or in a batch as an error
+    /// result matched by <see cref="Client.BatchRecordResult.IsIvReused"/>.
+    /// </remarks>
     /// <param name="plaintext">The formatted string from <see cref="Pii.Format"/>.</param>
     /// <param name="key">Your 32-byte provider encryption key.</param>
     public static EncryptedPii EncryptPii(string plaintext, byte[] key)

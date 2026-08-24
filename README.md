@@ -194,11 +194,42 @@ catch (VerifiablException exception)
 | Exception | Raised when |
 | --- | --- |
 | `VerifiablApiException` | The API returned a non-2xx response. Carries `Status`, a stable `Code`, the parsed `Body`, and a `RequestId` to quote to support. |
+| `VerifiablIvReuseException` | A registration was rejected because the record's encryption IV is already registered to your issuer. Derives from `VerifiablApiException`, so the catch clause above still covers it. |
 | `VerifiablAuthException` | An OAuth access token could not be obtained. |
 | `VerifiablTimeoutException` | The call exceeded `VerifiablClientOptions.Timeout`, which covers the token fetch, the request, and every retry. |
 | `VerifiablTransportException` | A network fault prevented a response (the `HttpRequestException` is the `InnerException`), or a 2xx response was not usable JSON. |
 
 Two things are deliberately *not* `VerifiablException`: an `ArgumentException` for an incomplete or malformed request, thrown before anything is sent, and an `OperationCanceledException` when you cancel the `CancellationToken` you passed in.
+
+### Reused encryption IV
+
+Registration rejects an IV that your issuer has already used. AES-256-GCM needs a unique IV for every record encrypted under one key, so a repeat is an integration fault, not a transient failure. `VerifiablCrypto.EncryptPii` draws a fresh IV on every call, so this happens only if you store the `EncryptionMetadata` and send it again with different content.
+
+The SDK does not re-encrypt and retry for you. Sending the same request again gives the same rejection, and re-encrypting behind your back would hide an integration that keeps producing colliding IVs. Encrypt the payslip again, resend the record with the new encryption metadata, and rebuild any barcode you already rendered from the previous ciphertext.
+
+Single registrations throw `VerifiablIvReuseException`, whose `Code` is `VerifiablErrorCodes.IvReused`.
+
+```csharp
+try
+{
+    await client.RegisterNonPiiAsync(request);
+}
+catch (VerifiablIvReuseException)
+{
+    // Encrypt again for a fresh IV and ciphertext, then register and render again.
+    EncryptedPii encrypted = VerifiablCrypto.EncryptPii(pii, key);
+}
+```
+
+Batch records come back as an error result, which `BatchRecordResult.IsIvReused` matches. It covers both cases the API reports: a collision with a stored record, and a repeat within the same batch (where the first record still registers).
+
+```csharp
+RegisterNonPiiBatchResponse batch = await client.RegisterNonPiiBatchAsync(records);
+List<string> toReEncrypt = batch.Results
+    .Where(result => result.IsIvReused)
+    .Select(result => result.VerifiablReference)
+    .ToList();
+```
 
 ## Security
 

@@ -236,7 +236,7 @@ public sealed class VerifiablClient : IVerifiablClient
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        throw new VerifiablApiException(
+                        throw VerifiablApiException.FromResponse(
                             (int)response.StatusCode,
                             ParseErrorBody(text),
                             ExtractRequestId(response));

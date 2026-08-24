@@ -6,6 +6,23 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `VerifiablIvReuseException`, thrown when a single registration is rejected
+  because the record's encryption IV is already registered to your issuer. It
+  derives from `VerifiablApiException`, so existing handling still catches it,
+  and its message carries the remedy: encrypt again for a fresh IV, resend, and
+  rebuild any barcode already rendered from the previous ciphertext. The SDK
+  does not re-encrypt and retry for you, because `VerifiablCrypto.EncryptPii`
+  already draws a fresh IV on every call, so a collision means encryption
+  metadata was replayed and hiding that would mask a broken integration.
+- `BatchRecordResult.IsIvReused`, matching the batch error result for the same
+  rejection. It covers both cases the API reports, a collision with a stored
+  record and a repeat within the same batch, which differ only in `Detail`.
+- `VerifiablErrorCodes.IvReused` and `VerifiablErrorCodes.Conflict`. `CONFLICT`
+  was already returned for a Verifiabl reference registered with different data
+  but was missing from the list.
+
 ## [0.3.0]
 
 A breaking change to the encryption helper: the key version is retired.

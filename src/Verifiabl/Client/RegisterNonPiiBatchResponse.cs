@@ -41,6 +41,30 @@ public sealed class BatchRecordResult
 
     /// <summary>Human-readable error detail, present when <see cref="Status"/> is "error".</summary>
     public string? Detail { get; }
+
+    /// <summary>
+    /// True when the API rejected this record because its encryption IV is already
+    /// registered to your issuer, either against a stored record or against an
+    /// earlier record in the same batch (that first record still registers).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The two cases differ only in <see cref="Detail"/>, so match on this rather
+    /// than on the wording.
+    /// </para>
+    /// <para>
+    /// AES-256-GCM requires a unique IV for every record encrypted under one key,
+    /// so this reports a fault in the calling integration rather than a transient
+    /// failure. The SDK deliberately does not re-encrypt and resubmit the record
+    /// for you: <see cref="VerifiablCrypto.EncryptPii"/> already draws a fresh IV
+    /// on every call, so a collision means encryption metadata was replayed, and
+    /// papering over it would hide a broken integration. Encrypt the payslip again,
+    /// resend the record with the new encryption metadata, and rebuild any barcode
+    /// already rendered from the previous ciphertext.
+    /// </para>
+    /// </remarks>
+    public bool IsIvReused =>
+        Status == BatchRecordStatuses.Error && Code == VerifiablErrorCodes.IvReused;
 }
 
 /// <summary>Response from <see cref="IVerifiablClient.RegisterNonPiiBatchAsync"/>.</summary>

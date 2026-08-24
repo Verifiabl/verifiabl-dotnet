@@ -20,6 +20,19 @@ public static class VerifiablErrorCodes
     /// <summary>The authenticated caller may not perform this operation.</summary>
     public const string Forbidden = "FORBIDDEN";
 
+    /// <summary>
+    /// The Verifiabl reference is already registered with different data. A resend
+    /// of identical content is an idempotent replay and succeeds instead.
+    /// </summary>
+    public const string Conflict = "CONFLICT";
+
+    /// <summary>
+    /// The record's encryption IV is already registered to this issuer. Surfaces as
+    /// <see cref="VerifiablIvReuseException"/> on a single registration, and as an
+    /// error result matched by <see cref="BatchRecordResult.IsIvReused"/> in a batch.
+    /// </summary>
+    public const string IvReused = "IV_REUSED";
+
     /// <summary>The referenced key version is not available for this provider.</summary>
     public const string KeyVersionUnavailable = "KEY_VERSION_UNAVAILABLE";
 

@@ -25,6 +25,7 @@ public interface IVerifiablClient
     /// <param name="request">The payslip registration.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
     /// <exception cref="ArgumentException">The request is incomplete or malformed.</exception>
+    /// <exception cref="VerifiablIvReuseException">The record's encryption IV is already registered to this issuer.</exception>
     /// <exception cref="VerifiablApiException">The API returned a non-2xx response.</exception>
     /// <exception cref="VerifiablAuthException">An OAuth token could not be obtained.</exception>
     /// <exception cref="VerifiablTimeoutException">The call exceeded the configured timeout.</exception>
@@ -41,6 +42,7 @@ public interface IVerifiablClient
     /// <param name="request">The payslip registration, including the ciphertext.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
     /// <exception cref="ArgumentException">The request is incomplete or malformed.</exception>
+    /// <exception cref="VerifiablIvReuseException">The record's encryption IV is already registered to this issuer.</exception>
     /// <exception cref="VerifiablApiException">The API returned a non-2xx response.</exception>
     /// <exception cref="VerifiablAuthException">An OAuth token could not be obtained.</exception>
     /// <exception cref="VerifiablTimeoutException">The call exceeded the configured timeout.</exception>
@@ -57,6 +59,9 @@ public interface IVerifiablClient
     /// <see cref="Verifiabl.VerifiablReference.Generate"/>) and the same fields as
     /// <see cref="RegisterNonPiiAsync"/>. The response contains a per-record
     /// result index-aligned to the input: one bad record never fails the batch.
+    /// A record whose encryption IV is already registered to this issuer, or is
+    /// repeated within this batch, comes back as an error result matched by
+    /// <see cref="BatchRecordResult.IsIvReused"/>.
     /// </summary>
     /// <param name="records">The records to register.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
