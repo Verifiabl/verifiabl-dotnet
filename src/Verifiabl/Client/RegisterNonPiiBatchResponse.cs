@@ -41,6 +41,27 @@ public sealed class BatchRecordResult
 
     /// <summary>Human-readable error detail, present when <see cref="Status"/> is "error".</summary>
     public string? Detail { get; }
+
+    /// <summary>
+    /// True when the API rejected this record because its encryption IV is already
+    /// registered to your issuer, either against a stored record or against an
+    /// earlier record in the same batch (that first record still registers).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The two cases differ only in <see cref="Detail"/>, so match on this rather
+    /// than on the wording.
+    /// </para>
+    /// <para>
+    /// The SDK does not re-encrypt and resubmit the record for you. Encrypt the
+    /// payslip again with <see cref="VerifiablCrypto.EncryptPii"/> to get a new
+    /// IV, resend the record with the new encryption metadata, and rebuild any
+    /// barcode that you rendered from the previous ciphertext. Resending the
+    /// record unchanged gives the same result.
+    /// </para>
+    /// </remarks>
+    public bool IsIvReused =>
+        Status == BatchRecordStatuses.Error && Code == VerifiablErrorCodes.IvReused;
 }
 
 /// <summary>Response from <see cref="IVerifiablClient.RegisterNonPiiBatchAsync"/>.</summary>
