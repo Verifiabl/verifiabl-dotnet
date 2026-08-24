@@ -107,11 +107,14 @@ public class ClientIvReuseTests
 
         // The server summary is the bare word "Conflict", which tells the caller
         // nothing about what to do next.
+        // Matched case-insensitively on the actionable terms, so the copy can be
+        // reworded without the assertion pinning a sentence.
         Assert.NotEqual("Conflict", error.Message);
-        Assert.Contains("encrypt the payslip again", error.Message, StringComparison.Ordinal);
-        Assert.Contains("fresh iv", error.Message, StringComparison.Ordinal);
-        Assert.Contains("resend", error.Message, StringComparison.Ordinal);
-        Assert.Contains("barcode", error.Message, StringComparison.Ordinal);
+        Assert.Contains("encrypt the payslip again", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("EncryptPii", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("new iv", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("resend", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("barcode", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -203,9 +203,9 @@ Two things are deliberately *not* `VerifiablException`: an `ArgumentException` f
 
 ### Reused encryption IV
 
-Registration rejects an IV that your issuer has already used. AES-256-GCM needs a unique IV for every record encrypted under one key, so a repeat is an integration fault, not a transient failure. `VerifiablCrypto.EncryptPii` draws a fresh IV on every call, so this happens only if you store the `EncryptionMetadata` and send it again with different content.
+Registration rejects an IV that your issuer has already used. `VerifiablCrypto.EncryptPii` draws a fresh IV on every call, so this occurs when stored `EncryptionMetadata` is sent again with different content.
 
-The SDK does not re-encrypt and retry for you. Sending the same request again gives the same rejection, and re-encrypting behind your back would hide an integration that keeps producing colliding IVs. Encrypt the payslip again, resend the record with the new encryption metadata, and rebuild any barcode you already rendered from the previous ciphertext.
+The SDK does not re-encrypt and retry for you. Encrypt the payslip again, resend the record with the new encryption metadata, and rebuild any barcode that you rendered from the previous ciphertext. Resending the record unchanged gives the same result.
 
 Single registrations throw `VerifiablIvReuseException`, whose `Code` is `VerifiablErrorCodes.IvReused`.
 

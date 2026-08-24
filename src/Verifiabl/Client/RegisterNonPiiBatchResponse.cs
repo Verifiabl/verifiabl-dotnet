@@ -53,14 +53,11 @@ public sealed class BatchRecordResult
     /// than on the wording.
     /// </para>
     /// <para>
-    /// AES-256-GCM requires a unique IV for every record encrypted under one key,
-    /// so this reports a fault in the calling integration rather than a transient
-    /// failure. The SDK deliberately does not re-encrypt and resubmit the record
-    /// for you: <see cref="VerifiablCrypto.EncryptPii"/> already draws a fresh IV
-    /// on every call, so a collision means encryption metadata was replayed, and
-    /// papering over it would hide a broken integration. Encrypt the payslip again,
-    /// resend the record with the new encryption metadata, and rebuild any barcode
-    /// already rendered from the previous ciphertext.
+    /// The SDK does not re-encrypt and resubmit the record for you. Encrypt the
+    /// payslip again with <see cref="VerifiablCrypto.EncryptPii"/> to get a new
+    /// IV, resend the record with the new encryption metadata, and rebuild any
+    /// barcode that you rendered from the previous ciphertext. Resending the
+    /// record unchanged gives the same result.
     /// </para>
     /// </remarks>
     public bool IsIvReused =>
