@@ -8,11 +8,22 @@ public class PayloadTests
     private const string Ciphertext = "abc123DEF456-_";
 
     [Fact]
-    public void BuildsTheV1Payload()
+    public void BuildsTheV1PayloadForRollback()
     {
-        string payload = VerifiablBarcode.BuildPayload(new BarcodeParts(Reference, Ciphertext));
+        string payload = VerifiablBarcode.BuildPayload(
+            new BarcodeParts(Reference, Ciphertext),
+            BarcodePayloadFormat.V1);
 
         Assert.Equal($"1|{Reference}|{Ciphertext}", payload);
+    }
+
+    [Fact]
+    public void BuildsTheV2XmpPayloadByDefault()
+    {
+        string payload = VerifiablBarcode.BuildPayload(
+            new BarcodeParts(Reference, "Zm9vYmFy"));
+
+        Assert.Equal($"2|{Reference}|MZXW6YTBOI", payload);
     }
 
     [Fact]
@@ -66,13 +77,12 @@ public class PayloadTests
     }
 
     [Fact]
-    public void BuildsTheProductionScanUrlByDefault()
+    public void BuildsTheV2ProductionScanUrlByDefault()
     {
-        string url = VerifiablBarcode.BuildScanUrl(new BarcodeParts(Reference, Ciphertext));
+        string url = VerifiablBarcode.BuildScanUrl(
+            new BarcodeParts(Reference, "Zm9vYmFy"));
 
-        Assert.Equal(
-            $"https://verify.verifiabl.io/v/{Reference}#1.{Ciphertext}",
-            url);
+        Assert.Equal($"https://v.verifiabl.io/v/{Reference}#2.MZXW6YTBOI", url);
     }
 
     // The ciphertext must never sit in a part of the URL that a client sends to
@@ -80,15 +90,16 @@ public class PayloadTests
     [Fact]
     public void KeepsTheCiphertextOutOfEverythingTheServerReceives()
     {
-        var url = new Uri(VerifiablBarcode.BuildScanUrl(new BarcodeParts(Reference, Ciphertext)));
+        var url = new Uri(VerifiablBarcode.BuildScanUrl(
+            new BarcodeParts(Reference, "Zm9vYmFy")));
 
-        Assert.DoesNotContain(Ciphertext, url.AbsolutePath);
+        Assert.DoesNotContain("MZXW6YTBOI", url.AbsolutePath);
         Assert.Empty(url.Query);
-        Assert.Equal($"#1.{Ciphertext}", url.Fragment);
+        Assert.Equal("#2.MZXW6YTBOI", url.Fragment);
     }
 
     [Fact]
-    public void BuildsTheOptInV2ShortHostScanUrl()
+    public void BuildsTheExplicitV2ShortHostScanUrl()
     {
         string url = VerifiablBarcode.BuildScanUrl(
             new BarcodeParts(Reference, "Zm9vYmFy"),
@@ -103,7 +114,7 @@ public class PayloadTests
     }
 
     [Fact]
-    public void BuildsTheOptInV2SandboxShortHostScanUrl()
+    public void BuildsTheV2SandboxShortHostScanUrl()
     {
         string url = VerifiablBarcode.BuildScanUrl(
             new BarcodeParts(Reference, "Zm9vYmFy"),
@@ -117,13 +128,18 @@ public class PayloadTests
     }
 
     [Fact]
-    public void BuildsTheSandboxScanUrl()
+    public void BuildsTheV1SandboxScanUrlForRollback()
     {
         string url = VerifiablBarcode.BuildScanUrl(
             new BarcodeParts(Reference, Ciphertext),
-            new ScanUrlOptions { Environment = VerifiablEnvironment.Sandbox });
+            new ScanUrlOptions
+            {
+                Environment = VerifiablEnvironment.Sandbox,
+                Format = BarcodePayloadFormat.V1,
+            });
 
         Assert.StartsWith("https://verify.sandbox.verifiabl.io/v/", url);
+        Assert.Equal($"#1.{Ciphertext}", new Uri(url).Fragment);
     }
 
     [Fact]

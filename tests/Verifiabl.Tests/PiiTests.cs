@@ -6,7 +6,7 @@ namespace Verifiabl.Tests;
 public class PiiTests
 {
     [Fact]
-    public void FormatsAllFieldsInWireOrder()
+    public void FormatsP2ByDefaultInWireOrder()
     {
         string formatted = Pii.Format(new PiiFields
         {
@@ -17,29 +17,31 @@ public class PiiTests
             Bsb = "062-000",
             AccountNumber = "12345678",
             AccountName = "Jane A Doe",
+            Address = "12 Example St, Sydney NSW 2000",
         });
 
         Assert.Equal(
-            "P1|Jane A. Doe|Senior Developer|Engineering|12345678901|062-000|12345678|Jane A Doe",
+            "P2|Jane A. Doe|Senior Developer|Engineering|12345678901|062-000|12345678|Jane A Doe|12 Example St, Sydney NSW 2000",
             formatted);
     }
 
     [Fact]
-    public void EncodesOmittedFieldsAsEmptySegments()
+    public void EncodesOmittedP2FieldsAsEmptySegments()
     {
         string formatted = Pii.Format(new PiiFields { EmployeeName = "Jane" });
 
-        Assert.Equal("P1|Jane||||||", formatted);
+        Assert.Equal("P2|Jane|||||||", formatted);
     }
 
     [Fact]
-    public void RoundTripsThroughParse()
+    public void RoundTripsP2ThroughParse()
     {
         var fields = new PiiFields
         {
             EmployeeName = "Jane A. Doe",
             Department = "Engineering",
             AccountNumber = "12345678",
+            Address = "12 Example St",
         };
 
         PiiFields parsed = Pii.Parse(Pii.Format(fields));
@@ -51,6 +53,20 @@ public class PiiTests
         Assert.Null(parsed.Bsb);
         Assert.Equal(fields.AccountNumber, parsed.AccountNumber);
         Assert.Null(parsed.AccountName);
+        Assert.Equal(fields.Address, parsed.Address);
+    }
+
+    [Fact]
+    public void FormatsAndParsesLegacyP1ForRollback()
+    {
+        var fields = new PiiFields { EmployeeName = "Jane", Address = "not emitted" };
+
+        string plaintext = Pii.FormatV1(fields);
+        PiiFields parsed = Pii.Parse(plaintext);
+
+        Assert.Equal("P1|Jane||||||", plaintext);
+        Assert.Equal("Jane", parsed.EmployeeName);
+        Assert.Null(parsed.Address);
     }
 
     [Fact]
@@ -86,7 +102,7 @@ public class PiiTests
         Assert.EndsWith(new string('a', 256), formatted);
     }
 
-    private static PiiV2Fields V2Fields(string? address = null) => new()
+    private static PiiFields V2Fields(string? address = null) => new()
     {
         EmployeeName = "Zoë Nguyễn",
         Position = "Ingénieure",
@@ -101,7 +117,7 @@ public class PiiTests
     [Fact]
     public void V2WritesExactBytesWithAnEmptyFinalAddress()
     {
-        byte[] actual = Encoding.UTF8.GetBytes(Pii.FormatV2(V2Fields()));
+        byte[] actual = Encoding.UTF8.GetBytes(Pii.Format(V2Fields()));
         byte[] expected = Encoding.UTF8.GetBytes(
             "P2|Zoë Nguyễn|Ingénieure|R&D|53004085616|062-000|12345678|Zoë Nguyễn|");
 
@@ -112,7 +128,7 @@ public class PiiTests
     public void V2PreservesARealisticInternationalAddressVerbatim()
     {
         const string address = "12 Rue de l’Église, Apt 4B, 75005 Paris, France 🇫🇷";
-        Assert.EndsWith("|" + address, Pii.FormatV2(V2Fields(address)));
+        Assert.EndsWith("|" + address, Pii.Format(V2Fields(address)));
     }
 
     [Fact]
@@ -120,17 +136,25 @@ public class PiiTests
     {
         string boundary = string.Concat(Enumerable.Repeat("東京", 53)) + "AB";
         Assert.Equal(320, Encoding.UTF8.GetByteCount(boundary));
-        Assert.EndsWith("|" + boundary, Pii.FormatV2(V2Fields(boundary)));
-        Assert.Throws<ArgumentException>(() => Pii.FormatV2(V2Fields(boundary + "C")));
+        Assert.EndsWith("|" + boundary, Pii.Format(V2Fields(boundary)));
+        Assert.Throws<ArgumentException>(() => Pii.Format(V2Fields(boundary + "C")));
     }
 
     [Theory]
     [InlineData("bad|address")]
     [InlineData("bad\naddress")]
     [InlineData("bad\u200Baddress")]
+    [InlineData("bad\U000E0001address")]
     public void V2RejectsDelimiterControlAndFormatCharacters(string address)
     {
-        Assert.Throws<ArgumentException>(() => Pii.FormatV2(V2Fields(address)));
+        Assert.Throws<ArgumentException>(() => Pii.Format(V2Fields(address)));
+    }
+
+    [Fact]
+    public void V2RejectsMalformedUtf16InsteadOfChangingItDuringEncryption()
+    {
+        Assert.Throws<ArgumentException>(() => Pii.Format(V2Fields("bad\uD800address")));
+        Assert.Throws<ArgumentException>(() => Pii.Format(new PiiFields { EmployeeName = "bad\uDC00name" }));
     }
 
     [Fact]
@@ -147,10 +171,13 @@ public class PiiTests
     }
 
     [Fact]
-    public void FieldOrderIsTheWireContract()
+    public void FieldOrdersArePermanentWireContracts()
     {
         Assert.Equal(
-            ["employeeName", "position", "department", "employerAbn", "bsb", "accountNumber", "accountName"],
+            ["employeeName", "position", "department", "employerAbn", "bsb", "accountNumber", "accountName", "address"],
             Pii.FieldOrder);
+        Assert.Equal(
+            ["employeeName", "position", "department", "employerAbn", "bsb", "accountNumber", "accountName"],
+            Pii.V1FieldOrder);
     }
 }

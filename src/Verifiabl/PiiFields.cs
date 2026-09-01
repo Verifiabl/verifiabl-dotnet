@@ -5,8 +5,9 @@ namespace Verifiabl;
 /// optional; omitted fields are encoded as empty segments and skipped by Verifiabl.
 /// </summary>
 /// <remarks>
-/// Values must not contain the pipe character <c>|</c> (the wire delimiter) or
-/// control characters, and each is limited to 256 characters.
+/// Values must not contain the pipe character <c>|</c> (the wire delimiter),
+/// control characters, or Unicode format characters. Fields other than Address
+/// are limited to 256 characters; Address is limited to 320 UTF-8 bytes.
 /// </remarks>
 public sealed class PiiFields
 {
@@ -30,4 +31,9 @@ public sealed class PiiFields
 
     /// <summary>Payment account name.</summary>
     public string? AccountName { get; set; }
+
+    /// <summary>
+    /// Optional unstructured address, preserved verbatim. Maximum 320 UTF-8 bytes.
+    /// </summary>
+    public string? Address { get; set; }
 }

@@ -9,7 +9,7 @@ public static class VerifiablEndpoints
     /// <summary>Production origin of the public QR scan URL printed on documents.</summary>
     public const string ProductionScanBaseUrl = "https://verify.verifiabl.io";
 
-    /// <summary>Production root origin used only by opt-in v2 barcode writers.</summary>
+    /// <summary>Production short origin used by default v2 barcode writers.</summary>
     public const string ProductionV2ScanBaseUrl = "https://v.verifiabl.io";
 
     /// <summary>Sandbox issuer API origin, selected via <see cref="VerifiablEnvironment.Sandbox"/>.</summary>
@@ -18,7 +18,7 @@ public static class VerifiablEndpoints
     /// <summary>Sandbox origin of the public QR scan URL.</summary>
     public const string SandboxScanBaseUrl = "https://verify.sandbox.verifiabl.io";
 
-    /// <summary>Sandbox root origin used only by opt-in v2 barcode writers.</summary>
+    /// <summary>Sandbox short origin used by default v2 barcode writers.</summary>
     public const string SandboxV2ScanBaseUrl = "https://v.sandbox.verifiabl.io";
 
     internal const string ProductionTokenUrl = "https://auth.verifiabl.io/oauth/token";

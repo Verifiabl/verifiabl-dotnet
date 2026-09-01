@@ -15,7 +15,7 @@ public static class VerifiablBase32
             throw new ArgumentNullException(nameof(bytes));
         }
 
-        var output = new StringBuilder((bytes.Length * 8 + 4) / 5);
+        var output = new StringBuilder(GetEncodedLength(bytes.Length));
         int accumulator = 0;
         int bits = 0;
         foreach (byte value in bytes)
@@ -37,5 +37,21 @@ public static class VerifiablBase32
         }
 
         return output.ToString();
+    }
+
+    internal static int GetEncodedLength(int byteLength)
+    {
+        if (byteLength < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(byteLength));
+        }
+
+        long outputLength = ((long)byteLength * 8 + 4) / 5;
+        if (outputLength > int.MaxValue)
+        {
+            throw new ArgumentException("The Base32 output exceeds the maximum string length.", nameof(byteLength));
+        }
+
+        return (int)outputLength;
     }
 }

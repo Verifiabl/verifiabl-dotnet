@@ -16,8 +16,8 @@ public enum BarcodeErrorCorrectionLevel
 /// <summary>Options for <see cref="VerifiablBarcode.CreateSvg"/>.</summary>
 public sealed class BarcodeSvgOptions
 {
-    /// <summary>Printed format. V2 is opt-in; defaults to V1.</summary>
-    public BarcodePayloadFormat Format { get; set; } = BarcodePayloadFormat.V1;
+    /// <summary>Printed format. Defaults to V2; select V1 only for rollback.</summary>
+    public BarcodePayloadFormat Format { get; set; } = BarcodePayloadFormat.V2;
 
     /// <summary>API environment for the public QR scan URL. Defaults to production.</summary>
     public VerifiablEnvironment Environment { get; set; } = VerifiablEnvironment.Production;

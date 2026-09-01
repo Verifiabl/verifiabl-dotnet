@@ -22,4 +22,11 @@ public class Base32Tests
     {
         Assert.Equal("74AAC", VerifiablBase32.Encode([0xff, 0x00, 0x01]));
     }
+
+    [Fact]
+    public void CalculatesLargeOutputLengthsWithoutIntegerOverflow()
+    {
+        Assert.Equal(429_496_730, VerifiablBase32.GetEncodedLength(268_435_456));
+        Assert.Throws<ArgumentException>(() => VerifiablBase32.GetEncodedLength(int.MaxValue));
+    }
 }

@@ -167,7 +167,7 @@ internal static class SvgBadgeRenderer
         string content,
         double badgeWidth,
         BarcodeErrorCorrectionLevel[] ladder,
-        BarcodePayloadFormat format = BarcodePayloadFormat.V1)
+        BarcodePayloadFormat format)
     {
         double scale = badgeWidth / FrameViewboxWidth;
         int? densestSize = null;

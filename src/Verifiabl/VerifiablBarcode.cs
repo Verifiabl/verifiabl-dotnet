@@ -17,7 +17,7 @@ public static class VerifiablBarcode
     /// Write the barcode payload (<see cref="BuildPayload(BarcodeParts)"/>) into the payslip
     /// PDF's XMP metadata in addition to the QR code, so a verifier can read the
     /// payload even when the QR itself cannot be scanned. Both hold the identical
-    /// encrypted <c>1|verifiablReference|&lt;encrypted PII&gt;</c> value; never
+    /// encrypted <c>2|verifiablReference|&lt;Base32 ciphertext&gt;</c> value by default; never
     /// write plaintext PII to metadata, which is not encrypted. Write the value
     /// with any PDF toolchain that can set a custom XMP property; the SDK only
     /// provides the keys.
@@ -28,7 +28,7 @@ public static class VerifiablBarcode
     public const string PdfPayloadXmpProperty = "payload";
 
     /// <summary>
-    /// Build the v1 barcode payload: <c>1|&lt;verifiablReference&gt;|&lt;ciphertext&gt;</c>.
+    /// Build the default v2 barcode payload: <c>2|&lt;verifiablReference&gt;|&lt;Base32 ciphertext&gt;</c>.
     /// </summary>
     /// <remarks>
     /// This is the bare wire format, and the value to write into the PDF's XMP
@@ -37,10 +37,10 @@ public static class VerifiablBarcode
     /// ciphertext as a public scan-redirect URL.
     /// </remarks>
     public static string BuildPayload(BarcodeParts parts) =>
-        BuildPayload(parts, BarcodePayloadFormat.V1);
+        BuildPayload(parts, BarcodePayloadFormat.V2);
 
     /// <summary>
-    /// Build a barcode payload in the selected format. V2 is opt-in.
+    /// Build a barcode payload in the selected format. Select V1 only for rollback.
     /// </summary>
     public static string BuildPayload(BarcodeParts parts, BarcodePayloadFormat format)
     {
@@ -63,16 +63,16 @@ public static class VerifiablBarcode
     }
 
     /// <summary>
-    /// Build the URL encoded into Verifiabl QR codes:
-    /// <c>https://verify.verifiabl.io/v/&lt;verifiablReference&gt;#1.&lt;ciphertext&gt;</c>.
+    /// Build the URL encoded into Verifiabl QR codes. The default is:
+    /// <c>https://v.verifiabl.io/v/&lt;verifiablReference&gt;#2.&lt;Base32 ciphertext&gt;</c>.
     /// The scan URL sends scanners to Verifiabl instead of exposing raw ciphertext
     /// in a phone camera preview.
     /// </summary>
     /// <remarks>
     /// The ciphertext rides in the fragment, which no client transmits to a
     /// server, so it cannot reach a request log at Verifiabl or at any
-    /// intermediary. Every character stays inside the URI-safe set (base64url
-    /// plus <c>.</c>), which is what keeps scanners treating this as a URL and
+    /// intermediary. Every character stays inside the URI-safe Base32 or
+    /// base64url alphabets plus <c>.</c>, which keeps scanners treating this as a URL and
     /// offering tap-to-open rather than showing it as plain text.
     /// </remarks>
     public static string BuildScanUrl(BarcodeParts parts, ScanUrlOptions? options = null)
