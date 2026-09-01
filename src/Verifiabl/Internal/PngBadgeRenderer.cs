@@ -64,7 +64,7 @@ internal static class PngBadgeRenderer
             frame.Height,
             content,
             selected.ErrorCorrectionLevel,
-            (selected.Size - 17) / 4,
+            selected.QrVersion,
             SvgBadgeRenderer.Round2(selected.ModulePx),
             degraded);
     }

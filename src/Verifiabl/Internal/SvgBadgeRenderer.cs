@@ -128,7 +128,7 @@ internal static class SvgBadgeRenderer
             Round2(height),
             content,
             selected.ErrorCorrectionLevel,
-            (selected.Size - 17) / 4,
+            selected.QrVersion,
             Round2(selected.ModulePx),
             degraded);
     }
@@ -398,6 +398,9 @@ internal static class SvgBadgeRenderer
         internal BarcodeErrorCorrectionLevel ErrorCorrectionLevel { get; }
 
         internal int Size { get; }
+
+        // QR symbols are 17 + four modules per version along each side.
+        internal int QrVersion => (Size - 17) / 4;
 
         internal double ModuleSize { get; }
 
