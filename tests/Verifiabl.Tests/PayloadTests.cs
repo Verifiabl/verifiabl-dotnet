@@ -5,7 +5,7 @@ namespace Verifiabl.Tests;
 public class PayloadTests
 {
     private const string Reference = "u0FE9WLIS7GYKQnpJPygBw";
-    private const string Ciphertext = "abc123DEF456-_";
+    private const string Ciphertext = "abc123DEF456-w";
 
     [Fact]
     public void BuildsTheV1PayloadForRollback()

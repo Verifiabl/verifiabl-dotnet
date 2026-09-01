@@ -9,7 +9,7 @@ namespace Verifiabl;
 /// control characters, or Unicode format characters. Fields other than Address
 /// are limited to 256 characters; Address is limited to 320 UTF-8 bytes.
 /// </remarks>
-public sealed class PiiFields
+public class PiiFields
 {
     /// <summary>Employee full name as printed on the payslip.</summary>
     public string? EmployeeName { get; set; }

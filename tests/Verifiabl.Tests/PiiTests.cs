@@ -99,7 +99,7 @@ public class PiiTests
     {
         string formatted = Pii.Format(new PiiFields { AccountName = new string('a', 256) });
 
-        Assert.EndsWith(new string('a', 256), formatted);
+        Assert.EndsWith(new string('a', 256) + "|", formatted);
     }
 
     private static PiiFields V2Fields(string? address = null) => new()
@@ -113,6 +113,14 @@ public class PiiTests
         AccountName = "Zoë Nguyễn",
         Address = address,
     };
+
+    [Fact]
+    public void OptInV2NamesRemainCompatibilityAliasesForTheDefaultWriter()
+    {
+        var fields = new PiiV2Fields { EmployeeName = "Jane", Address = "12 Example St" };
+
+        Assert.Equal(Pii.Format(fields), Pii.FormatV2(fields));
+    }
 
     [Fact]
     public void V2WritesExactBytesWithAnEmptyFinalAddress()
@@ -148,6 +156,18 @@ public class PiiTests
     public void V2RejectsDelimiterControlAndFormatCharacters(string address)
     {
         Assert.Throws<ArgumentException>(() => Pii.Format(V2Fields(address)));
+    }
+
+    [Theory]
+    [InlineData("\u0600")]
+    [InlineData("\u0890")]
+    [InlineData("\U00013430")]
+    [InlineData("\U0001BCA0")]
+    [InlineData("\U000E007F")]
+    public void V2UsesTheFixedUnicode15FormatCharacterTable(string formatCharacter)
+    {
+        Assert.Throws<ArgumentException>(
+            () => Pii.Format(new PiiFields { EmployeeName = "Jane" + formatCharacter }));
     }
 
     [Fact]
