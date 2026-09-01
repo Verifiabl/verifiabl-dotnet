@@ -9,6 +9,7 @@ public sealed class BarcodePngResult
         int height,
         string content,
         BarcodeErrorCorrectionLevel errorCorrectionLevel,
+        int qrVersion,
         double modulePx,
         bool degraded)
     {
@@ -17,6 +18,7 @@ public sealed class BarcodePngResult
         Height = height;
         Content = content;
         ErrorCorrectionLevel = errorCorrectionLevel;
+        QrVersion = qrVersion;
         ModulePx = modulePx;
         Degraded = degraded;
     }
@@ -39,6 +41,9 @@ public sealed class BarcodePngResult
     /// below it only for unusually long PII so the code still fits the fixed frame.
     /// </summary>
     public BarcodeErrorCorrectionLevel ErrorCorrectionLevel { get; }
+
+    /// <summary>QR symbol version (1-40), for scanner-fixture attribution.</summary>
+    public int QrVersion { get; }
 
     /// <summary>Rendered size of one QR module, in output pixels.</summary>
     public double ModulePx { get; }

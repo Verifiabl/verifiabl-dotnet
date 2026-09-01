@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Text;
 
 namespace Verifiabl;
 
@@ -22,6 +24,9 @@ public static class Pii
 {
     private const string Prefix = "P1|";
     private const int MaxFieldLength = 256;
+
+    /// <summary>Maximum UTF-8 size of the optional P2 address.</summary>
+    public const int AddressMaxBytes = 320;
 
     /// <summary>Field order is the wire contract. Never reorder.</summary>
     public static readonly IReadOnlyList<string> FieldOrder = new ReadOnlyCollection<string>(
@@ -62,6 +67,32 @@ public static class Pii
         ];
 
         return Prefix + string.Join("|", segments);
+    }
+
+    /// <summary>
+    /// Opt-in P2 writer. The address is preserved verbatim and represented by
+    /// the final field, which is empty when no address is supplied.
+    /// </summary>
+    public static string FormatV2(PiiV2Fields fields)
+    {
+        if (fields is null)
+        {
+            throw new ArgumentNullException(nameof(fields));
+        }
+
+        string[] segments =
+        [
+            ValidateV2Field(fields.EmployeeName, nameof(fields.EmployeeName)),
+            ValidateV2Field(fields.Position, nameof(fields.Position)),
+            ValidateV2Field(fields.Department, nameof(fields.Department)),
+            ValidateV2Field(fields.EmployerAbn, nameof(fields.EmployerAbn)),
+            ValidateV2Field(fields.Bsb, nameof(fields.Bsb)),
+            ValidateV2Field(fields.AccountNumber, nameof(fields.AccountNumber)),
+            ValidateV2Field(fields.AccountName, nameof(fields.AccountName)),
+            ValidateAddress(fields.Address),
+        ];
+
+        return "P2|" + string.Join("|", segments);
     }
 
     /// <summary>
@@ -127,6 +158,43 @@ public static class Pii
 
         return value;
     }
+
+    private static string ValidateV2Field(string? value, string name)
+    {
+        value = ValidateField(value, name);
+        if (ContainsFormatCharacter(value))
+        {
+            throw new ArgumentException($"{name} must not contain format characters.", name);
+        }
+
+        return value;
+    }
+
+    private static string ValidateAddress(string? value)
+    {
+        if (value is null)
+        {
+            return string.Empty;
+        }
+
+        const string name = nameof(PiiV2Fields.Address);
+        if (!IsPrintableWithoutPipe(value) || ContainsFormatCharacter(value))
+        {
+            throw new ArgumentException(
+                $"{name} must not contain '|', control, or format characters.",
+                name);
+        }
+
+        if (Encoding.UTF8.GetByteCount(value) > AddressMaxBytes)
+        {
+            throw new ArgumentException($"{name} exceeds {AddressMaxBytes} UTF-8 bytes.", name);
+        }
+
+        return value;
+    }
+
+    private static bool ContainsFormatCharacter(string value) =>
+        value.Any(c => CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.Format);
 
     private static string? NormalizeSegment(string value, string name)
     {

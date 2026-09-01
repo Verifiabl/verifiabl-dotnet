@@ -1,3 +1,4 @@
+using System.Text;
 using Xunit;
 
 namespace Verifiabl.Tests;
@@ -83,6 +84,53 @@ public class PiiTests
         string formatted = Pii.Format(new PiiFields { AccountName = new string('a', 256) });
 
         Assert.EndsWith(new string('a', 256), formatted);
+    }
+
+    private static PiiV2Fields V2Fields(string? address = null) => new()
+    {
+        EmployeeName = "Zoë Nguyễn",
+        Position = "Ingénieure",
+        Department = "R&D",
+        EmployerAbn = "53004085616",
+        Bsb = "062-000",
+        AccountNumber = "12345678",
+        AccountName = "Zoë Nguyễn",
+        Address = address,
+    };
+
+    [Fact]
+    public void V2WritesExactBytesWithAnEmptyFinalAddress()
+    {
+        byte[] actual = Encoding.UTF8.GetBytes(Pii.FormatV2(V2Fields()));
+        byte[] expected = Encoding.UTF8.GetBytes(
+            "P2|Zoë Nguyễn|Ingénieure|R&D|53004085616|062-000|12345678|Zoë Nguyễn|");
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void V2PreservesARealisticInternationalAddressVerbatim()
+    {
+        const string address = "12 Rue de l’Église, Apt 4B, 75005 Paris, France 🇫🇷";
+        Assert.EndsWith("|" + address, Pii.FormatV2(V2Fields(address)));
+    }
+
+    [Fact]
+    public void V2AcceptsExactly320Utf8BytesAndRejectsOneOver()
+    {
+        string boundary = string.Concat(Enumerable.Repeat("東京", 53)) + "AB";
+        Assert.Equal(320, Encoding.UTF8.GetByteCount(boundary));
+        Assert.EndsWith("|" + boundary, Pii.FormatV2(V2Fields(boundary)));
+        Assert.Throws<ArgumentException>(() => Pii.FormatV2(V2Fields(boundary + "C")));
+    }
+
+    [Theory]
+    [InlineData("bad|address")]
+    [InlineData("bad\naddress")]
+    [InlineData("bad\u200Baddress")]
+    public void V2RejectsDelimiterControlAndFormatCharacters(string address)
+    {
+        Assert.Throws<ArgumentException>(() => Pii.FormatV2(V2Fields(address)));
     }
 
     [Fact]

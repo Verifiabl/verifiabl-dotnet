@@ -15,6 +15,27 @@ public class PayloadTests
         Assert.Equal($"1|{Reference}|{Ciphertext}", payload);
     }
 
+    [Fact]
+    public void RejectsNonCanonicalBase64UrlBeforeWritingV2()
+    {
+        Assert.Throws<ArgumentException>(() => VerifiablBarcode.BuildPayload(
+            new BarcodeParts(Reference, "Zh"),
+            BarcodePayloadFormat.V2));
+    }
+
+    [Fact]
+    public void BuildsTheOptInV2XmpPayloadFromExactCiphertextBytes()
+    {
+        const string ciphertext = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8";
+        string payload = VerifiablBarcode.BuildPayload(
+            new BarcodeParts(Reference, ciphertext),
+            BarcodePayloadFormat.V2);
+
+        Assert.Equal(
+            $"2|{Reference}|AAAQEAYEAUDAOCAJBIFQYDIOB4IBCEQTCQKRMFYYDENBWHA5DYPQ",
+            payload);
+    }
+
     [Theory]
     [InlineData("short")]
     [InlineData("u0FE9WLIS7GYKQnpJPygBwX")]
@@ -64,6 +85,35 @@ public class PayloadTests
         Assert.DoesNotContain(Ciphertext, url.AbsolutePath);
         Assert.Empty(url.Query);
         Assert.Equal($"#1.{Ciphertext}", url.Fragment);
+    }
+
+    [Fact]
+    public void BuildsTheOptInV2RootDomainScanUrl()
+    {
+        string url = VerifiablBarcode.BuildScanUrl(
+            new BarcodeParts(Reference, "Zm9vYmFy"),
+            new ScanUrlOptions { Format = BarcodePayloadFormat.V2 });
+
+        Assert.Equal($"https://verifiabl.io/v/{Reference}#2.MZXW6YTBOI", url);
+        Assert.Equal(
+            VerifiablBarcode.BuildPayload(
+                new BarcodeParts(Reference, "Zm9vYmFy"),
+                BarcodePayloadFormat.V2).Split('|')[2],
+            url.Split(new[] { "#2." }, StringSplitOptions.None)[1]);
+    }
+
+    [Fact]
+    public void BuildsTheOptInV2SandboxRootDomainScanUrl()
+    {
+        string url = VerifiablBarcode.BuildScanUrl(
+            new BarcodeParts(Reference, "Zm9vYmFy"),
+            new ScanUrlOptions
+            {
+                Format = BarcodePayloadFormat.V2,
+                Environment = VerifiablEnvironment.Sandbox,
+            });
+
+        Assert.Equal($"https://sandbox.verifiabl.io/v/{Reference}#2.MZXW6YTBOI", url);
     }
 
     [Fact]

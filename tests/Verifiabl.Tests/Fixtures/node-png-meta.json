@@ -4,6 +4,7 @@
     "height": 1133,
     "content": "https://verify.verifiabl.io/v/u0FE9WLIS7GYKQnpJPygBw#1.Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Zz19-_",
     "errorCorrectionLevel": "M",
+    "qrVersion": 13,
     "modulePx": 8.45,
     "degraded": false
   },
@@ -12,6 +13,7 @@
     "height": 755,
     "content": "https://verify.sandbox.verifiabl.io/v/u0FE9WLIS7GYKQnpJPygBw#1.Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Zz19-_",
     "errorCorrectionLevel": "Q",
+    "qrVersion": 16,
     "modulePx": 4.82,
     "degraded": false
   },
@@ -20,7 +22,17 @@
     "height": 2265,
     "content": "https://verify.verifiabl.io/v/u0FE9WLIS7GYKQnpJPygBw#1.Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Ab3Zz19-_",
     "errorCorrectionLevel": "M",
+    "qrVersion": 13,
     "modulePx": 16.9,
+    "degraded": false
+  },
+  "png-v2-mixed-mode-720": {
+    "width": 720,
+    "height": 1133,
+    "content": "https://verifiabl.io/v/u0FE9WLIS7GYKQnpJPygBw#2.AG64A33QDPOAN5YBXXAG64A33QDPOAN5YBXXAG64A33QDPOAN5YBXXAG64A33QDPOAN5YBXXAG64A33QDPOAN5YBXXAG64A33QDPOAN5YBXXAG64A33QDPOAN5YBXXAG64A33QDPOAN5YBXXAG64A33QDPOAN5YBXXAG64A33QDPOAN5YBXXAG64A33QDPOAN5YBXXAG64A33QDPOAN5YBXXAG64A33QDPOAN5YBXXAG64A33QDPOAN5YBXXAG64A33QDPOAN5YBXXAG64A33QDPOAN5YBXXM46X36Y",
+    "errorCorrectionLevel": "M",
+    "qrVersion": 12,
+    "modulePx": 8.96,
     "degraded": false
   }
 }

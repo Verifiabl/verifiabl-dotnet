@@ -18,6 +18,7 @@ internal static class PngBadgeRenderer
             badge.Height,
             badge.Content,
             badge.ErrorCorrectionLevel,
+            badge.QrVersion,
             badge.ModulePx,
             badge.Degraded);
     }
@@ -34,6 +35,7 @@ internal static class PngBadgeRenderer
 
         var scanOptions = new ScanUrlOptions
         {
+            Format = options.Format,
             Environment = options.Environment,
             ScanBaseUrl = options.ScanBaseUrl,
         };
@@ -42,7 +44,7 @@ internal static class PngBadgeRenderer
         BarcodeErrorCorrectionLevel[] ladder =
             SvgBadgeRenderer.ErrorCorrectionLadder(options.MaxErrorCorrection);
         SvgBadgeRenderer.SelectedQrRendering selected =
-            SvgBadgeRenderer.SelectQrRendering(content, pixelWidth, ladder);
+            SvgBadgeRenderer.SelectQrRendering(content, pixelWidth, ladder, options.Format);
         bool degraded = selected.ErrorCorrectionLevel != ladder[0]
             || selected.ModulePx < SvgBadgeRenderer.IdealModulePx;
 
@@ -62,6 +64,7 @@ internal static class PngBadgeRenderer
             frame.Height,
             content,
             selected.ErrorCorrectionLevel,
+            (selected.Size - 17) / 4,
             SvgBadgeRenderer.Round2(selected.ModulePx),
             degraded);
     }
@@ -74,6 +77,7 @@ internal static class PngBadgeRenderer
             int height,
             string content,
             BarcodeErrorCorrectionLevel errorCorrectionLevel,
+            int qrVersion,
             double modulePx,
             bool degraded)
         {
@@ -82,6 +86,7 @@ internal static class PngBadgeRenderer
             Height = height;
             Content = content;
             ErrorCorrectionLevel = errorCorrectionLevel;
+            QrVersion = qrVersion;
             ModulePx = modulePx;
             Degraded = degraded;
         }
@@ -95,6 +100,8 @@ internal static class PngBadgeRenderer
         internal string Content { get; }
 
         internal BarcodeErrorCorrectionLevel ErrorCorrectionLevel { get; }
+
+        internal int QrVersion { get; }
 
         internal double ModulePx { get; }
 

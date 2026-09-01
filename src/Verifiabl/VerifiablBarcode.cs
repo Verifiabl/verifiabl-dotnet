@@ -14,7 +14,7 @@ public static class VerifiablBarcode
     /// not change.
     /// </summary>
     /// <remarks>
-    /// Write the barcode payload (<see cref="BuildPayload"/>) into the payslip
+    /// Write the barcode payload (<see cref="BuildPayload(BarcodeParts)"/>) into the payslip
     /// PDF's XMP metadata in addition to the QR code, so a verifier can read the
     /// payload even when the QR itself cannot be scanned. Both hold the identical
     /// encrypted <c>1|verifiablReference|&lt;encrypted PII&gt;</c> value; never
@@ -28,13 +28,6 @@ public static class VerifiablBarcode
     public const string PdfPayloadXmpProperty = "payload";
 
     /// <summary>
-    /// Protocol version carried by both wire formats. The bare payload spells it
-    /// <c>1|</c> and the scan URL spells it <c>#1.</c>, so a version bump that
-    /// touched only one would emit a payload and a scan URL that disagree.
-    /// </summary>
-    private const string ProtocolVersion = "1";
-
-    /// <summary>
     /// Build the v1 barcode payload: <c>1|&lt;verifiablReference&gt;|&lt;ciphertext&gt;</c>.
     /// </summary>
     /// <remarks>
@@ -43,7 +36,13 @@ public static class VerifiablBarcode
     /// <see cref="BuildScanUrl"/>, which carries the same reference and
     /// ciphertext as a public scan-redirect URL.
     /// </remarks>
-    public static string BuildPayload(BarcodeParts parts)
+    public static string BuildPayload(BarcodeParts parts) =>
+        BuildPayload(parts, BarcodePayloadFormat.V1);
+
+    /// <summary>
+    /// Build a barcode payload in the selected format. V2 is opt-in.
+    /// </summary>
+    public static string BuildPayload(BarcodeParts parts, BarcodePayloadFormat format)
     {
         if (parts is null)
         {
@@ -56,8 +55,11 @@ public static class VerifiablBarcode
         string ciphertext = Validation.ValidateCiphertext(
             parts.EncryptedPii,
             nameof(parts.EncryptedPii));
+        format = ValidateFormat(format, nameof(format));
 
-        return $"{ProtocolVersion}|{reference}|{ciphertext}";
+        return format == BarcodePayloadFormat.V1
+            ? $"1|{reference}|{ciphertext}"
+            : $"2|{reference}|{VerifiablBase32.Encode(Base64Url.DecodeCanonical(ciphertext))}";
     }
 
     /// <summary>
@@ -79,8 +81,13 @@ public static class VerifiablBarcode
         VerifiablEnvironment environment = VerifiablEndpoints.Validate(
             options.Environment,
             $"{nameof(options)}.{nameof(options.Environment)}");
+        BarcodePayloadFormat format = ValidateFormat(
+            options.Format,
+            $"{nameof(options)}.{nameof(options.Format)}");
         string baseUrl = options.ScanBaseUrl is null
-            ? VerifiablEndpoints.ScanBaseUrlFor(environment)
+            ? format == BarcodePayloadFormat.V2
+                ? VerifiablEndpoints.V2ScanBaseUrlFor(environment)
+                : VerifiablEndpoints.ScanBaseUrlFor(environment)
             : NormalizeScanBaseUrl(options.ScanBaseUrl);
 
         if (parts is null)
@@ -95,7 +102,13 @@ public static class VerifiablBarcode
             parts.EncryptedPii,
             nameof(parts.EncryptedPii));
 
-        return $"{baseUrl}/v/{reference}#{ProtocolVersion}.{ciphertext}";
+        if (format == BarcodePayloadFormat.V1)
+        {
+            return $"{baseUrl}/v/{reference}#1.{ciphertext}";
+        }
+
+        string base32 = VerifiablBase32.Encode(Base64Url.DecodeCanonical(ciphertext));
+        return $"{baseUrl}/v/{reference}#2.{base32}";
     }
 
     /// <summary>
@@ -137,6 +150,16 @@ public static class VerifiablBarcode
         int pixelWidth = 720)
     {
         return PngBadgeRenderer.Render(parts, options ?? new BarcodeSvgOptions(), pixelWidth);
+    }
+
+    internal static BarcodePayloadFormat ValidateFormat(BarcodePayloadFormat format, string paramName)
+    {
+        if (format != BarcodePayloadFormat.V1 && format != BarcodePayloadFormat.V2)
+        {
+            throw new ArgumentOutOfRangeException(paramName, format, "Format must be V1 or V2.");
+        }
+
+        return format;
     }
 
     private static string NormalizeScanBaseUrl(Uri scanBaseUrl)

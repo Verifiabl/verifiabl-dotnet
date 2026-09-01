@@ -8,6 +8,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Opt-in v2 barcode and XMP writers (`BarcodePayloadFormat.V2`) with canonical
+  uppercase unpadded RFC 4648 Base32, root-domain scan URLs, and explicit QR
+  byte/alphanumeric segments. V1 remains the default.
+- `Pii.FormatV2` and `PiiV2Fields`, including the optional unstructured address
+  with a 320-byte UTF-8 ceiling and delimiter/control/format-character rejection.
+- QR version reporting and cross-SDK v2 raster parity fixtures.
 - `VerifiablIvReuseException`, thrown when a single registration is rejected
   because the record's encryption IV is already registered to your issuer. It
   derives from `VerifiablApiException`, so existing handling still catches it,
