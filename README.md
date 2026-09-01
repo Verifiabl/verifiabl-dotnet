@@ -137,6 +137,33 @@ BarcodeSvgResult legacyBadge = VerifiablBarcode.CreateSvg(parts, legacyOptions);
 string legacyXmpPayload = VerifiablBarcode.BuildPayload(parts, BarcodePayloadFormat.V1);
 ```
 
+### Scanner test pack
+
+Generate synthetic v2 symbols for screen, print, fold, photocopy, camera, and hardware-scanner tests:
+
+```bash
+dotnet run --project tools/Verifiabl.ScannerPack -- ./artifacts/ver-460
+```
+
+Open `artifacts/ver-460/index.html` for screen or print tests. The pack includes PNG files and a
+`manifest.json` file. The manifest records each exact scan URL, XMP payload, ciphertext byte value,
+QR version, and error-correction level. All fixture details are synthetic. Do not replace them with
+customer data. CI also publishes the same pack as the `verifiabl-dotnet-scanner-pack` workflow
+artifact.
+
+### Development shell
+
+The pinned Nix shell supplies the .NET 8 and .NET 10 SDKs and runtimes:
+
+```bash
+nix develop
+dotnet restore
+dotnet test
+```
+
+Linux and macOS can build all library targets. Windows CI runs the .NET Framework 4.7.2 tests.
+
+
 The compiler enforces the mandatory fields: `Schema`, `IssuedAt`, `PayslipNonPii`, and `EncryptionMetadata` are `required`, so an incomplete request will not build.
 
 `AdditionalData` is passed to the API verbatim under the exact keys you supply. Values may be strings, booleans, numbers, `null`, nested dictionaries, or sequences of those; anything else throws an `ArgumentException` naming the key. Which keys your schema requires is documented per schema — the `au.payslip.v1` set is shown above.

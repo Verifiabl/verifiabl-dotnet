@@ -16,6 +16,9 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   permanent legacy writer. P2 rejects delimiters, controls, Unicode format
   characters, and malformed UTF-16 before encryption.
 - QR version reporting and cross-SDK v2 raster parity fixtures.
+- A synthetic scanner pack generator for screen, print, fold, photocopy, camera,
+  and hardware-scanner testing.
+- A pinned Nix development shell with .NET 8 and .NET 10 tooling.
 - `VerifiablIvReuseException`, thrown when a single registration is rejected
   because the record's encryption IV is already registered to your issuer. It
   derives from `VerifiablApiException`, so existing handling still catches it,

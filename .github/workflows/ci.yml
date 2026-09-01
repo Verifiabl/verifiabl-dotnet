@@ -26,6 +26,14 @@ jobs:
       - run: dotnet restore
       - run: dotnet build --configuration Release --no-restore
       - run: dotnet test --configuration Release --no-build
+      - run: dotnet run --project tools/Verifiabl.ScannerPack --configuration Release --no-build -- artifacts/scanner-pack
+        if: runner.os == 'Linux'
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: verifiabl-dotnet-scanner-pack
+          path: artifacts/scanner-pack
+          if-no-files-found: error
       # Packing validates the NuGet metadata and package layout on every change.
       - run: dotnet pack --configuration Release --no-build --output artifacts
         if: runner.os == 'Linux'
