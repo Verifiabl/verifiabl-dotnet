@@ -88,13 +88,13 @@ public class PayloadTests
     }
 
     [Fact]
-    public void BuildsTheOptInV2RootDomainScanUrl()
+    public void BuildsTheOptInV2ShortHostScanUrl()
     {
         string url = VerifiablBarcode.BuildScanUrl(
             new BarcodeParts(Reference, "Zm9vYmFy"),
             new ScanUrlOptions { Format = BarcodePayloadFormat.V2 });
 
-        Assert.Equal($"https://verifiabl.io/v/{Reference}#2.MZXW6YTBOI", url);
+        Assert.Equal($"https://v.verifiabl.io/v/{Reference}#2.MZXW6YTBOI", url);
         Assert.Equal(
             VerifiablBarcode.BuildPayload(
                 new BarcodeParts(Reference, "Zm9vYmFy"),
@@ -103,7 +103,7 @@ public class PayloadTests
     }
 
     [Fact]
-    public void BuildsTheOptInV2SandboxRootDomainScanUrl()
+    public void BuildsTheOptInV2SandboxShortHostScanUrl()
     {
         string url = VerifiablBarcode.BuildScanUrl(
             new BarcodeParts(Reference, "Zm9vYmFy"),
@@ -113,7 +113,7 @@ public class PayloadTests
                 Environment = VerifiablEnvironment.Sandbox,
             });
 
-        Assert.Equal($"https://sandbox.verifiabl.io/v/{Reference}#2.MZXW6YTBOI", url);
+        Assert.Equal($"https://v.sandbox.verifiabl.io/v/{Reference}#2.MZXW6YTBOI", url);
     }
 
     [Fact]

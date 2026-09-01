@@ -119,7 +119,7 @@ BarcodeSvgResult badge = VerifiablBarcode.CreateSvg(
 ### Opt-in v2 / P2 writers
 
 V1 remains the default and permanently readable. Opt in only after Verifiabl confirms the reader,
-root-route, and scanner-compatibility release gates for your environment:
+short scan-host route, and scanner-compatibility release gates for your environment:
 
 ```csharp
 string plaintext = Pii.FormatV2(new PiiV2Fields
@@ -142,9 +142,9 @@ string xmpPayload = VerifiablBarcode.BuildPayload(parts, BarcodePayloadFormat.V2
 P2 is exactly `P2|employeeName|position|department|employerAbn|bsb|accountNumber|accountName|address`.
 The final address is unstructured, optional, preserved verbatim, and limited to 320 UTF-8 bytes.
 Pipes, control characters, and Unicode format characters are rejected before encryption. A v2 QR
-uses the root scan domain with `#2.<BASE32>` and an explicit byte/alphanumeric segment split; its XMP
+uses the short scan host with `#2.<BASE32>` and an explicit byte/alphanumeric segment split; its XMP
 copy must be the matching `2|reference|BASE32`. Never mix QR and XMP versions. Rollback changes new
-writer output back to v1; readers and root routes remain available for already printed v2 documents.
+writer output back to v1; readers and short-host routes remain available for already printed v2 documents.
 
 The compiler enforces the mandatory fields: `Schema`, `IssuedAt`, `PayslipNonPii`, and `EncryptionMetadata` are `required`, so an incomplete request will not build.
 

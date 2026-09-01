@@ -9,7 +9,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Opt-in v2 barcode and XMP writers (`BarcodePayloadFormat.V2`) with canonical
-  uppercase unpadded RFC 4648 Base32, root-domain scan URLs, and explicit QR
+  uppercase unpadded RFC 4648 Base32, short-host scan URLs, and explicit QR
   byte/alphanumeric segments. V1 remains the default.
 - `Pii.FormatV2` and `PiiV2Fields`, including the optional unstructured address
   with a 320-byte UTF-8 ceiling and delimiter/control/format-character rejection.
