@@ -3,6 +3,9 @@ namespace Verifiabl;
 /// <summary>Options for <see cref="VerifiablBarcode.BuildScanUrl"/>.</summary>
 public sealed class ScanUrlOptions
 {
+    /// <summary>Printed format. Defaults to V2; select V1 only for rollback.</summary>
+    public BarcodePayloadFormat Format { get; set; } = BarcodePayloadFormat.V2;
+
     /// <summary>API environment for the public QR scan URL. Defaults to production.</summary>
     public VerifiablEnvironment Environment { get; set; } = VerifiablEnvironment.Production;
 

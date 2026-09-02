@@ -15,7 +15,7 @@ public class NodeSdkParityTests
 
     private static string Ciphertext()
     {
-        return string.Concat(Enumerable.Repeat("Ab3", 80)) + "Zz19-_";
+        return string.Concat(Enumerable.Repeat("Ab3", 80)) + "Zz19-w";
     }
 
     private static string Fixture(string name)
@@ -39,6 +39,25 @@ public class NodeSdkParityTests
         Assert.Equal(expected.GetProperty("modulePx").GetDouble(), result.ModulePx);
         Assert.Equal(expected.GetProperty("degraded").GetBoolean(), result.Degraded);
         Assert.Equal(Fixture("node-svg-default-480.svg"), result.Svg);
+    }
+
+    [Fact]
+    public void MatchesTheNodeRendererForTheExplicitV1Badge()
+    {
+        BarcodeSvgResult result = VerifiablBarcode.CreateSvg(
+            new BarcodeParts(Reference, Ciphertext()),
+            new BarcodeSvgOptions { Format = BarcodePayloadFormat.V1 });
+
+        using JsonDocument meta = JsonDocument.Parse(Fixture("node-svg-meta.json"));
+        JsonElement expected = meta.RootElement.GetProperty("v1-default-480");
+
+        Assert.Equal(expected.GetProperty("content").GetString(), result.Content);
+        Assert.Equal(expected.GetProperty("width").GetDouble(), result.Width);
+        Assert.Equal(expected.GetProperty("height").GetDouble(), result.Height);
+        Assert.Equal("M", ToNodeLevel(result.ErrorCorrectionLevel));
+        Assert.Equal(expected.GetProperty("modulePx").GetDouble(), result.ModulePx);
+        Assert.Equal(expected.GetProperty("degraded").GetBoolean(), result.Degraded);
+        Assert.Equal(Fixture("node-svg-v1-default-480.svg"), result.Svg);
     }
 
     [Fact]
@@ -70,14 +89,16 @@ public class NodeSdkParityTests
     /// scannability proof.
     /// </summary>
     [Theory]
-    [InlineData("png-default-720", 720, false, false)]
-    [InlineData("png-sandbox-q-480", 480, true, true)]
-    [InlineData("png-default-1440", 1440, false, false)]
+    [InlineData("png-default-1440", 1440, false, false, null)]
+    [InlineData("png-default-720", 720, false, false, null)]
+    [InlineData("png-sandbox-q-480", 480, true, true, null)]
+    [InlineData("png-v1-default-720", 720, false, false, BarcodePayloadFormat.V1)]
     public void PngRasterMatchesTheNodeCompositor(
         string caseName,
         int pixelWidth,
         bool sandbox,
-        bool quartile)
+        bool quartile,
+        BarcodePayloadFormat? format)
     {
         var options = new BarcodeSvgOptions
         {
@@ -86,6 +107,11 @@ public class NodeSdkParityTests
                 ? BarcodeErrorCorrectionLevel.Quartile
                 : BarcodeErrorCorrectionLevel.Medium,
         };
+        if (format.HasValue)
+        {
+            options.Format = format.Value;
+        }
+
         Internal.PngBadgeRenderer.CompositedBadge badge = Internal.PngBadgeRenderer.Compose(
             new BarcodeParts(Reference, Ciphertext()),
             options,
@@ -99,6 +125,7 @@ public class NodeSdkParityTests
         Assert.Equal(
             expected.GetProperty("errorCorrectionLevel").GetString(),
             ToNodeLevel(badge.ErrorCorrectionLevel));
+        Assert.Equal(expected.GetProperty("qrVersion").GetInt32(), badge.QrVersion);
         Assert.Equal(expected.GetProperty("modulePx").GetDouble(), badge.ModulePx);
         Assert.Equal(expected.GetProperty("degraded").GetBoolean(), badge.Degraded);
 

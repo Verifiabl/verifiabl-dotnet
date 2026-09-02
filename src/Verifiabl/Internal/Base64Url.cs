@@ -10,6 +10,24 @@ internal static class Base64Url
             .Replace('/', '_');
     }
 
+    internal static byte[] DecodeCanonical(string value)
+    {
+        if (!IsBase64Url(value))
+        {
+            throw new ArgumentException("Ciphertext must be canonical unpadded base64url.", nameof(value));
+        }
+
+        string padded = value.Replace('-', '+').Replace('_', '/');
+        padded += new string('=', (4 - padded.Length % 4) % 4);
+        byte[] bytes = Convert.FromBase64String(padded);
+        if (!string.Equals(Encode(bytes), value, StringComparison.Ordinal))
+        {
+            throw new ArgumentException("Ciphertext must be canonical unpadded base64url.", nameof(value));
+        }
+
+        return bytes;
+    }
+
     /// <summary>
     /// Matches decodable unpadded base64url: alphabet only, non-empty, and a length that a
     /// byte sequence can actually encode to (length % 4 == 1 is never decodable).

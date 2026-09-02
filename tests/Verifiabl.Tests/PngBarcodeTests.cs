@@ -11,7 +11,7 @@ public class PngBarcodeTests
 
     private static string Ciphertext()
     {
-        return string.Concat(Enumerable.Repeat("Ab3", 80)) + "Zz19-_";
+        return string.Concat(Enumerable.Repeat("Ab3", 80)) + "Zz19-w";
     }
 
     private static BarcodeParts Parts()

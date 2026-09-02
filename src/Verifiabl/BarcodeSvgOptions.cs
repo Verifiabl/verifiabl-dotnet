@@ -16,6 +16,9 @@ public enum BarcodeErrorCorrectionLevel
 /// <summary>Options for <see cref="VerifiablBarcode.CreateSvg"/>.</summary>
 public sealed class BarcodeSvgOptions
 {
+    /// <summary>Printed format. Defaults to V2; select V1 only for rollback.</summary>
+    public BarcodePayloadFormat Format { get; set; } = BarcodePayloadFormat.V2;
+
     /// <summary>API environment for the public QR scan URL. Defaults to production.</summary>
     public VerifiablEnvironment Environment { get; set; } = VerifiablEnvironment.Production;
 
@@ -53,6 +56,7 @@ public sealed class BarcodeSvgResult
         double height,
         string content,
         BarcodeErrorCorrectionLevel errorCorrectionLevel,
+        int qrVersion,
         double modulePx,
         bool degraded)
     {
@@ -61,6 +65,7 @@ public sealed class BarcodeSvgResult
         Height = height;
         Content = content;
         ErrorCorrectionLevel = errorCorrectionLevel;
+        QrVersion = qrVersion;
         ModulePx = modulePx;
         Degraded = degraded;
     }
@@ -83,6 +88,9 @@ public sealed class BarcodeSvgResult
     /// below it only for unusually long PII so the code still fits the fixed frame.
     /// </summary>
     public BarcodeErrorCorrectionLevel ErrorCorrectionLevel { get; }
+
+    /// <summary>QR symbol version (1-40), for scanner-fixture attribution.</summary>
+    public int QrVersion { get; }
 
     /// <summary>Rendered size of one QR module, in output pixels.</summary>
     public double ModulePx { get; }

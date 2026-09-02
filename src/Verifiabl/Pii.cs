@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text;
 
 namespace Verifiabl;
 
@@ -10,21 +11,37 @@ namespace Verifiabl;
 /// being embedded in the barcode and is never sent to the Verifiabl API in
 /// plaintext.
 ///
-/// Layout (8 segments, "P1" prefix + 7 fields, in this exact order):
+/// Current layout (9 segments, "P2" prefix + 8 fields, in this exact order):
 ///
-///   P1|employeeName|position|department|employerAbn|bsb|accountNumber|accountName
+///   P2|employeeName|position|department|employerAbn|bsb|accountNumber|accountName|address
 ///
-/// Example:
-///
-///   P1|Jane A. Doe|Senior Developer|Engineering|12345678901|062-000|12345678|Jane A Doe
+/// P1 remains available through <see cref="FormatV1"/> for rollback and is parsed permanently.
 /// </remarks>
 public static class Pii
 {
-    private const string Prefix = "P1|";
+    private const string V1Prefix = "P1|";
+    private const string V2Prefix = "P2|";
     private const int MaxFieldLength = 256;
+    private static readonly Encoding StrictUtf8 = new UTF8Encoding(false, true);
 
-    /// <summary>Field order is the wire contract. Never reorder.</summary>
+    /// <summary>Maximum UTF-8 size of the optional P2 address.</summary>
+    public const int AddressMaxBytes = 320;
+
+    /// <summary>Current P2 field order. Never reorder.</summary>
     public static readonly IReadOnlyList<string> FieldOrder = new ReadOnlyCollection<string>(
+    [
+        "employeeName",
+        "position",
+        "department",
+        "employerAbn",
+        "bsb",
+        "accountNumber",
+        "accountName",
+        "address",
+    ]);
+
+    /// <summary>Permanent legacy P1 field order. Never reorder.</summary>
+    public static readonly IReadOnlyList<string> V1FieldOrder = new ReadOnlyCollection<string>(
     [
         "employeeName",
         "position",
@@ -36,14 +53,43 @@ public static class Pii
     ]);
 
     /// <summary>
-    /// Format employee PII into Verifiabl's compact plaintext wire format.
-    /// The result is what you encrypt with <see cref="VerifiablCrypto.EncryptPii"/>
-    /// before embedding it in a barcode.
+    /// Format employee PII as the current P2 plaintext. The result is what you
+    /// encrypt with <see cref="VerifiablCrypto.EncryptPii"/> before embedding it
+    /// in a barcode.
     /// </summary>
-    /// <exception cref="ArgumentException">
-    /// A field contains a pipe or control character, or exceeds 256 characters.
-    /// </exception>
     public static string Format(PiiFields fields)
+    {
+        if (fields is null)
+        {
+            throw new ArgumentNullException(nameof(fields));
+        }
+
+        string[] segments =
+        [
+            ValidateV2Field(fields.EmployeeName, nameof(fields.EmployeeName)),
+            ValidateV2Field(fields.Position, nameof(fields.Position)),
+            ValidateV2Field(fields.Department, nameof(fields.Department)),
+            ValidateV2Field(fields.EmployerAbn, nameof(fields.EmployerAbn)),
+            ValidateV2Field(fields.Bsb, nameof(fields.Bsb)),
+            ValidateV2Field(fields.AccountNumber, nameof(fields.AccountNumber)),
+            ValidateV2Field(fields.AccountName, nameof(fields.AccountName)),
+            ValidateAddress(fields.Address),
+        ];
+
+        return V2Prefix + string.Join("|", segments);
+    }
+
+    /// <summary>
+    /// Compatibility alias for the P2 writer that was introduced before P2
+    /// became the default. New code should use <see cref="Format(PiiFields)"/>.
+    /// </summary>
+    public static string FormatV2(PiiV2Fields fields) => Format(fields);
+
+    /// <summary>
+    /// Format the permanent legacy P1 plaintext for rollback. New documents use
+    /// <see cref="Format(PiiFields)"/>.
+    /// </summary>
+    public static string FormatV1(PiiFields fields)
     {
         if (fields is null)
         {
@@ -61,7 +107,7 @@ public static class Pii
             ValidateField(fields.AccountName, nameof(fields.AccountName)),
         ];
 
-        return Prefix + string.Join("|", segments);
+        return V1Prefix + string.Join("|", segments);
     }
 
     /// <summary>
@@ -72,7 +118,7 @@ public static class Pii
     /// Useful for round-trip testing your integration; not needed in the normal
     /// issuance flow.
     /// </remarks>
-    /// <exception cref="FormatException">The input is not a valid P1 PII string.</exception>
+    /// <exception cref="FormatException">The input is not a valid P1 or P2 PII string.</exception>
     public static PiiFields Parse(string plaintext)
     {
         if (plaintext is null)
@@ -80,30 +126,33 @@ public static class Pii
             throw new ArgumentNullException(nameof(plaintext));
         }
 
-        if (!plaintext.StartsWith(Prefix, StringComparison.Ordinal))
+        bool isV2 = plaintext.StartsWith(V2Prefix, StringComparison.Ordinal);
+        bool isV1 = plaintext.StartsWith(V1Prefix, StringComparison.Ordinal);
+        if (!isV1 && !isV2)
         {
-            throw new FormatException("Invalid PII format: expected 'P1|' prefix.");
+            throw new FormatException("Invalid PII format: expected 'P1|' or 'P2|' prefix.");
         }
 
-        string[] values = plaintext.Substring(Prefix.Length).Split('|');
-        if (values.Length != FieldOrder.Count)
+        int prefixLength = isV2 ? V2Prefix.Length : V1Prefix.Length;
+        int expectedCount = isV2 ? FieldOrder.Count : V1FieldOrder.Count;
+        string[] values = plaintext.Substring(prefixLength).Split('|');
+        if (values.Length != expectedCount)
         {
             throw new FormatException(
-                $"Expected {FieldOrder.Count} PII fields but got {values.Length}.");
+                $"Expected {expectedCount} PII fields but got {values.Length}.");
         }
 
-        var fields = new PiiFields
+        return new PiiFields
         {
-            EmployeeName = NormalizeSegment(values[0], "employeeName"),
-            Position = NormalizeSegment(values[1], "position"),
-            Department = NormalizeSegment(values[2], "department"),
-            EmployerAbn = NormalizeSegment(values[3], "employerAbn"),
-            Bsb = NormalizeSegment(values[4], "bsb"),
-            AccountNumber = NormalizeSegment(values[5], "accountNumber"),
-            AccountName = NormalizeSegment(values[6], "accountName"),
+            EmployeeName = NormalizeSegment(values[0], "employeeName", isV2),
+            Position = NormalizeSegment(values[1], "position", isV2),
+            Department = NormalizeSegment(values[2], "department", isV2),
+            EmployerAbn = NormalizeSegment(values[3], "employerAbn", isV2),
+            Bsb = NormalizeSegment(values[4], "bsb", isV2),
+            AccountNumber = NormalizeSegment(values[5], "accountNumber", isV2),
+            AccountName = NormalizeSegment(values[6], "accountName", isV2),
+            Address = isV2 ? NormalizeAddress(values[7]) : null,
         };
-
-        return fields;
     }
 
     private static string ValidateField(string? value, string name)
@@ -128,19 +177,131 @@ public static class Pii
         return value;
     }
 
-    private static string? NormalizeSegment(string value, string name)
+    private static string ValidateV2Field(string? value, string name)
+    {
+        value = ValidateField(value, name);
+        ValidateStrictUtf8(value, name);
+        if (ContainsFormatCharacter(value))
+        {
+            throw new ArgumentException($"{name} must not contain format characters.", name);
+        }
+
+        return value;
+    }
+
+    private static string ValidateAddress(string? value)
+    {
+        if (value is null)
+        {
+            return string.Empty;
+        }
+
+        const string name = nameof(PiiFields.Address);
+        int byteCount = ValidateStrictUtf8(value, name);
+        if (!IsPrintableWithoutPipe(value) || ContainsFormatCharacter(value))
+        {
+            throw new ArgumentException(
+                $"{name} must not contain '|', control, or format characters.",
+                name);
+        }
+
+        if (byteCount > AddressMaxBytes)
+        {
+            throw new ArgumentException($"{name} exceeds {AddressMaxBytes} UTF-8 bytes.", name);
+        }
+
+        return value;
+    }
+
+    private static int ValidateStrictUtf8(string value, string name)
+    {
+        try
+        {
+            return StrictUtf8.GetByteCount(value);
+        }
+        catch (EncoderFallbackException exception)
+        {
+            throw new ArgumentException($"{name} must contain valid Unicode.", name, exception);
+        }
+    }
+
+    private static bool ContainsFormatCharacter(string value)
+    {
+        // Unicode 15.1 General_Category=Cf, fixed here rather than delegated to
+        // each target runtime's Unicode tables. Keep this in sync with the Node
+        // writer's supported Unicode version when that baseline changes.
+        for (int index = 0; index < value.Length; index++)
+        {
+            int codePoint = value[index];
+            if (char.IsHighSurrogate(value[index]))
+            {
+                codePoint = char.ConvertToUtf32(value[index], value[++index]);
+            }
+
+            if (IsUnicode15FormatCharacter(codePoint))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsUnicode15FormatCharacter(int codePoint) =>
+        codePoint == 0x00AD
+        || codePoint is >= 0x0600 and <= 0x0605
+        || codePoint == 0x061C
+        || codePoint == 0x06DD
+        || codePoint == 0x070F
+        || codePoint is >= 0x0890 and <= 0x0891
+        || codePoint == 0x08E2
+        || codePoint == 0x180E
+        || codePoint is >= 0x200B and <= 0x200F
+        || codePoint is >= 0x202A and <= 0x202E
+        || codePoint is >= 0x2060 and <= 0x2064
+        || codePoint is >= 0x2066 and <= 0x206F
+        || codePoint == 0xFEFF
+        || codePoint is >= 0xFFF9 and <= 0xFFFB
+        || codePoint == 0x110BD
+        || codePoint == 0x110CD
+        || codePoint is >= 0x13430 and <= 0x1343F
+        || codePoint is >= 0x1BCA0 and <= 0x1BCA3
+        || codePoint is >= 0x1D173 and <= 0x1D17A
+        || codePoint == 0xE0001
+        || codePoint is >= 0xE0020 and <= 0xE007F;
+
+    private static string? NormalizeSegment(string value, string name, bool isV2)
     {
         if (value.Length == 0)
         {
             return null;
         }
 
-        if (value.Length > MaxFieldLength || !IsPrintableWithoutPipe(value))
+        try
         {
-            throw new FormatException($"PII field '{name}' is not a valid field value.");
+            return isV2 ? ValidateV2Field(value, name) : ValidateField(value, name);
+        }
+        catch (ArgumentException exception)
+        {
+            throw new FormatException($"PII field '{name}' is not a valid field value.", exception);
+        }
+    }
+
+    private static string? NormalizeAddress(string value)
+    {
+        if (value.Length == 0)
+        {
+            return null;
         }
 
-        return value;
+        try
+        {
+            return ValidateAddress(value);
+        }
+        catch (ArgumentException exception)
+        {
+            throw new FormatException("PII field 'address' is not a valid field value.", exception);
+        }
     }
 
     /// <summary>

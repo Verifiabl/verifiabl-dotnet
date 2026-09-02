@@ -9,11 +9,17 @@ public static class VerifiablEndpoints
     /// <summary>Production origin of the public QR scan URL printed on documents.</summary>
     public const string ProductionScanBaseUrl = "https://verify.verifiabl.io";
 
+    /// <summary>Production short origin used by default v2 barcode writers.</summary>
+    public const string ProductionV2ScanBaseUrl = "https://v.verifiabl.io";
+
     /// <summary>Sandbox issuer API origin, selected via <see cref="VerifiablEnvironment.Sandbox"/>.</summary>
     public const string SandboxIssuerBaseUrl = "https://register.sandbox.verifiabl.io";
 
     /// <summary>Sandbox origin of the public QR scan URL.</summary>
     public const string SandboxScanBaseUrl = "https://verify.sandbox.verifiabl.io";
+
+    /// <summary>Sandbox short origin used by default v2 barcode writers.</summary>
+    public const string SandboxV2ScanBaseUrl = "https://v.sandbox.verifiabl.io";
 
     internal const string ProductionTokenUrl = "https://auth.verifiabl.io/oauth/token";
     internal const string SandboxTokenUrl = "https://auth.sandbox.verifiabl.io/oauth/token";
@@ -23,6 +29,11 @@ public static class VerifiablEndpoints
 
     internal static string ScanBaseUrlFor(VerifiablEnvironment environment) =>
         environment == VerifiablEnvironment.Sandbox ? SandboxScanBaseUrl : ProductionScanBaseUrl;
+
+    internal static string V2ScanBaseUrlFor(VerifiablEnvironment environment) =>
+        environment == VerifiablEnvironment.Sandbox
+            ? SandboxV2ScanBaseUrl
+            : ProductionV2ScanBaseUrl;
 
     internal static string TokenUrlFor(VerifiablEnvironment environment) =>
         environment == VerifiablEnvironment.Sandbox ? SandboxTokenUrl : ProductionTokenUrl;

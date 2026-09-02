@@ -83,6 +83,7 @@ string pii = Pii.Format(new PiiFields
     Bsb = "062-000",
     AccountNumber = "12345678",
     AccountName = "Jane A Doe",
+    Address = "12 Example St, Sydney NSW 2000",
 });
 EncryptedPii encrypted = VerifiablCrypto.EncryptPii(pii, key);
 
@@ -114,6 +115,26 @@ RegisterNonPiiResponse registration = await client.RegisterNonPiiAsync(new Regis
 BarcodeSvgResult badge = VerifiablBarcode.CreateSvg(
     new BarcodeParts(registration.VerifiablReference, encrypted.Ciphertext),
     new BarcodeSvgOptions { Environment = VerifiablEnvironment.Sandbox });
+```
+
+### V2 / P2 format and V1 rollback
+
+New documents use P2 plaintext and v2 barcode/XMP output by default. P2 is exactly
+`P2|employeeName|position|department|employerAbn|bsb|accountNumber|accountName|address`.
+The final address is unstructured, optional, preserved verbatim, and limited to 320 UTF-8 bytes.
+Pipes, control characters, Unicode format characters, and malformed Unicode are rejected before
+encryption. A v2 QR uses the short scan host with `#2.<BASE32>` and an explicit byte/alphanumeric
+segment split; its XMP copy is the matching `2|reference|BASE32` returned by
+`VerifiablBarcode.BuildPayload(parts)`.
+
+V1/P1 remain permanently supported for existing documents and emergency writer rollback. Select
+both explicitly so QR and XMP never mix versions:
+
+```csharp
+string legacyPlaintext = Pii.FormatV1(fields);
+var legacyOptions = new BarcodeSvgOptions { Format = BarcodePayloadFormat.V1 };
+BarcodeSvgResult legacyBadge = VerifiablBarcode.CreateSvg(parts, legacyOptions);
+string legacyXmpPayload = VerifiablBarcode.BuildPayload(parts, BarcodePayloadFormat.V1);
 ```
 
 The compiler enforces the mandatory fields: `Schema`, `IssuedAt`, `PayslipNonPii`, and `EncryptionMetadata` are `required`, so an incomplete request will not build.

@@ -38,7 +38,7 @@ public class SvgBarcodeTests
         BarcodeSvgResult result = VerifiablBarcode.CreateSvg(
             new BarcodeParts(Reference, RealisticCiphertext()));
 
-        Assert.StartsWith($"https://verify.verifiabl.io/v/{Reference}#1.", result.Content);
+        Assert.StartsWith($"https://v.verifiabl.io/v/{Reference}#2.", result.Content);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class SvgBarcodeTests
             new BarcodeParts(Reference, RealisticCiphertext()),
             new BarcodeSvgOptions { Environment = VerifiablEnvironment.Sandbox });
 
-        Assert.StartsWith("https://verify.sandbox.verifiabl.io/v/", result.Content);
+        Assert.StartsWith("https://v.sandbox.verifiabl.io/v/", result.Content);
     }
 
     [Fact]
@@ -174,7 +174,8 @@ public class SvgBarcodeTests
     public void SvgModulesMatchTheQrMatrixAndDecodeToTheScanUrl()
     {
         BarcodeSvgResult result = VerifiablBarcode.CreateSvg(
-            new BarcodeParts(Reference, RealisticCiphertext()));
+            new BarcodeParts(Reference, RealisticCiphertext()),
+            new BarcodeSvgOptions { Format = BarcodePayloadFormat.V1 });
 
         // Rebuild the same QR matrix the renderer used.
         QrCode qr = QrCode.EncodeTextAdvanced(

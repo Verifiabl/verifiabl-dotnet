@@ -14,10 +14,10 @@ public static class VerifiablBarcode
     /// not change.
     /// </summary>
     /// <remarks>
-    /// Write the barcode payload (<see cref="BuildPayload"/>) into the payslip
+    /// Write the barcode payload (<see cref="BuildPayload(BarcodeParts)"/>) into the payslip
     /// PDF's XMP metadata in addition to the QR code, so a verifier can read the
     /// payload even when the QR itself cannot be scanned. Both hold the identical
-    /// encrypted <c>1|verifiablReference|&lt;encrypted PII&gt;</c> value; never
+    /// encrypted <c>2|verifiablReference|&lt;Base32 ciphertext&gt;</c> value by default; never
     /// write plaintext PII to metadata, which is not encrypted. Write the value
     /// with any PDF toolchain that can set a custom XMP property; the SDK only
     /// provides the keys.
@@ -27,15 +27,13 @@ public static class VerifiablBarcode
     /// <summary>XMP property name for the PDF metadata copy of the payload.</summary>
     public const string PdfPayloadXmpProperty = "payload";
 
-    /// <summary>
-    /// Protocol version carried by both wire formats. The bare payload spells it
-    /// <c>1|</c> and the scan URL spells it <c>#1.</c>, so a version bump that
-    /// touched only one would emit a payload and a scan URL that disagree.
-    /// </summary>
-    private const string ProtocolVersion = "1";
+    private const string V1PayloadVersion = "1";
+    private const string V2PayloadVersion = "2";
+    internal const string V1ScanUrlFragmentMarker = "#1.";
+    internal const string V2ScanUrlFragmentMarker = "#2.";
 
     /// <summary>
-    /// Build the v1 barcode payload: <c>1|&lt;verifiablReference&gt;|&lt;ciphertext&gt;</c>.
+    /// Build the default v2 barcode payload: <c>2|&lt;verifiablReference&gt;|&lt;Base32 ciphertext&gt;</c>.
     /// </summary>
     /// <remarks>
     /// This is the bare wire format, and the value to write into the PDF's XMP
@@ -43,7 +41,13 @@ public static class VerifiablBarcode
     /// <see cref="BuildScanUrl"/>, which carries the same reference and
     /// ciphertext as a public scan-redirect URL.
     /// </remarks>
-    public static string BuildPayload(BarcodeParts parts)
+    public static string BuildPayload(BarcodeParts parts) =>
+        BuildPayload(parts, BarcodePayloadFormat.V2);
+
+    /// <summary>
+    /// Build a barcode payload in the selected format. Select V1 only for rollback.
+    /// </summary>
+    public static string BuildPayload(BarcodeParts parts, BarcodePayloadFormat format)
     {
         if (parts is null)
         {
@@ -56,21 +60,24 @@ public static class VerifiablBarcode
         string ciphertext = Validation.ValidateCiphertext(
             parts.EncryptedPii,
             nameof(parts.EncryptedPii));
+        format = ValidateFormat(format, nameof(format));
 
-        return $"{ProtocolVersion}|{reference}|{ciphertext}";
+        return format == BarcodePayloadFormat.V1
+            ? $"{V1PayloadVersion}|{reference}|{ciphertext}"
+            : $"{V2PayloadVersion}|{reference}|{VerifiablBase32.Encode(Base64Url.DecodeCanonical(ciphertext))}";
     }
 
     /// <summary>
-    /// Build the URL encoded into Verifiabl QR codes:
-    /// <c>https://verify.verifiabl.io/v/&lt;verifiablReference&gt;#1.&lt;ciphertext&gt;</c>.
+    /// Build the URL encoded into Verifiabl QR codes. The default is:
+    /// <c>https://v.verifiabl.io/v/&lt;verifiablReference&gt;#2.&lt;Base32 ciphertext&gt;</c>.
     /// The scan URL sends scanners to Verifiabl instead of exposing raw ciphertext
     /// in a phone camera preview.
     /// </summary>
     /// <remarks>
     /// The ciphertext rides in the fragment, which no client transmits to a
     /// server, so it cannot reach a request log at Verifiabl or at any
-    /// intermediary. Every character stays inside the URI-safe set (base64url
-    /// plus <c>.</c>), which is what keeps scanners treating this as a URL and
+    /// intermediary. Every character stays inside the URI-safe Base32 or
+    /// base64url alphabets plus <c>.</c>, which keeps scanners treating this as a URL and
     /// offering tap-to-open rather than showing it as plain text.
     /// </remarks>
     public static string BuildScanUrl(BarcodeParts parts, ScanUrlOptions? options = null)
@@ -79,8 +86,13 @@ public static class VerifiablBarcode
         VerifiablEnvironment environment = VerifiablEndpoints.Validate(
             options.Environment,
             $"{nameof(options)}.{nameof(options.Environment)}");
+        BarcodePayloadFormat format = ValidateFormat(
+            options.Format,
+            $"{nameof(options)}.{nameof(options.Format)}");
         string baseUrl = options.ScanBaseUrl is null
-            ? VerifiablEndpoints.ScanBaseUrlFor(environment)
+            ? format == BarcodePayloadFormat.V2
+                ? VerifiablEndpoints.V2ScanBaseUrlFor(environment)
+                : VerifiablEndpoints.ScanBaseUrlFor(environment)
             : NormalizeScanBaseUrl(options.ScanBaseUrl);
 
         if (parts is null)
@@ -95,7 +107,13 @@ public static class VerifiablBarcode
             parts.EncryptedPii,
             nameof(parts.EncryptedPii));
 
-        return $"{baseUrl}/v/{reference}#{ProtocolVersion}.{ciphertext}";
+        if (format == BarcodePayloadFormat.V1)
+        {
+            return $"{baseUrl}/v/{reference}{V1ScanUrlFragmentMarker}{ciphertext}";
+        }
+
+        string base32 = VerifiablBase32.Encode(Base64Url.DecodeCanonical(ciphertext));
+        return $"{baseUrl}/v/{reference}{V2ScanUrlFragmentMarker}{base32}";
     }
 
     /// <summary>
@@ -137,6 +155,16 @@ public static class VerifiablBarcode
         int pixelWidth = 720)
     {
         return PngBadgeRenderer.Render(parts, options ?? new BarcodeSvgOptions(), pixelWidth);
+    }
+
+    internal static BarcodePayloadFormat ValidateFormat(BarcodePayloadFormat format, string paramName)
+    {
+        if (format != BarcodePayloadFormat.V1 && format != BarcodePayloadFormat.V2)
+        {
+            throw new ArgumentOutOfRangeException(paramName, format, "Format must be V1 or V2.");
+        }
+
+        return format;
     }
 
     private static string NormalizeScanBaseUrl(Uri scanBaseUrl)
