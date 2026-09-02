@@ -144,6 +144,54 @@ public class ServiceCollectionTests
         Assert.Equal(Timeout.InfiniteTimeSpan, client.Timeout);
     }
 
+#if NET472
+    [Fact]
+    public void CallerSuppliedHttpClientDoesNotConfigureNetFrameworkConnectionLease()
+    {
+        var issuerUri = new Uri("http://localhost:41801");
+        ServicePoint issuerServicePoint = ServicePointManager.FindServicePoint(issuerUri);
+        issuerServicePoint.ConnectionLeaseTimeout = -1;
+
+        var services = new ServiceCollection();
+        services.AddVerifiablClient(options =>
+        {
+            options.Auth = VerifiablAuth.ApiKey("static-key");
+            options.IssuerBaseUrl = issuerUri;
+            options.HttpClient = new HttpClient(new FakeHttpHandler());
+        });
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        provider.GetRequiredService<IVerifiablClient>();
+
+        Assert.Equal(-1, issuerServicePoint.ConnectionLeaseTimeout);
+    }
+
+    [Fact]
+    public void FactoryClientConfiguresNetFrameworkConnectionLeaseForIssuerAndTokenOrigins()
+    {
+        var issuerUri = new Uri("http://localhost:41802");
+        var tokenUri = new Uri("http://localhost:41803/oauth/token");
+        ServicePoint issuerServicePoint = ServicePointManager.FindServicePoint(issuerUri);
+        ServicePoint tokenServicePoint = ServicePointManager.FindServicePoint(tokenUri);
+        issuerServicePoint.ConnectionLeaseTimeout = -1;
+        tokenServicePoint.ConnectionLeaseTimeout = -1;
+
+        var services = new ServiceCollection();
+        services.AddVerifiablClient(options =>
+        {
+            options.Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret", tokenUri);
+            options.IssuerBaseUrl = issuerUri;
+        });
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        provider.GetRequiredService<IVerifiablClient>();
+
+        int expectedLease = (int)TimeSpan.FromMinutes(2).TotalMilliseconds;
+        Assert.Equal(expectedLease, issuerServicePoint.ConnectionLeaseTimeout);
+        Assert.Equal(expectedLease, tokenServicePoint.ConnectionLeaseTimeout);
+    }
+#endif
+
     [Fact]
     public void KeyedRegistrationsDoNotSuppressTheUnkeyedClient()
     {

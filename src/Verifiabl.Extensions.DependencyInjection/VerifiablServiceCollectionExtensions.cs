@@ -120,14 +120,14 @@ public static class VerifiablServiceCollectionExtensions
                 .GetRequiredService<IOptions<VerifiablClientOptions>>()
                 .Value;
 
-#if NET472
-            ConfigureNetFrameworkConnectionLease(options);
-#endif
-
             if (options.HttpClient is not null)
             {
                 return new VerifiablClient(options);
             }
+
+#if NET472
+            ConfigureNetFrameworkConnectionLeases(options);
+#endif
 
             return new VerifiablClient(CloneWithHttpClient(
                 options,
@@ -177,10 +177,20 @@ public static class VerifiablServiceCollectionExtensions
     }
 
 #if NET472
-    private static void ConfigureNetFrameworkConnectionLease(VerifiablClientOptions options)
+    private static void ConfigureNetFrameworkConnectionLeases(VerifiablClientOptions options)
     {
-        Uri issuerBaseUri = ResolveIssuerBaseUri(options);
-        ServicePoint servicePoint = ServicePointManager.FindServicePoint(issuerBaseUri);
+        ConfigureNetFrameworkConnectionLease(ResolveIssuerBaseUri(options));
+
+        Uri? tokenBaseUri = ResolveTokenBaseUri(options);
+        if (tokenBaseUri is not null)
+        {
+            ConfigureNetFrameworkConnectionLease(tokenBaseUri);
+        }
+    }
+
+    private static void ConfigureNetFrameworkConnectionLease(Uri baseUri)
+    {
+        ServicePoint servicePoint = ServicePointManager.FindServicePoint(baseUri);
         servicePoint.ConnectionLeaseTimeout = (int)NetFrameworkConnectionLease.TotalMilliseconds;
     }
 
@@ -194,6 +204,20 @@ public static class VerifiablServiceCollectionExtensions
         return options.Environment == VerifiablEnvironment.Sandbox
             ? new Uri(VerifiablEndpoints.SandboxIssuerBaseUrl)
             : new Uri(VerifiablEndpoints.ProductionIssuerBaseUrl);
+    }
+
+    private static Uri? ResolveTokenBaseUri(VerifiablClientOptions options)
+    {
+        if (options.Auth is not VerifiablAuth.ClientCredentialsAuth auth)
+        {
+            return null;
+        }
+
+        Uri tokenUri = auth.TokenUrl
+            ?? new Uri(options.Environment == VerifiablEnvironment.Sandbox
+                ? VerifiablEndpoints.SandboxTokenUrl
+                : VerifiablEndpoints.ProductionTokenUrl);
+        return new Uri(tokenUri.GetLeftPart(UriPartial.Authority));
     }
 #endif
 }

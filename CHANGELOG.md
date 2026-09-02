@@ -57,9 +57,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Microsoft options pipeline with startup validation, so common misconfiguration
   fails during host startup rather than on the first client resolve.
 - `net472` DI registrations now apply .NET Framework connection recycling via
-  `ServicePoint.ConnectionLeaseTimeout` for the selected issuer API origin,
-  matching the long-lived singleton client mitigation used by modern targets
-  without changing process-wide `ServicePointManager` DNS policy.
+  `ServicePoint.ConnectionLeaseTimeout` for the selected issuer API and OAuth
+  origins when the DI package creates the transport, matching the long-lived
+  singleton client mitigation used by modern targets without changing
+  caller-supplied clients or process-wide `ServicePointManager` DNS policy.
 - Repeated `AddVerifiablClient` calls are now fully first-wins: later calls do
   not reconfigure either the client options or the named `HttpClient`.
 
