@@ -150,18 +150,33 @@ try
   <style>
     body { font: 14px/1.4 system-ui, sans-serif; margin: 24px; color: #111; }
     .notice { padding: 12px; border: 2px solid #010a4f; margin-bottom: 24px; }
-    .fixture { break-after: page; page-break-after: always; max-width: 760px; }
-    img { display: block; width: 45mm; height: auto; margin: 16px 0; image-rendering: pixelated; }
+    .fixtures { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px 24px; }
+    .fixture { break-inside: avoid; page-break-inside: avoid; max-width: 760px; }
+    img { display: block; width: 19mm; height: auto; margin: 12px 0; image-rendering: pixelated; }
     dt { font-weight: 700; float: left; clear: left; width: 110px; }
     dd { margin-left: 120px; margin-bottom: 8px; overflow-wrap: anywhere; }
     code { font: 11px/1.3 ui-monospace, monospace; }
-    .fold-guide { clear: both; margin-top: 30mm; border-top: 1px dashed #555; padding-top: 4px; }
-    @media print { body { margin: 12mm; } .fixture { max-width: none; } }
+    @media print {
+      body { font-size: 11px; line-height: 1.25; margin: 10mm; }
+      h2, p { margin: 0 0 4px; }
+      .notice { margin-bottom: 8px; padding: 6px; }
+      .fixtures { grid-template-columns: repeat(3, 1fr); gap: 8px 12px; }
+      .fixture { max-width: none; }
+      img { margin: 6px 0; }
+      dt { float: none; clear: none; display: inline; width: auto; }
+      dt::after { content: ": "; }
+      dd { display: inline; margin: 0; }
+      dd::after { content: "\A"; white-space: pre; }
+      code { font-size: 9px; }
+      .expected-scan { display: none; }
+    }
   </style>
 </head>
 <body>
   <div class="notice"><strong>Synthetic test data only.</strong> Compare scanner output with manifest.json. Do not use customer payslips.</div>
+  <div class="fixtures">
   {{cards}}
+  </div>
 </body>
 </html>
 """;
@@ -236,9 +251,8 @@ static string RenderCard(ScannerFixture fixture, object manifestValue)
           <dt>QR</dt><dd>Version {{qr.GetProperty("version")}}, ECC {{H(qr.GetProperty("errorCorrectionLevel").GetString()!)}}</dd>
           <dt>Address</dt><dd>{{value.GetProperty("addressUtf8Bytes")}} UTF-8 bytes</dd>
           <dt>Reference</dt><dd><code>{{H(fixture.Reference)}}</code></dd>
-          <dt>Expected scan</dt><dd><code>{{H(qr.GetProperty("content").GetString()!)}}</code></dd>
+          <dt class="expected-scan">Expected scan</dt><dd class="expected-scan"><code>{{H(qr.GetProperty("content").GetString()!)}}</code></dd>
         </dl>
-        <div class="fold-guide">Fold guide: fold on this line, away from the QR, for the fold test.</div>
       </article>
 """;
 }
