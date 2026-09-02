@@ -4,8 +4,8 @@ using System.Text;
 using System.Text.Json;
 using Verifiabl;
 
-string outputDirectory = Path.GetFullPath(
-    args.Length > 0 ? args[0] : Path.Combine("artifacts", "scanner-pack"));
+string outputDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(
+    args.Length > 0 ? args[0] : Path.Combine("artifacts", "scanner-pack")));
 byte[] key = Enumerable.Range(0, 32).Select(value => (byte)value).ToArray();
 var sharedFields = new PiiFields
 {
@@ -55,81 +55,92 @@ ScannerFixture[] fixtures =
         CopyFields(sharedFields, string.Concat(Enumerable.Repeat("東京", 53)) + "AB")),
 ];
 
-if (Directory.Exists(outputDirectory) && Directory.EnumerateFileSystemEntries(outputDirectory).Any())
+if (Directory.Exists(outputDirectory) || File.Exists(outputDirectory))
 {
     throw new InvalidOperationException(
-        $"Output directory already exists and is not empty: {outputDirectory}. "
-        + "Choose an empty directory or remove it first.");
+        $"Output path already exists: {outputDirectory}. Remove it first.");
 }
 
-Directory.CreateDirectory(outputDirectory);
-var manifestFixtures = new List<object>();
-for (int index = 0; index < fixtures.Length; index++)
+string? outputParent = Path.GetDirectoryName(outputDirectory);
+string outputName = Path.GetFileName(outputDirectory);
+if (string.IsNullOrEmpty(outputParent) || string.IsNullOrEmpty(outputName))
 {
-    ScannerFixture fixture = fixtures[index];
-    string plaintext = Pii.Format(fixture.Fields);
-    byte[] ciphertextBytes = EncryptDeterministically(plaintext, index, key);
-    string encryptedPii = Base64Url(ciphertextBytes);
-    var parts = new BarcodeParts(fixture.Reference, encryptedPii);
-    BarcodePngResult barcode = VerifiablBarcode.CreatePng(
-        parts,
-        new BarcodeSvgOptions
-        {
-            Environment = VerifiablEnvironment.Sandbox,
-            MaxErrorCorrection = BarcodeErrorCorrectionLevel.Medium,
-        },
-        720);
-    string pngFile = fixture.Id + ".png";
-    File.WriteAllBytes(Path.Combine(outputDirectory, pngFile), barcode.Png);
+    throw new InvalidOperationException($"Output path must name a directory: {outputDirectory}.");
+}
 
-    manifestFixtures.Add(new
+Directory.CreateDirectory(outputParent);
+string stagingDirectory = Path.Combine(outputParent, $".{outputName}.tmp-{Guid.NewGuid():N}");
+Directory.CreateDirectory(stagingDirectory);
+bool published = false;
+try
+{
+    var manifestFixtures = new List<object>();
+    for (int index = 0; index < fixtures.Length; index++)
     {
-        fixture.Id,
-        fixture.Description,
-        AddressUtf8Bytes = Encoding.UTF8.GetByteCount(fixture.Fields.Address ?? string.Empty),
-        PlaintextUtf8Bytes = Encoding.UTF8.GetByteCount(plaintext),
-        VerifiablReference = fixture.Reference,
-        Ciphertext = new
-        {
-            ByteLength = ciphertextBytes.Length,
-            Base64url = encryptedPii,
-            Hex = Convert.ToHexString(ciphertextBytes).ToLowerInvariant(),
-        },
-        Qr = new
-        {
-            File = pngFile,
-            Content = barcode.Content,
-            Version = barcode.QrVersion,
-            ErrorCorrectionLevel = ToNodeLevel(barcode.ErrorCorrectionLevel),
-            barcode.Width,
-            barcode.Height,
-            Segments = new[] { "byte", "alphanumeric" },
-        },
-        XmpPayload = VerifiablBarcode.BuildPayload(parts),
-    });
-}
+        ScannerFixture fixture = fixtures[index];
+        string plaintext = Pii.Format(fixture.Fields);
+        byte[] ciphertextBytes = EncryptDeterministically(plaintext, index, key);
+        string encryptedPii = Base64Url(ciphertextBytes);
+        var parts = new BarcodeParts(fixture.Reference, encryptedPii);
+        BarcodePngResult barcode = VerifiablBarcode.CreatePng(
+            parts,
+            new BarcodeSvgOptions
+            {
+                Environment = VerifiablEnvironment.Sandbox,
+                MaxErrorCorrection = BarcodeErrorCorrectionLevel.Medium,
+            },
+            720);
+        string pngFile = fixture.Id + ".png";
+        File.WriteAllBytes(Path.Combine(stagingDirectory, pngFile), barcode.Png);
 
-var manifest = new
-{
-    Format = "verifiabl-scanner-pack-v1",
-    SyntheticDataOnly = true,
-    Environment = "sandbox",
-    Fixtures = manifestFixtures,
-};
-var jsonOptions = new JsonSerializerOptions
-{
-    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    WriteIndented = true,
-};
-File.WriteAllText(
-    Path.Combine(outputDirectory, "manifest.json"),
-    JsonSerializer.Serialize(manifest, jsonOptions) + Environment.NewLine,
-    new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        manifestFixtures.Add(new
+        {
+            fixture.Id,
+            fixture.Description,
+            AddressUtf8Bytes = Encoding.UTF8.GetByteCount(fixture.Fields.Address ?? string.Empty),
+            PlaintextUtf8Bytes = Encoding.UTF8.GetByteCount(plaintext),
+            VerifiablReference = fixture.Reference,
+            Ciphertext = new
+            {
+                ByteLength = ciphertextBytes.Length,
+                Base64url = encryptedPii,
+                Hex = Convert.ToHexString(ciphertextBytes).ToLowerInvariant(),
+            },
+            Qr = new
+            {
+                File = pngFile,
+                Content = barcode.Content,
+                Version = barcode.QrVersion,
+                ErrorCorrectionLevel = ToNodeLevel(barcode.ErrorCorrectionLevel),
+                barcode.Width,
+                barcode.Height,
+                Segments = new[] { "byte", "alphanumeric" },
+            },
+            XmpPayload = VerifiablBarcode.BuildPayload(parts),
+        });
+    }
 
-string cards = string.Join(
-    Environment.NewLine,
-    manifestFixtures.Select((value, index) => RenderCard(fixtures[index], value)));
-string html = $$"""
+    var manifest = new
+    {
+        Format = "verifiabl-scanner-pack-v1",
+        SyntheticDataOnly = true,
+        Environment = "sandbox",
+        Fixtures = manifestFixtures,
+    };
+    var jsonOptions = new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true,
+    };
+    File.WriteAllText(
+        Path.Combine(stagingDirectory, "manifest.json"),
+        JsonSerializer.Serialize(manifest, jsonOptions) + Environment.NewLine,
+        new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
+    string cards = string.Join(
+        Environment.NewLine,
+        manifestFixtures.Select((value, index) => RenderCard(fixtures[index], value)));
+    string html = $$"""
 <!doctype html>
 <html lang="en">
 <head>
@@ -154,11 +165,21 @@ string html = $$"""
 </body>
 </html>
 """;
-File.WriteAllText(
-    Path.Combine(outputDirectory, "index.html"),
-    html,
-    new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-Console.WriteLine($"Wrote {manifestFixtures.Count} scanner fixtures to {outputDirectory}");
+    File.WriteAllText(
+        Path.Combine(stagingDirectory, "index.html"),
+        html,
+        new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+    Directory.Move(stagingDirectory, outputDirectory);
+    published = true;
+    Console.WriteLine($"Wrote {manifestFixtures.Count} scanner fixtures to {outputDirectory}");
+}
+finally
+{
+    if (!published && Directory.Exists(stagingDirectory))
+    {
+        Directory.Delete(stagingDirectory, recursive: true);
+    }
+}
 
 static PiiFields CopyFields(PiiFields source, string? address = null) => new()
 {
