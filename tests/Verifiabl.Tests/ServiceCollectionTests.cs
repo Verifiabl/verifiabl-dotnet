@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Verifiabl.Client;
+using Verifiabl.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Verifiabl.Tests;
@@ -56,16 +58,25 @@ public class ServiceCollectionTests
     }
 
     [Fact]
-    public void InvalidOptionsSurfaceOnTheFirstResolve()
+    public void InvalidOptionsSurfaceThroughTheOptionsPipeline()
     {
         var services = new ServiceCollection();
 
-        // Registration itself never validates: the options delegate only runs on resolve.
-        services.AddVerifiablClient(options => options.Timeout = TimeSpan.Zero);
+        services.AddVerifiablClient(options =>
+        {
+            options.Auth = VerifiablAuth.ApiKey("static-key");
+            options.Timeout = TimeSpan.Zero;
+        });
 
         using ServiceProvider provider = services.BuildServiceProvider();
 
-        Assert.Throws<ArgumentException>(() => provider.GetRequiredService<IVerifiablClient>());
+        OptionsValidationException optionsError = Assert.Throws<OptionsValidationException>(
+            () => provider.GetRequiredService<IOptions<VerifiablClientOptions>>().Value);
+        OptionsValidationException clientError = Assert.Throws<OptionsValidationException>(
+            () => provider.GetRequiredService<IVerifiablClient>());
+
+        Assert.Contains("Timeout must be positive.", optionsError.Failures);
+        Assert.Contains("Timeout must be positive.", clientError.Failures);
     }
 
     [Fact]
@@ -106,6 +117,27 @@ public class ServiceCollectionTests
 
         // The SDK applies its own deadline, so the transport must not impose one.
         Assert.Equal(Timeout.InfiniteTimeSpan, client.Timeout);
+    }
+
+    [Fact]
+    public void FirstRegistrationWinsCompletely()
+    {
+        var services = new ServiceCollection();
+        services.AddVerifiablClient(options =>
+        {
+            options.Auth = VerifiablAuth.ApiKey("first");
+            options.Environment = VerifiablEnvironment.Sandbox;
+        });
+        services.AddVerifiablClient(options =>
+        {
+            options.Auth = VerifiablAuth.ApiKey("second");
+            options.Environment = VerifiablEnvironment.Production;
+        });
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        VerifiablClientOptions options = provider.GetRequiredService<IOptions<VerifiablClientOptions>>().Value;
+
+        Assert.Equal(VerifiablEnvironment.Sandbox, options.Environment);
     }
 
     [Fact]

@@ -15,7 +15,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   follows NuGet's PascalCase dotted convention. The old ids stay on nuget.org
   through 0.4.0 and receive no further releases; they are to be deprecated on
   nuget.org in favour of the new ids. Assembly names and namespaces are
-  unchanged: code still uses `using Verifiabl;` and `using Verifiabl.Client;`.
+  unchanged for the core package: code still uses `using Verifiabl;` and
+  `using Verifiabl.Client;`. The DI extension methods moved out of the
+  `Microsoft.Extensions.DependencyInjection` namespace into
+  `Verifiabl.Extensions.DependencyInjection`, following Microsoft guidance for
+  third-party library authors; consumers now add that `using` before calling
+  `AddVerifiablClient`.
 
 ### Added
 
@@ -45,6 +50,18 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `VerifiablErrorCodes.IvReused` and `VerifiablErrorCodes.Conflict`. `CONFLICT`
   was already returned for a Verifiabl reference registered with different data
   but was missing from the list.
+
+### Fixed
+
+- The DI extension package now registers `VerifiablClientOptions` through the
+  Microsoft options pipeline with startup validation, so common misconfiguration
+  fails during host startup rather than on the first client resolve.
+- `net472` DI registrations now apply .NET Framework DNS recycling via
+  `ServicePoint.ConnectionLeaseTimeout` and `ServicePointManager.DnsRefreshTimeout`
+  for the selected issuer API origin, matching the long-lived singleton client
+  mitigation used by modern targets.
+- Repeated `AddVerifiablClient` calls are now fully first-wins: later calls do
+  not reconfigure either the client options or the named `HttpClient`.
 
 ## [0.3.0]
 

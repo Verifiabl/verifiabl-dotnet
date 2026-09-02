@@ -10,6 +10,7 @@ dotnet add package Verifiabl.Issuer.Extensions.DependencyInjection
 using Microsoft.Extensions.DependencyInjection;
 using Verifiabl;
 using Verifiabl.Client;
+using Verifiabl.Extensions.DependencyInjection;
 
 builder.Services.AddVerifiablClient(options =>
 {
@@ -33,6 +34,8 @@ Use the `Action<IServiceProvider, VerifiablClientOptions>` overload when the cre
 The client is registered as a **singleton**: it caches OAuth access tokens, so a scoped or transient lifetime would fetch a fresh token on every resolve. Its `HttpClient` comes from the named factory client `Verifiabl` (`VerifiablServiceCollectionExtensions.HttpClientName`), which you can further configure with `AddHttpClient("Verifiabl")`. Setting `options.HttpClient` yourself takes precedence.
 
 Registration uses `TryAdd` semantics: the **first** `AddVerifiablClient` call wins and later calls are silently ignored, so register the client once at composition-root level rather than from multiple modules.
+
+The extension method lives in `Verifiabl.Extensions.DependencyInjection`, so add that `using` alongside `Microsoft.Extensions.DependencyInjection`.
 
 Full documentation: [docs.verifiabl.io](https://docs.verifiabl.io/).
 
