@@ -22,22 +22,22 @@ ScannerFixture[] fixtures =
     new(
         "minimal",
         "Short P2 payload with only an employee name",
-        "AAAAAAAAAAAAAAAAAAAAAA",
+        FixtureReference(0x00),
         new PiiFields { EmployeeName = "Jane Doe" }),
     new(
         "representative-no-address",
         "Representative P2 payload with the optional address absent",
-        "u0FE9WLIS7GYKQnpJPygBw",
+        FixtureReference(0x11),
         CopyFields(sharedFields)),
     new(
         "international-address",
         "Realistic international P2 address",
-        "AbCdEfGhIjKlMnOpQrStUv",
+        FixtureReference(0x22),
         CopyFields(sharedFields, "12 Rue de l’Église, Apt 4B, 75005 Paris, France 🇫🇷")),
     new(
         "dense-fields",
         "Dense P2 payload with long synthetic payroll fields",
-        "BBBBBBBBBBBBBBBBBBBBBB",
+        FixtureReference(0x33),
         new PiiFields
         {
             EmployeeName = "Alexandra Example-Synthetic",
@@ -51,9 +51,16 @@ ScannerFixture[] fixtures =
     new(
         "address-320-bytes",
         "Exact 320-byte UTF-8 P2 address boundary",
-        "42Bb_14sjC-UPUVshbjjSg",
+        FixtureReference(0x44),
         CopyFields(sharedFields, string.Concat(Enumerable.Repeat("東京", 53)) + "AB")),
 ];
+
+if (Directory.Exists(outputDirectory) && Directory.EnumerateFileSystemEntries(outputDirectory).Any())
+{
+    throw new InvalidOperationException(
+        $"Output directory already exists and is not empty: {outputDirectory}. "
+        + "Choose an empty directory or remove it first.");
+}
 
 Directory.CreateDirectory(outputDirectory);
 var manifestFixtures = new List<object>();
@@ -178,6 +185,8 @@ static byte[] EncryptDeterministically(string plaintext, int index, byte[] key)
     aes.Encrypt(iv, plaintextBytes, ciphertext, tag);
     return ciphertext;
 }
+
+static string FixtureReference(byte value) => Base64Url(Enumerable.Repeat(value, 16).ToArray());
 
 static string Base64Url(byte[] bytes) => Convert.ToBase64String(bytes)
     .TrimEnd('=')
