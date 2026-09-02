@@ -135,17 +135,17 @@ internal static class SvgBadgeRenderer
 
     /// <summary>
     /// The ladder from <paramref name="ceiling"/> down to Low, e.g. Medium yields
-    /// [Medium, Low]. Low is a real ladder entry but not a valid ceiling: allowing
-    /// it would silently force the weakest level, so it fails loudly instead.
+    /// [Medium, Low].
     /// </summary>
     internal static BarcodeErrorCorrectionLevel[] ErrorCorrectionLadder(
         BarcodeErrorCorrectionLevel ceiling)
     {
         if (ceiling != BarcodeErrorCorrectionLevel.Quartile
-            && ceiling != BarcodeErrorCorrectionLevel.Medium)
+            && ceiling != BarcodeErrorCorrectionLevel.Medium
+            && ceiling != BarcodeErrorCorrectionLevel.Low)
         {
             throw new ArgumentException(
-                "MaxErrorCorrection must be Quartile or Medium.",
+                "MaxErrorCorrection must be Quartile, Medium, or Low.",
                 nameof(BarcodeSvgOptions.MaxErrorCorrection));
         }
 

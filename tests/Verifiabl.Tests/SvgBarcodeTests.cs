@@ -138,11 +138,21 @@ public class SvgBarcodeTests
     }
 
     [Fact]
-    public void RejectsLowAsACeilingInsteadOfSilentlyForcingIt()
+    public void LowCeilingYieldsASparserNonDegradedCode()
     {
-        Assert.Throws<ArgumentException>(() => VerifiablBarcode.CreateSvg(
-            new BarcodeParts(Reference, RealisticCiphertext()),
-            new BarcodeSvgOptions { MaxErrorCorrection = BarcodeErrorCorrectionLevel.Low }));
+        BarcodeParts parts = new(Reference, RealisticCiphertext());
+
+        BarcodeSvgResult medium = VerifiablBarcode.CreateSvg(parts);
+        BarcodeSvgResult low = VerifiablBarcode.CreateSvg(parts, new BarcodeSvgOptions
+        {
+            MaxErrorCorrection = BarcodeErrorCorrectionLevel.Low,
+        });
+
+        Assert.Equal(BarcodeErrorCorrectionLevel.Low, low.ErrorCorrectionLevel);
+        Assert.False(low.Degraded);
+        Assert.True(
+            low.ModulePx > medium.ModulePx,
+            "low should be sparser than medium for the same payload");
     }
 
     [Fact]

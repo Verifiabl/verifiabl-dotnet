@@ -48,16 +48,7 @@ ScannerFixture[] fixtures =
             AccountNumber = "12345678901234567890",
             AccountName = "Alexandra Example-Synthetic",
         }),
-    new(
-        "address-200-bytes",
-        "Hypothetical 200-byte UTF-8 P2 address cap",
-        FixtureReference(0x44),
-        CopyFields(sharedFields, FullAddressEdge(200))),
-    new(
-        "address-320-bytes",
-        "Exact 320-byte UTF-8 P2 address boundary",
-        FixtureReference(0x55),
-        CopyFields(sharedFields, FullAddressEdge(320))),
+    .. AddressExperimentFixtures(sharedFields),
 ];
 
 if (Directory.Exists(outputDirectory) || File.Exists(outputDirectory))
@@ -92,7 +83,7 @@ try
             new BarcodeSvgOptions
             {
                 Environment = VerifiablEnvironment.Sandbox,
-                MaxErrorCorrection = BarcodeErrorCorrectionLevel.Medium,
+                MaxErrorCorrection = fixture.MaxErrorCorrection,
             },
             720);
         string pngFile = fixture.Id + ".png";
@@ -205,16 +196,43 @@ finally
     }
 }
 
-static string FullAddressEdge(int utf8Bytes)
+static ScannerFixture[] AddressExperimentFixtures(PiiFields sharedFields)
 {
-    if (utf8Bytes < 2 || (utf8Bytes - 2) % 6 != 0)
+    var fixtures = new List<ScannerFixture>();
+    byte referenceByte = 0x60;
+    foreach (int addressBytes in new[] { 160, 200, 240, 320 })
     {
-        throw new ArgumentOutOfRangeException(
-            nameof(utf8Bytes),
-            "Fixture address byte count must be 2 mod 6 for the 東京 + AB pattern.");
+        foreach (BarcodeErrorCorrectionLevel level in new[]
+        {
+            BarcodeErrorCorrectionLevel.Medium,
+            BarcodeErrorCorrectionLevel.Low,
+        })
+        {
+            string suffix = level == BarcodeErrorCorrectionLevel.Medium ? "medium" : "low";
+            string label = level == BarcodeErrorCorrectionLevel.Medium ? "ECC M" : "ECC L";
+            fixtures.Add(new ScannerFixture(
+                $"address-{addressBytes}-{suffix}",
+                $"{addressBytes}-byte UTF-8 P2 address edge case, {label}",
+                FixtureReference(referenceByte++),
+                CopyFields(sharedFields, FullAddressEdge(addressBytes)),
+                level));
+        }
     }
 
-    string address = string.Concat(Enumerable.Repeat("東京", (utf8Bytes - 2) / 6)) + "AB";
+    return fixtures.ToArray();
+}
+
+static string FullAddressEdge(int utf8Bytes)
+{
+    if (utf8Bytes <= 0)
+    {
+        throw new ArgumentOutOfRangeException(nameof(utf8Bytes));
+    }
+
+    int cjkPairs = utf8Bytes / 6;
+    int asciiRemainder = utf8Bytes - cjkPairs * 6;
+    string address = string.Concat(Enumerable.Repeat("東京", cjkPairs))
+        + new string('A', asciiRemainder);
     if (Encoding.UTF8.GetByteCount(address) != utf8Bytes)
     {
         throw new InvalidOperationException("Address fixture byte count mismatch.");
@@ -288,37 +306,39 @@ static string RenderAddressSizeMatrix(ScannerFixture[] fixtures, List<object> ma
 {
     string rows = string.Join(
         Environment.NewLine,
-        new[] { "address-200-bytes", "address-320-bytes" }.Select(id =>
-        {
-            int index = Array.FindIndex(fixtures, fixture => fixture.Id == id);
-            if (index < 0)
+        fixtures.Select((fixture, index) => (Fixture: fixture, Index: index))
+            .Where(item => item.Fixture.Id.StartsWith("address-", StringComparison.Ordinal))
+            .Select(item =>
             {
-                throw new InvalidOperationException($"Missing fixture {id}.");
-            }
-
-            ScannerFixture fixture = fixtures[index];
-            JsonElement value = JsonSerializer.SerializeToElement(
-                manifestValues[index],
-                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-            JsonElement qr = value.GetProperty("qr");
-            string file = H(qr.GetProperty("file").GetString()!);
-            string version = qr.GetProperty("version").GetRawText();
-            string ecc = H(qr.GetProperty("errorCorrectionLevel").GetString()!);
-            string addressBytes = value.GetProperty("addressUtf8Bytes").GetRawText();
-            string plaintextBytes = value.GetProperty("plaintextUtf8Bytes").GetRawText();
-            return $$"""
-              <tr>
-                <th scope="row">
-                  <strong>{{H(fixture.Id)}}</strong><br>
-                  {{addressBytes}} address bytes<br>
-                  {{plaintextBytes}} plaintext bytes<br>
-                  QR v{{version}}, ECC {{ecc}}
-                </th>
-                <td><img class="qr size-19" src="{{file}}" alt="{{H(fixture.Id)}} at 19mm"></td>
-                <td><img class="qr size-25" src="{{file}}" alt="{{H(fixture.Id)}} at 25mm"></td>
-              </tr>
+                ScannerFixture fixture = item.Fixture;
+                JsonElement value = JsonSerializer.SerializeToElement(
+                    manifestValues[item.Index],
+                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                JsonElement qr = value.GetProperty("qr");
+                string file = H(qr.GetProperty("file").GetString()!);
+                string version = qr.GetProperty("version").GetRawText();
+                string ecc = H(qr.GetProperty("errorCorrectionLevel").GetString()!);
+                string addressBytes = value.GetProperty("addressUtf8Bytes").GetRawText();
+                string plaintextBytes = value.GetProperty("plaintextUtf8Bytes").GetRawText();
+                string content = H(qr.GetProperty("content").GetString()!);
+                string title = H(fixture.Id);
+                return $$"""
+                  <tr>
+                    <th scope="row">
+                      <strong>{{title}}</strong><br>
+                      {{addressBytes}} address bytes<br>
+                      {{plaintextBytes}} plaintext bytes<br>
+                      QR v{{version}}, ECC {{ecc}}<br>
+                      <span class="expected-label">Expected scan</span>
+                      <code>{{content}}</code>
+                    </th>
+                    <td><img class="qr size-19" src="{{file}}" alt="{{title}} at 19mm"></td>
+                    <td><img class="qr size-22" src="{{file}}" alt="{{title}} at 22mm"></td>
+                    <td><img class="qr size-25" src="{{file}}" alt="{{title}} at 25mm"></td>
+                    <td><img class="qr size-28" src="{{file}}" alt="{{title}} at 28mm"></td>
+                  </tr>
 """;
-        }));
+            }));
 
     return $$"""
 <!doctype html>
@@ -326,30 +346,38 @@ static string RenderAddressSizeMatrix(ScannerFixture[] fixtures, List<object> ma
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Verifiabl address QR size matrix</title>
+  <title>Verifiabl address QR ECC and size matrix</title>
   <style>
     body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; color: #111; }
     .notice { padding: 10px; border: 2px solid #010a4f; margin-bottom: 14px; }
     table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #bbb; padding: 8px; text-align: left; vertical-align: top; }
+    th, td { border: 1px solid #bbb; padding: 6px; text-align: left; vertical-align: top; }
     thead th { background: #f2f3f7; }
+    tbody th { width: 54mm; }
+    code { display: block; margin-top: 3px; font: 8px/1.25 ui-monospace, monospace; overflow-wrap: anywhere; word-break: break-all; }
+    .expected-label { display: block; margin-top: 5px; font-weight: 700; }
     .qr { display: block; image-rendering: pixelated; }
     .size-19 { width: 19mm; height: auto; }
+    .size-22 { width: 22mm; height: auto; }
     .size-25 { width: 25mm; height: auto; }
+    .size-28 { width: 28mm; height: auto; }
     @media print {
-      body { margin: 8mm; font-size: 11px; }
-      th, td { padding: 4px; }
+      body { margin: 6mm; font-size: 10px; }
+      th, td { padding: 3px; }
+      code { font-size: 6px; }
     }
   </style>
 </head>
 <body>
-  <div class="notice"><strong>One-off edge-case scan page.</strong> Compare the full-address fixtures at compact 19mm and larger 25mm render sizes. Synthetic test data only.</div>
+  <div class="notice"><strong>One-off edge-case scan page.</strong> Full-address byte caps crossed with ECC Medium/Low and 19/22/25/28mm render sizes. Synthetic test data only.</div>
   <table>
     <thead>
       <tr>
-        <th scope="col">Address cap case</th>
+        <th scope="col">Address + ECC case</th>
         <th scope="col">19mm</th>
+        <th scope="col">22mm</th>
         <th scope="col">25mm</th>
+        <th scope="col">28mm</th>
       </tr>
     </thead>
     <tbody>
@@ -367,4 +395,5 @@ internal sealed record ScannerFixture(
     string Id,
     string Description,
     string Reference,
-    PiiFields Fields);
+    PiiFields Fields,
+    BarcodeErrorCorrectionLevel MaxErrorCorrection = BarcodeErrorCorrectionLevel.Medium);

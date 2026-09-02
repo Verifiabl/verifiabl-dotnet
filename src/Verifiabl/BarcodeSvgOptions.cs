@@ -3,7 +3,7 @@ namespace Verifiabl;
 /// <summary>QR error-correction levels used by the barcode renderer.</summary>
 public enum BarcodeErrorCorrectionLevel
 {
-    /// <summary>~7% damage recovery. Never a ceiling; only reached by degradation.</summary>
+    /// <summary>~7% damage recovery. Produces larger modules at the cost of damage tolerance.</summary>
     Low = 0,
 
     /// <summary>~15% damage recovery. The default ceiling.</summary>
@@ -32,15 +32,16 @@ public sealed class BarcodeSvgOptions
     public double Width { get; set; } = 480;
 
     /// <summary>
-    /// Highest QR error-correction level to use: <see cref="BarcodeErrorCorrectionLevel.Medium"/>
-    /// (the default) or <see cref="BarcodeErrorCorrectionLevel.Quartile"/>. The
-    /// renderer still steps below this only when the payload would not otherwise
-    /// fit the fixed frame.
+    /// Highest QR error-correction level to use: <see cref="BarcodeErrorCorrectionLevel.Low"/>,
+    /// <see cref="BarcodeErrorCorrectionLevel.Medium"/> (the default), or
+    /// <see cref="BarcodeErrorCorrectionLevel.Quartile"/>. The renderer still
+    /// steps below this only when the payload would not otherwise fit the fixed frame.
     /// </summary>
     /// <remarks>
-    /// Medium (~15% damage recovery) keeps the modules large and the symbol
-    /// visually clean. Choose Quartile (~25% recovery) for documents expected to
-    /// take heavy print wear, accepting a denser code (one or two QR versions
+    /// Medium (~15% damage recovery) balances module size and recovery. Choose
+    /// Low (~7% recovery) to make dense payload modules larger, accepting less
+    /// resilience to wear. Choose Quartile (~25% recovery) for documents expected
+    /// to take heavy print wear, accepting a denser code (one or two QR versions
     /// larger).
     /// </remarks>
     public BarcodeErrorCorrectionLevel MaxErrorCorrection { get; set; } =
