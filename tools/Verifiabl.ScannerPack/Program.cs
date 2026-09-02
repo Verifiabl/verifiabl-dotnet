@@ -5,7 +5,7 @@ using System.Text.Json;
 using Verifiabl;
 
 string outputDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(
-    args.Length > 0 ? args[0] : Path.Combine("artifacts", "scanner-pack")));
+    args.Length > 0 ? args[0] : Path.Join("artifacts", "scanner-pack")));
 byte[] key = Enumerable.Range(0, 32).Select(value => (byte)value).ToArray();
 var sharedFields = new PiiFields
 {
@@ -69,7 +69,7 @@ if (string.IsNullOrEmpty(outputParent) || string.IsNullOrEmpty(outputName))
 }
 
 Directory.CreateDirectory(outputParent);
-string stagingDirectory = Path.Combine(outputParent, $".{outputName}.tmp-{Guid.NewGuid():N}");
+string stagingDirectory = Path.Join(outputParent, $".{outputName}.tmp-{Guid.NewGuid():N}");
 Directory.CreateDirectory(stagingDirectory);
 bool published = false;
 try
@@ -91,7 +91,7 @@ try
             },
             720);
         string pngFile = fixture.Id + ".png";
-        File.WriteAllBytes(Path.Combine(stagingDirectory, pngFile), barcode.Png);
+        File.WriteAllBytes(Path.Join(stagingDirectory, pngFile), barcode.Png);
 
         manifestFixtures.Add(new
         {
@@ -133,7 +133,7 @@ try
         WriteIndented = true,
     };
     File.WriteAllText(
-        Path.Combine(stagingDirectory, "manifest.json"),
+        Path.Join(stagingDirectory, "manifest.json"),
         JsonSerializer.Serialize(manifest, jsonOptions) + Environment.NewLine,
         new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
@@ -166,7 +166,7 @@ try
 </html>
 """;
     File.WriteAllText(
-        Path.Combine(stagingDirectory, "index.html"),
+        Path.Join(stagingDirectory, "index.html"),
         html,
         new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     Directory.Move(stagingDirectory, outputDirectory);
