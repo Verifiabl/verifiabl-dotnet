@@ -49,10 +49,15 @@ ScannerFixture[] fixtures =
             AccountName = "Alexandra Example-Synthetic",
         }),
     new(
+        "address-200-bytes",
+        "Hypothetical 200-byte UTF-8 P2 address cap",
+        FixtureReference(0x44),
+        CopyFields(sharedFields, FullAddressEdge(200))),
+    new(
         "address-320-bytes",
         "Exact 320-byte UTF-8 P2 address boundary",
-        FixtureReference(0x44),
-        CopyFields(sharedFields, string.Concat(Enumerable.Repeat("東京", 53)) + "AB")),
+        FixtureReference(0x55),
+        CopyFields(sharedFields, FullAddressEdge(320))),
 ];
 
 if (Directory.Exists(outputDirectory) || File.Exists(outputDirectory))
@@ -184,6 +189,10 @@ try
         Path.Join(stagingDirectory, "index.html"),
         html,
         new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+    File.WriteAllText(
+        Path.Join(stagingDirectory, "address-size-matrix.html"),
+        RenderAddressSizeMatrix(fixtures, manifestFixtures),
+        new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     Directory.Move(stagingDirectory, outputDirectory);
     published = true;
     Console.WriteLine($"Wrote {manifestFixtures.Count} scanner fixtures to {outputDirectory}");
@@ -194,6 +203,24 @@ finally
     {
         Directory.Delete(stagingDirectory, recursive: true);
     }
+}
+
+static string FullAddressEdge(int utf8Bytes)
+{
+    if (utf8Bytes < 2 || (utf8Bytes - 2) % 6 != 0)
+    {
+        throw new ArgumentOutOfRangeException(
+            nameof(utf8Bytes),
+            "Fixture address byte count must be 2 mod 6 for the 東京 + AB pattern.");
+    }
+
+    string address = string.Concat(Enumerable.Repeat("東京", (utf8Bytes - 2) / 6)) + "AB";
+    if (Encoding.UTF8.GetByteCount(address) != utf8Bytes)
+    {
+        throw new InvalidOperationException("Address fixture byte count mismatch.");
+    }
+
+    return address;
 }
 
 static PiiFields CopyFields(PiiFields source, string? address = null) => new()
@@ -254,6 +281,83 @@ static string RenderCard(ScannerFixture fixture, object manifestValue)
           <dt class="expected-scan">Expected scan</dt><dd class="expected-scan"><code>{{H(qr.GetProperty("content").GetString()!)}}</code></dd>
         </dl>
       </article>
+""";
+}
+
+static string RenderAddressSizeMatrix(ScannerFixture[] fixtures, List<object> manifestValues)
+{
+    string rows = string.Join(
+        Environment.NewLine,
+        new[] { "address-200-bytes", "address-320-bytes" }.Select(id =>
+        {
+            int index = Array.FindIndex(fixtures, fixture => fixture.Id == id);
+            if (index < 0)
+            {
+                throw new InvalidOperationException($"Missing fixture {id}.");
+            }
+
+            ScannerFixture fixture = fixtures[index];
+            JsonElement value = JsonSerializer.SerializeToElement(
+                manifestValues[index],
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+            JsonElement qr = value.GetProperty("qr");
+            string file = H(qr.GetProperty("file").GetString()!);
+            string version = qr.GetProperty("version").GetRawText();
+            string ecc = H(qr.GetProperty("errorCorrectionLevel").GetString()!);
+            string addressBytes = value.GetProperty("addressUtf8Bytes").GetRawText();
+            string plaintextBytes = value.GetProperty("plaintextUtf8Bytes").GetRawText();
+            return $$"""
+              <tr>
+                <th scope="row">
+                  <strong>{{H(fixture.Id)}}</strong><br>
+                  {{addressBytes}} address bytes<br>
+                  {{plaintextBytes}} plaintext bytes<br>
+                  QR v{{version}}, ECC {{ecc}}
+                </th>
+                <td><img class="qr size-19" src="{{file}}" alt="{{H(fixture.Id)}} at 19mm"></td>
+                <td><img class="qr size-25" src="{{file}}" alt="{{H(fixture.Id)}} at 25mm"></td>
+              </tr>
+""";
+        }));
+
+    return $$"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verifiabl address QR size matrix</title>
+  <style>
+    body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; color: #111; }
+    .notice { padding: 10px; border: 2px solid #010a4f; margin-bottom: 14px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #bbb; padding: 8px; text-align: left; vertical-align: top; }
+    thead th { background: #f2f3f7; }
+    .qr { display: block; image-rendering: pixelated; }
+    .size-19 { width: 19mm; height: auto; }
+    .size-25 { width: 25mm; height: auto; }
+    @media print {
+      body { margin: 8mm; font-size: 11px; }
+      th, td { padding: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="notice"><strong>One-off edge-case scan page.</strong> Compare the full-address fixtures at compact 19mm and larger 25mm render sizes. Synthetic test data only.</div>
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">Address cap case</th>
+        <th scope="col">19mm</th>
+        <th scope="col">25mm</th>
+      </tr>
+    </thead>
+    <tbody>
+{{rows}}
+    </tbody>
+  </table>
+</body>
+</html>
 """;
 }
 
