@@ -218,13 +218,17 @@ internal static class SvgBadgeRenderer
 
     private static QrCode EncodeV2Segments(string content, QrCode.Ecc ecc)
     {
-        int split = content.IndexOf("#2.", StringComparison.Ordinal);
+        int split = content.IndexOf(
+            VerifiablBarcode.V2ScanUrlFragmentMarker,
+            StringComparison.Ordinal);
         if (split < 0)
         {
-            throw new ArgumentException("V2 QR content must contain the #2. marker.", nameof(content));
+            throw new ArgumentException(
+                $"V2 QR content must contain the {VerifiablBarcode.V2ScanUrlFragmentMarker} marker.",
+                nameof(content));
         }
 
-        split += 3;
+        split += VerifiablBarcode.V2ScanUrlFragmentMarker.Length;
         byte[] prefix = Encoding.UTF8.GetBytes(content.Substring(0, split));
         byte[] ciphertext = Encoding.ASCII.GetBytes(content.Substring(split));
         var segments = new List<DataSegment>

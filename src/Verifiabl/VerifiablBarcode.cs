@@ -27,6 +27,11 @@ public static class VerifiablBarcode
     /// <summary>XMP property name for the PDF metadata copy of the payload.</summary>
     public const string PdfPayloadXmpProperty = "payload";
 
+    private const string V1PayloadVersion = "1";
+    private const string V2PayloadVersion = "2";
+    internal const string V1ScanUrlFragmentMarker = "#1.";
+    internal const string V2ScanUrlFragmentMarker = "#2.";
+
     /// <summary>
     /// Build the default v2 barcode payload: <c>2|&lt;verifiablReference&gt;|&lt;Base32 ciphertext&gt;</c>.
     /// </summary>
@@ -58,8 +63,8 @@ public static class VerifiablBarcode
         format = ValidateFormat(format, nameof(format));
 
         return format == BarcodePayloadFormat.V1
-            ? $"1|{reference}|{ciphertext}"
-            : $"2|{reference}|{VerifiablBase32.Encode(Base64Url.DecodeCanonical(ciphertext))}";
+            ? $"{V1PayloadVersion}|{reference}|{ciphertext}"
+            : $"{V2PayloadVersion}|{reference}|{VerifiablBase32.Encode(Base64Url.DecodeCanonical(ciphertext))}";
     }
 
     /// <summary>
@@ -104,11 +109,11 @@ public static class VerifiablBarcode
 
         if (format == BarcodePayloadFormat.V1)
         {
-            return $"{baseUrl}/v/{reference}#1.{ciphertext}";
+            return $"{baseUrl}/v/{reference}{V1ScanUrlFragmentMarker}{ciphertext}";
         }
 
         string base32 = VerifiablBase32.Encode(Base64Url.DecodeCanonical(ciphertext));
-        return $"{baseUrl}/v/{reference}#2.{base32}";
+        return $"{baseUrl}/v/{reference}{V2ScanUrlFragmentMarker}{base32}";
     }
 
     /// <summary>
