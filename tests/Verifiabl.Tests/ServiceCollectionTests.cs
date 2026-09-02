@@ -105,6 +105,29 @@ public class ServiceCollectionTests
     }
 
     [Fact]
+    public void SingletonUsesTheOptionsMonitorInstanceValidatedAtStartup()
+    {
+        var services = new ServiceCollection();
+        int configureCount = 0;
+        var httpClient = new HttpClient(new FakeHttpHandler());
+        services.AddVerifiablClient(options =>
+        {
+            configureCount++;
+            options.Auth = VerifiablAuth.ApiKey("static-key");
+            options.HttpClient = httpClient;
+        });
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        VerifiablClientOptions validatedOptions = provider
+            .GetRequiredService<IOptionsMonitor<VerifiablClientOptions>>()
+            .CurrentValue;
+        provider.GetRequiredService<IVerifiablClient>();
+
+        Assert.Equal(1, configureCount);
+        Assert.Same(httpClient, validatedOptions.HttpClient);
+    }
+
+    [Fact]
     public async Task ACallerSuppliedHttpClientWinsOverTheFactoryClient()
     {
         var handler = new FakeHttpHandler

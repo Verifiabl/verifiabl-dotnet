@@ -117,8 +117,8 @@ public static class VerifiablServiceCollectionExtensions
         services.TryAddSingleton<IVerifiablClient>(provider =>
         {
             VerifiablClientOptions options = provider
-                .GetRequiredService<IOptions<VerifiablClientOptions>>()
-                .Value;
+                .GetRequiredService<IOptionsMonitor<VerifiablClientOptions>>()
+                .CurrentValue;
 
             if (options.HttpClient is not null)
             {
