@@ -75,8 +75,33 @@ public class ServiceCollectionTests
         OptionsValidationException clientError = Assert.Throws<OptionsValidationException>(
             () => provider.GetRequiredService<IVerifiablClient>());
 
-        Assert.Contains("Timeout must be positive.", optionsError.Failures);
-        Assert.Contains("Timeout must be positive.", clientError.Failures);
+        Assert.Contains(
+            optionsError.Failures,
+            failure => failure.Contains("Timeout must be positive.", StringComparison.Ordinal));
+        Assert.Contains(
+            clientError.Failures,
+            failure => failure.Contains("Timeout must be positive.", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void InvalidTokenUrlSurfacesThroughTheOptionsPipeline()
+    {
+        var services = new ServiceCollection();
+
+        services.AddVerifiablClient(options =>
+            options.Auth = VerifiablAuth.ClientCredentials(
+                "client-id",
+                "client-secret",
+                new Uri("https://example.com/oauth/token")));
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+
+        OptionsValidationException optionsError = Assert.Throws<OptionsValidationException>(
+            () => provider.GetRequiredService<IOptions<VerifiablClientOptions>>().Value);
+
+        Assert.Contains(
+            optionsError.Failures,
+            failure => failure.Contains("tokenUrl must use a Verifiabl auth host", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -117,6 +142,21 @@ public class ServiceCollectionTests
 
         // The SDK applies its own deadline, so the transport must not impose one.
         Assert.Equal(Timeout.InfiniteTimeSpan, client.Timeout);
+    }
+
+    [Fact]
+    public void KeyedRegistrationsDoNotSuppressTheUnkeyedClient()
+    {
+        var services = new ServiceCollection();
+        services.AddKeyedSingleton<IVerifiablClient>(
+            "tenant",
+            (_, _) => throw new InvalidOperationException("Keyed registration should not be resolved."));
+        services.AddVerifiablClient(options =>
+            options.Auth = VerifiablAuth.ApiKey("static-key"));
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+
+        Assert.IsType<VerifiablClient>(provider.GetRequiredService<IVerifiablClient>());
     }
 
     [Fact]

@@ -73,7 +73,9 @@ public static class VerifiablServiceCollectionExtensions
             throw new ArgumentNullException(nameof(configureOptions));
         }
 
-        if (services.Any(descriptor => descriptor.ServiceType == typeof(IVerifiablClient)))
+        if (services.Any(descriptor =>
+                descriptor.ServiceType == typeof(IVerifiablClient)
+                && !descriptor.IsKeyedService))
         {
             return services;
         }
@@ -83,17 +85,11 @@ public static class VerifiablServiceCollectionExtensions
                 Options.DefaultName,
                 options => configureOptions(provider, options)));
 
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<VerifiablClientOptions>, VerifiablClientOptionsValidator>());
+
         services
             .AddOptions<VerifiablClientOptions>()
-            .Validate(options => options.Auth is not null, "Auth is required.")
-            .Validate(
-                options => options.Environment is VerifiablEnvironment.Production or VerifiablEnvironment.Sandbox,
-                "Environment must be Production or Sandbox.")
-            .Validate(
-                options => options.IssuerBaseUrl is null || IsValidIssuerBaseUrl(options.IssuerBaseUrl),
-                "IssuerBaseUrl must use https, or http for localhost.")
-            .Validate(options => options.Timeout > TimeSpan.Zero, "Timeout must be positive.")
-            .Validate(options => options.MaxRetries >= 0, "MaxRetries must not be negative.")
             .ValidateOnStart();
 
 #if NET8_0_OR_GREATER
@@ -125,7 +121,7 @@ public static class VerifiablServiceCollectionExtensions
                 .Value;
 
 #if NET472
-            ConfigureNetFrameworkDnsRefresh(options);
+            ConfigureNetFrameworkConnectionLease(options);
 #endif
 
             if (options.HttpClient is not null)
@@ -146,29 +142,46 @@ public static class VerifiablServiceCollectionExtensions
     private static VerifiablClientOptions CloneWithHttpClient(
         VerifiablClientOptions options,
         HttpClient httpClient) => new()
-    {
-        Auth = options.Auth,
-        Environment = options.Environment,
-        IssuerBaseUrl = options.IssuerBaseUrl,
-        Timeout = options.Timeout,
-        MaxRetries = options.MaxRetries,
-        HttpClient = httpClient,
-        OnRequest = options.OnRequest,
-        OnResponse = options.OnResponse,
-        OnError = options.OnError,
-    };
+        {
+            Auth = options.Auth,
+            Environment = options.Environment,
+            IssuerBaseUrl = options.IssuerBaseUrl,
+            Timeout = options.Timeout,
+            MaxRetries = options.MaxRetries,
+            HttpClient = httpClient,
+            OnRequest = options.OnRequest,
+            OnResponse = options.OnResponse,
+            OnError = options.OnError,
+        };
 
-    private static bool IsValidIssuerBaseUrl(Uri url) =>
-        url.IsAbsoluteUri
-        && ((url.Scheme == Uri.UriSchemeHttp && url.IsLoopback) || url.Scheme == Uri.UriSchemeHttps);
+    private sealed class VerifiablClientOptionsValidator : IValidateOptions<VerifiablClientOptions>
+    {
+        public ValidateOptionsResult Validate(string? name, VerifiablClientOptions options)
+        {
+            if (name is not null && name != Options.DefaultName)
+            {
+                return ValidateOptionsResult.Skip;
+            }
+
+            try
+            {
+                VerifiablClient.ValidateOptions(options);
+            }
+            catch (ArgumentException exception)
+            {
+                return ValidateOptionsResult.Fail(exception.Message);
+            }
+
+            return ValidateOptionsResult.Success;
+        }
+    }
 
 #if NET472
-    private static void ConfigureNetFrameworkDnsRefresh(VerifiablClientOptions options)
+    private static void ConfigureNetFrameworkConnectionLease(VerifiablClientOptions options)
     {
         Uri issuerBaseUri = ResolveIssuerBaseUri(options);
         ServicePoint servicePoint = ServicePointManager.FindServicePoint(issuerBaseUri);
         servicePoint.ConnectionLeaseTimeout = (int)NetFrameworkConnectionLease.TotalMilliseconds;
-        ServicePointManager.DnsRefreshTimeout = (int)NetFrameworkConnectionLease.TotalMilliseconds;
     }
 
     private static Uri ResolveIssuerBaseUri(VerifiablClientOptions options)

@@ -80,10 +80,9 @@ public sealed class VerifiablClient : IVerifiablClient
             throw new ArgumentNullException(nameof(options));
         }
 
-        _auth = options.Auth
-            ?? throw new ArgumentException(
-                "Auth is required: pass VerifiablAuth.ClientCredentials(...) or VerifiablAuth.ApiKey(...).",
-                nameof(options));
+        ValidateOptions(options);
+
+        _auth = options.Auth!;
 
         VerifiablEnvironment environment = VerifiablEndpoints.Validate(
             options.Environment,
@@ -98,6 +97,41 @@ public sealed class VerifiablClient : IVerifiablClient
             ? VerifiablEndpoints.IssuerBaseUrlFor(environment)
             : ValidateIssuerBaseUrl(options.IssuerBaseUrl);
 
+        _timeout = options.Timeout;
+        _maxRetries = options.MaxRetries;
+        _httpClient = options.HttpClient ?? SharedHttpClient.Value;
+        _onRequest = options.OnRequest;
+        _onResponse = options.OnResponse;
+        _onError = options.OnError;
+    }
+
+    internal static void ValidateOptions(VerifiablClientOptions options)
+    {
+        if (options is null)
+        {
+            throw new ArgumentNullException(nameof(options));
+        }
+
+        VerifiablAuth auth = options.Auth
+            ?? throw new ArgumentException(
+                "Auth is required: pass VerifiablAuth.ClientCredentials(...) or VerifiablAuth.ApiKey(...).",
+                nameof(options));
+
+        VerifiablEndpoints.Validate(
+            options.Environment,
+            $"{nameof(options)}.{nameof(options.Environment)}");
+
+        Uri? tokenUrlOverride = (auth as VerifiablAuth.ClientCredentialsAuth)?.TokenUrl;
+        if (tokenUrlOverride is not null)
+        {
+            ValidateTokenUrl(tokenUrlOverride);
+        }
+
+        if (options.IssuerBaseUrl is not null)
+        {
+            ValidateIssuerBaseUrl(options.IssuerBaseUrl);
+        }
+
         if (options.Timeout <= TimeSpan.Zero)
         {
             throw new ArgumentException(
@@ -111,13 +145,6 @@ public sealed class VerifiablClient : IVerifiablClient
                 "MaxRetries must not be negative.",
                 $"{nameof(options)}.{nameof(options.MaxRetries)}");
         }
-
-        _timeout = options.Timeout;
-        _maxRetries = options.MaxRetries;
-        _httpClient = options.HttpClient ?? SharedHttpClient.Value;
-        _onRequest = options.OnRequest;
-        _onResponse = options.OnResponse;
-        _onError = options.OnError;
     }
 
     /// <inheritdoc />
