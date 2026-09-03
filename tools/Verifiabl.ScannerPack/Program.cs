@@ -4,8 +4,10 @@ using System.Text;
 using System.Text.Json;
 using Verifiabl;
 
+bool stressMode = args.Contains("--stress", StringComparer.Ordinal);
+string? requestedOutput = args.FirstOrDefault(arg => !arg.StartsWith("--", StringComparison.Ordinal));
 string outputDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(
-    args.Length > 0 ? args[0] : Path.Join("artifacts", "scanner-pack")));
+    requestedOutput ?? Path.Join("artifacts", stressMode ? "qr-stress" : "scanner-pack")));
 byte[] key = Enumerable.Range(0, 32).Select(value => (byte)value).ToArray();
 // Address ECC pairs intentionally reuse the same synthetic payload so scan differences
 // are attributable to ECC level rather than reference/IV/ciphertext changes.
@@ -20,7 +22,7 @@ var sharedFields = new PiiFields
     AccountNumber = "12345678",
     AccountName = "Zoë Nguyễn",
 };
-ScannerFixture[] fixtures =
+ScannerFixture[] standardFixtures =
 [
     new(
         "minimal",
@@ -58,6 +60,7 @@ ScannerFixture[] fixtures =
         CopyFields(sharedFields, string.Concat(Enumerable.Repeat("東京", 53)) + "AB")),
     .. AddressExperimentFixtures(sharedFields, AddressExperimentNonceSlotStart),
 ];
+ScannerFixture[] fixtures = stressMode ? StressFixtures() : standardFixtures;
 
 if (Directory.Exists(outputDirectory) || File.Exists(outputDirectory))
 {
@@ -82,7 +85,25 @@ try
     for (int index = 0; index < fixtures.Length; index++)
     {
         ScannerFixture fixture = fixtures[index];
-        string plaintext = Pii.Format(fixture.Fields);
+        string plaintext;
+        try
+        {
+            plaintext = Pii.Format(fixture.Fields);
+        }
+        catch (Exception exception) when (fixture.ExpectedFormatFailure && exception is ArgumentException)
+        {
+            manifestFixtures.Add(new
+            {
+                fixture.Id,
+                fixture.Description,
+                Status = "expected-reject",
+                AddressUtf8Bytes = Encoding.UTF8.GetByteCount(fixture.Fields.Address ?? string.Empty),
+                FailureStage = "Pii.Format",
+                FailureMessage = exception.Message,
+            });
+            continue;
+        }
+
         byte[] ciphertextBytes = EncryptDeterministically(plaintext, fixture.EncryptionNonceSlot ?? index, key);
         string encryptedPii = Base64Url(ciphertextBytes);
         var parts = new BarcodeParts(fixture.Reference, encryptedPii);
@@ -104,11 +125,12 @@ try
             AddressUtf8Bytes = Encoding.UTF8.GetByteCount(fixture.Fields.Address ?? string.Empty),
             PlaintextUtf8Bytes = Encoding.UTF8.GetByteCount(plaintext),
             VerifiablReference = fixture.Reference,
+            Status = "rendered",
+            MaxErrorCorrection = ToNodeLevel(fixture.MaxErrorCorrection),
             Ciphertext = new
             {
                 ByteLength = ciphertextBytes.Length,
                 Base64url = encryptedPii,
-                Hex = Convert.ToHexString(ciphertextBytes).ToLowerInvariant(),
             },
             Qr = new
             {
@@ -118,6 +140,17 @@ try
                 ErrorCorrectionLevel = ToNodeLevel(barcode.ErrorCorrectionLevel),
                 barcode.Width,
                 barcode.Height,
+                ModuleCount = barcode.QrVersion * 4 + 17,
+                barcode.ModulePx,
+                barcode.Degraded,
+                ContentUtf8Bytes = Encoding.UTF8.GetByteCount(barcode.Content),
+                PhysicalModuleMm = new Dictionary<string, double>
+                {
+                    ["19"] = PhysicalModuleMm(barcode.ModulePx, barcode.Width, 19),
+                    ["22"] = PhysicalModuleMm(barcode.ModulePx, barcode.Width, 22),
+                    ["25"] = PhysicalModuleMm(barcode.ModulePx, barcode.Width, 25),
+                    ["28"] = PhysicalModuleMm(barcode.ModulePx, barcode.Width, 28),
+                },
                 Segments = new[] { "byte", "alphanumeric" },
             },
             XmpPayload = VerifiablBarcode.BuildPayload(parts),
@@ -126,7 +159,7 @@ try
 
     var manifest = new
     {
-        Format = "verifiabl-scanner-pack-v1",
+        Format = stressMode ? "verifiabl-qr-stress-v1" : "verifiabl-scanner-pack-v1",
         SyntheticDataOnly = true,
         Environment = "sandbox",
         Fixtures = manifestFixtures,
@@ -139,6 +172,14 @@ try
     File.WriteAllText(
         Path.Join(stagingDirectory, "manifest.json"),
         JsonSerializer.Serialize(manifest, jsonOptions) + Environment.NewLine,
+        new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+    File.WriteAllText(
+        Path.Join(stagingDirectory, "results.csv"),
+        RenderResultsCsv(manifestFixtures),
+        new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+    File.WriteAllText(
+        Path.Join(stagingDirectory, "summary.md"),
+        RenderSummary(stressMode, manifestFixtures),
         new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
     string cards = string.Join(
@@ -223,6 +264,133 @@ static ScannerFixture[] AddressExperimentFixtures(PiiFields sharedFields, int en
     return fixtures.ToArray();
 }
 
+static ScannerFixture[] StressFixtures()
+{
+    var fixtures = new List<ScannerFixture>();
+    int nonce = 0;
+    foreach (int addressBytes in new[] { 0, 120, 160, 200, 240, 280, 320, 321 })
+    {
+        string[] scripts = addressBytes == 0 ? ["none"] : ["ascii", "latin", "cjk", "mixed"];
+        foreach (string script in scripts)
+        {
+            foreach ((string density, PiiFields fields) in StressDensityProfiles(addressBytes, script))
+            {
+                if (addressBytes > Pii.AddressMaxBytes)
+                {
+                    fixtures.Add(new ScannerFixture(
+                        $"p2-{density}-{script}-addr-{addressBytes}-expected-reject",
+                        $"Expected address rejection before encryption/render at {addressBytes} UTF-8 bytes",
+                        FixtureReferenceFromId($"p2-{density}-{script}-addr-{addressBytes}-expected-reject"),
+                        fields,
+                        IncludeInIndex: false,
+                        ExpectedFormatFailure: true));
+                    nonce++;
+                    continue;
+                }
+
+                foreach (BarcodeErrorCorrectionLevel level in new[]
+                {
+                    BarcodeErrorCorrectionLevel.Medium,
+                    BarcodeErrorCorrectionLevel.Low,
+                })
+                {
+                    string suffix = level == BarcodeErrorCorrectionLevel.Medium ? "medium" : "low";
+                    string id = $"p2-{density}-{script}-addr-{addressBytes}-{suffix}";
+                    fixtures.Add(new ScannerFixture(
+                        id,
+                        $"P2 {density} fixture, {script} address, {addressBytes} UTF-8 address bytes, ECC {ToNodeLevel(level)}",
+                        FixtureReferenceFromId(id),
+                        fields,
+                        level,
+                        IncludeInIndex: false,
+                        EncryptionNonceSlot: nonce));
+                    nonce++;
+                }
+            }
+        }
+    }
+
+    return fixtures.ToArray();
+}
+
+static IEnumerable<(string Density, PiiFields Fields)> StressDensityProfiles(int addressBytes, string script)
+{
+    string? address = addressBytes == 0 ? null : ExactUtf8String(addressBytes, script);
+    yield return ("minimal", new PiiFields { EmployeeName = "Ava Example", Address = address });
+    yield return ("representative", new PiiFields
+    {
+        EmployeeName = "Zoë Nguyễn",
+        Position = "Senior Registered Nurse",
+        Department = "Emergency Department",
+        EmployerAbn = "53-004-085-616",
+        Bsb = "062-000",
+        AccountNumber = "12345678",
+        AccountName = "Zoe Nguyen",
+        Address = address,
+    });
+    yield return ("long-fields", new PiiFields
+    {
+        EmployeeName = "Dr Alexandra Catherine Example-Synthetic",
+        Position = "Principal International Payroll Systems Engineer",
+        Department = "Global Payroll Operations and Compliance",
+        EmployerAbn = "53-004-085-616",
+        Bsb = "062-000",
+        AccountNumber = "12345678901234567890",
+        AccountName = "Alexandra Catherine Example Synthetic",
+        Address = address,
+    });
+    yield return ("dense-fields", new PiiFields
+    {
+        EmployeeName = RepeatToLength("Alexandra Example ", 128),
+        Position = RepeatToLength("Principal Payroll Systems Engineer ", 180),
+        Department = RepeatToLength("International Payroll Compliance Operations ", 180),
+        EmployerAbn = "53-004-085-616",
+        Bsb = "062-000",
+        AccountNumber = RepeatToLength("1234567890", 80),
+        AccountName = RepeatToLength("Alexandra Catherine Example Synthetic ", 180),
+        Address = address,
+    });
+}
+
+static string ExactUtf8String(int bytes, string script)
+{
+    string[] chunks = script switch
+    {
+        "ascii" => ["A"],
+        "latin" => ["é", "ø", "A"],
+        "cjk" => ["東", "京", "A"],
+        "mixed" => ["é", "東", "A", "ø", "京", "Ж", "한"],
+        _ => throw new ArgumentOutOfRangeException(nameof(script), script, "Unknown address script."),
+    };
+    int remaining = bytes;
+    var builder = new StringBuilder();
+    while (remaining > 0)
+    {
+        string next = chunks.First(chunk => Encoding.UTF8.GetByteCount(chunk) <= remaining);
+        builder.Append(next);
+        remaining -= Encoding.UTF8.GetByteCount(next);
+    }
+
+    string value = builder.ToString();
+    if (Encoding.UTF8.GetByteCount(value) != bytes)
+    {
+        throw new InvalidOperationException("Address fixture byte count mismatch.");
+    }
+
+    return value;
+}
+
+static string RepeatToLength(string seed, int length)
+{
+    var builder = new StringBuilder();
+    while (builder.Length < length)
+    {
+        builder.Append(seed);
+    }
+
+    return builder.ToString()[..length];
+}
+
 static string FullAddressEdge(int utf8Bytes)
 {
     if (utf8Bytes <= 0)
@@ -270,6 +438,9 @@ static byte[] EncryptDeterministically(string plaintext, int index, byte[] key)
 
 static string FixtureReference(byte value) => Base64Url(Enumerable.Repeat(value, 16).ToArray());
 
+static string FixtureReferenceFromId(string value) => Base64Url(
+    SHA256.HashData(Encoding.UTF8.GetBytes("reference:" + value))[..16]);
+
 static string Base64Url(byte[] bytes) => Convert.ToBase64String(bytes)
     .TrimEnd('=')
     .Replace('+', '-')
@@ -281,6 +452,101 @@ static string ToNodeLevel(BarcodeErrorCorrectionLevel level) => level switch
     BarcodeErrorCorrectionLevel.Medium => "M",
     _ => "L",
 };
+
+static double PhysicalModuleMm(double modulePx, int pixelWidth, int badgeMm) =>
+    Math.Round(badgeMm * (modulePx / pixelWidth), 4);
+
+static string RenderResultsCsv(List<object> manifestValues)
+{
+    var rows = new List<string>
+    {
+        "id,status,addressUtf8Bytes,plaintextUtf8Bytes,ciphertextBytes,contentUtf8Bytes,maxErrorCorrection,errorCorrectionLevel,qrVersion,moduleCount,modulePx,degraded,scanUrl",
+    };
+    foreach (object manifestValue in manifestValues)
+    {
+        JsonElement value = JsonSerializer.SerializeToElement(
+            manifestValue,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        string id = Csv(value.GetProperty("id").GetString()!);
+        string status = Csv(value.TryGetProperty("status", out JsonElement statusValue)
+            ? statusValue.GetString()!
+            : "rendered");
+        string addressBytes = value.GetProperty("addressUtf8Bytes").GetRawText();
+        if (!value.TryGetProperty("qr", out JsonElement qr))
+        {
+            rows.Add(string.Join(',', [id, status, addressBytes, "", "", "", "", "", "", "", "", "", ""]));
+            continue;
+        }
+
+        JsonElement ciphertext = value.GetProperty("ciphertext");
+        rows.Add(string.Join(',',
+        [
+            id,
+            status,
+            addressBytes,
+            value.GetProperty("plaintextUtf8Bytes").GetRawText(),
+            ciphertext.GetProperty("byteLength").GetRawText(),
+            qr.GetProperty("contentUtf8Bytes").GetRawText(),
+            Csv(value.GetProperty("maxErrorCorrection").GetString()!),
+            Csv(qr.GetProperty("errorCorrectionLevel").GetString()!),
+            qr.GetProperty("version").GetRawText(),
+            qr.GetProperty("moduleCount").GetRawText(),
+            qr.GetProperty("modulePx").GetRawText(),
+            qr.GetProperty("degraded").GetRawText(),
+            Csv(qr.GetProperty("content").GetString()!),
+        ]));
+    }
+
+    return string.Join(Environment.NewLine, rows) + Environment.NewLine;
+}
+
+static string RenderSummary(bool stressMode, List<object> manifestValues)
+{
+    var rendered = manifestValues.Select(value => JsonSerializer.SerializeToElement(
+            value,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }))
+        .Where(value => value.TryGetProperty("qr", out _))
+        .ToArray();
+    int expectedRejects = manifestValues.Count - rendered.Length;
+    string rows = string.Join(Environment.NewLine, rendered
+        .OrderBy(value => value.GetProperty("addressUtf8Bytes").GetInt32())
+        .ThenBy(value => value.GetProperty("id").GetString(), StringComparer.Ordinal)
+        .Take(60)
+        .Select(value =>
+        {
+            JsonElement qr = value.GetProperty("qr");
+            return $"| {value.GetProperty("addressUtf8Bytes").GetRawText()} | {H(value.GetProperty("id").GetString()!)} | {H(value.GetProperty("maxErrorCorrection").GetString()!)} | {H(qr.GetProperty("errorCorrectionLevel").GetString()!)} | {qr.GetProperty("version").GetRawText()} | {qr.GetProperty("moduleCount").GetRawText()} | {qr.GetProperty("contentUtf8Bytes").GetRawText()} | {(qr.GetProperty("degraded").GetBoolean() ? "yes" : "no")} |";
+        }));
+
+    return $$"""
+# Verifiabl QR scanner pack summary
+
+Synthetic data only. Generated by the .NET SDK ScannerPack{{(stressMode ? " stress mode" : string.Empty)}}. The manifest includes ciphertext-bearing scan URLs for representative/manual comparison; do not use customer data in this corpus. No ciphertext hashes or other ciphertext derivatives are written.
+
+## Run metadata
+
+- Mode: {{(stressMode ? "stress" : "standard")}}
+- Environment: sandbox
+- Fixtures: {{manifestValues.Count}}
+- Rendered: {{rendered.Length}}
+- Expected format rejects: {{expectedRejects}}
+
+## QR density sample
+
+| Address bytes | Fixture | ECC ceiling | ECC used | QR version | Modules | URL bytes | Degraded |
+| ---: | --- | --- | --- | ---: | ---: | ---: | --- |
+{{rows}}
+
+## VER-373 notes
+
+The .NET stress mode includes explicit Medium and Low error-correction rows, which complements the Node stress harness where Low is reached only by the degradation ladder. Use the generated `address-size-matrix.html`, `manifest.json`, and `results.csv` to decide the address cap, badge-size floor, and whether Low/degraded output is acceptable.
+""";
+}
+
+static string Csv(string value) =>
+    value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r')
+        ? $"\"{value.Replace("\"", "\"\"")}\""
+        : value;
 
 static string RenderCard(ScannerFixture fixture, object manifestValue)
 {
@@ -316,7 +582,10 @@ static string RenderAddressSizeMatrix(ScannerFixture[] fixtures, List<object> ma
                 JsonElement value = JsonSerializer.SerializeToElement(
                     manifestValues[item.Index],
                     new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-                JsonElement qr = value.GetProperty("qr");
+                if (!value.TryGetProperty("qr", out JsonElement qr))
+                {
+                    return string.Empty;
+                }
                 string file = H(qr.GetProperty("file").GetString()!);
                 string version = qr.GetProperty("version").GetRawText();
                 string ecc = H(qr.GetProperty("errorCorrectionLevel").GetString()!);
@@ -394,4 +663,5 @@ internal sealed record ScannerFixture(
     PiiFields Fields,
     BarcodeErrorCorrectionLevel MaxErrorCorrection = BarcodeErrorCorrectionLevel.Medium,
     bool IncludeInIndex = true,
-    int? EncryptionNonceSlot = null);
+    int? EncryptionNonceSlot = null,
+    bool ExpectedFormatFailure = false);

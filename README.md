@@ -151,11 +151,19 @@ dotnet run --project tools/Verifiabl.ScannerPack -- ./artifacts/ver-460
 
 Open `artifacts/ver-460/index.html` for screen, print, and fold tests. Open
 `artifacts/ver-460/address-size-matrix.html` to compare dense-address QR error-correction and badge
-size trade-offs. The output directory must not already exist, so a stale partial pack is never mixed
-with a fresh run. The pack includes PNG files and a `manifest.json` file. The manifest records each
-exact scan URL, XMP payload, ciphertext byte value, QR version, and error-correction level. All
-fixture details are synthetic. Do not replace them with customer data. CI also publishes the same
-pack as the `verifiabl-dotnet-scanner-pack` workflow artifact.
+size trade-offs. To generate the larger VER-523 stress corpus, including explicit ECC Medium/Low
+rows across address byte lengths and field-density profiles, pass `--stress`:
+
+```bash
+dotnet run --project tools/Verifiabl.ScannerPack -- ./artifacts/ver-523 --stress
+```
+
+The output directory must not already exist, so a stale partial pack is never mixed with a fresh run.
+The pack includes PNG files, `manifest.json`, `results.csv`, and `summary.md`. The manifest records
+each exact scan URL, XMP payload, ciphertext byte value, QR version, error-correction level, degraded
+flag, module count, and physical module sizes. All fixture details are synthetic. Do not replace them
+with customer data. CI also publishes the standard pack as the `verifiabl-dotnet-scanner-pack`
+workflow artifact.
 
 ### Development shell
 
