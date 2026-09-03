@@ -4,8 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Verifiabl;
 
-bool stressMode = args.Contains("--stress", StringComparer.Ordinal);
-string? requestedOutput = args.FirstOrDefault(arg => !arg.StartsWith("--", StringComparison.Ordinal));
+(string? requestedOutput, bool stressMode) = ParseArgs(args);
 string outputDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(
     requestedOutput ?? Path.Join("artifacts", stressMode ? "qr-stress" : "scanner-pack")));
 byte[] key = Enumerable.Range(0, 32).Select(value => (byte)value).ToArray();
@@ -28,12 +27,14 @@ ScannerFixture[] standardFixtures =
         "minimal",
         "Short P2 payload with only an employee name",
         FixtureReference(0x00),
-        new PiiFields { EmployeeName = "Jane Doe" }),
+        new PiiFields { EmployeeName = "Jane Doe" },
+        EncryptionNonceSlot: 0),
     new(
         "representative-no-address",
         "Representative P2 payload with the optional address absent",
         FixtureReference(0x11),
-        CopyFields(sharedFields)),
+        CopyFields(sharedFields),
+        EncryptionNonceSlot: 1),
     new(
         "au-address-median",
         "AU representative P2 payload, address around the median length",
@@ -48,7 +49,8 @@ ScannerFixture[] standardFixtures =
             AccountNumber = "12345678",
             AccountName = "Mia Thompson",
             Address = ExactAsciiAddress(36),
-        }),
+        },
+        EncryptionNonceSlot: 20),
     new(
         "au-jobtitle-absent",
         "AU representative P2 payload with no job title and a typical address",
@@ -62,22 +64,26 @@ ScannerFixture[] standardFixtures =
             AccountNumber = "12345678",
             AccountName = "Oliver Smith",
             Address = ExactAsciiAddress(40),
-        }),
+        },
+        EncryptionNonceSlot: 21),
     new(
         "au-address-p95",
         "AU representative P2 payload, address around the P95 length",
         FixtureReference(0x14),
-        CopyFields(sharedFields, ExactAsciiAddress(48))),
+        CopyFields(sharedFields, ExactAsciiAddress(48)),
+        EncryptionNonceSlot: 22),
     new(
         "au-address-p99",
         "AU representative P2 payload, address around the P99 length",
         FixtureReference(0x15),
-        CopyFields(sharedFields, ExactAsciiAddress(58))),
+        CopyFields(sharedFields, ExactAsciiAddress(58)),
+        EncryptionNonceSlot: 23),
     new(
         "international-address",
         "Realistic international P2 address",
         FixtureReference(0x22),
-        CopyFields(sharedFields, "12 Rue de l’Église, Apt 4B, 75005 Paris, France 🇫🇷")),
+        CopyFields(sharedFields, "12 Rue de l’Église, Apt 4B, 75005 Paris, France 🇫🇷"),
+        EncryptionNonceSlot: 2),
     new(
         "dense-fields",
         "Dense P2 payload with long synthetic payroll fields",
@@ -91,12 +97,14 @@ ScannerFixture[] standardFixtures =
             Bsb = "062-000",
             AccountNumber = "12345678901234567890",
             AccountName = "Alexandra Example-Synthetic",
-        }),
+        },
+        EncryptionNonceSlot: 3),
     new(
         "address-320-bytes",
         "Exact 320-byte UTF-8 P2 address boundary",
         FixtureReference(0x44),
-        CopyFields(sharedFields, string.Concat(Enumerable.Repeat("東京", 53)) + "AB")),
+        CopyFields(sharedFields, string.Concat(Enumerable.Repeat("東京", 53)) + "AB"),
+        EncryptionNonceSlot: 4),
     .. AddressExperimentFixtures(sharedFields, AddressExperimentNonceSlotStart),
 ];
 ScannerFixture[] fixtures = stressMode ? StressFixtures() : standardFixtures;
@@ -170,6 +178,7 @@ try
             {
                 ByteLength = ciphertextBytes.Length,
                 Base64url = encryptedPii,
+                Hex = Convert.ToHexString(ciphertextBytes).ToLowerInvariant(),
             },
             Qr = new
             {
@@ -271,6 +280,33 @@ finally
     }
 }
 
+static (string? OutputDirectory, bool StressMode) ParseArgs(string[] args)
+{
+    string? outputDirectory = null;
+    bool stressMode = false;
+    foreach (string arg in args)
+    {
+        if (arg == "--stress")
+        {
+            stressMode = true;
+        }
+        else if (arg.StartsWith("--", StringComparison.Ordinal))
+        {
+            throw new ArgumentException($"Unknown option: {arg}");
+        }
+        else if (outputDirectory is null)
+        {
+            outputDirectory = arg;
+        }
+        else
+        {
+            throw new ArgumentException($"Unexpected extra output path: {arg}");
+        }
+    }
+
+    return (outputDirectory, stressMode);
+}
+
 static ScannerFixture[] AddressExperimentFixtures(PiiFields sharedFields, int encryptionNonceSlotStart)
 {
     var fixtures = new List<ScannerFixture>();
@@ -316,19 +352,21 @@ static ScannerFixture[] StressFixtures()
         {
             foreach ((string density, PiiFields fields) in StressDensityProfiles(addressBytes, script))
             {
+                string baseId = $"p2-{density}-{script}-addr-{addressBytes}";
                 if (addressBytes > Pii.AddressMaxBytes)
                 {
                     fixtures.Add(new ScannerFixture(
-                        $"p2-{density}-{script}-addr-{addressBytes}-expected-reject",
+                        $"{baseId}-expected-reject",
                         $"Expected address rejection before encryption/render at {addressBytes} UTF-8 bytes",
-                        FixtureReferenceFromId($"p2-{density}-{script}-addr-{addressBytes}-expected-reject"),
+                        FixtureReferenceFromId($"{baseId}-expected-reject"),
                         fields,
                         IncludeInIndex: false,
                         ExpectedFormatFailure: true));
-                    nonce++;
                     continue;
                 }
 
+                string reference = FixtureReferenceFromId(baseId);
+                int pairNonceSlot = nonce++;
                 foreach (BarcodeErrorCorrectionLevel level in new[]
                 {
                     BarcodeErrorCorrectionLevel.Medium,
@@ -336,16 +374,15 @@ static ScannerFixture[] StressFixtures()
                 })
                 {
                     string suffix = level == BarcodeErrorCorrectionLevel.Medium ? "medium" : "low";
-                    string id = $"p2-{density}-{script}-addr-{addressBytes}-{suffix}";
+                    string id = $"{baseId}-{suffix}";
                     fixtures.Add(new ScannerFixture(
                         id,
                         $"P2 {density} fixture, {script} address, {addressBytes} UTF-8 address bytes, ECC {ToNodeLevel(level)}",
-                        FixtureReferenceFromId(id),
+                        reference,
                         fields,
                         level,
                         IncludeInIndex: false,
-                        EncryptionNonceSlot: nonce));
-                    nonce++;
+                        EncryptionNonceSlot: pairNonceSlot));
                 }
             }
         }
@@ -425,10 +462,14 @@ static string ExactUtf8String(int bytes, string script)
         _ => throw new ArgumentOutOfRangeException(nameof(script), script, "Unknown address script."),
     };
     int remaining = bytes;
+    int chunkIndex = 0;
     var builder = new StringBuilder();
     while (remaining > 0)
     {
-        string next = chunks.First(chunk => Encoding.UTF8.GetByteCount(chunk) <= remaining);
+        string candidate = chunks[chunkIndex % chunks.Length];
+        chunkIndex++;
+        int candidateBytes = Encoding.UTF8.GetByteCount(candidate);
+        string next = candidateBytes <= remaining ? candidate : "A";
         builder.Append(next);
         remaining -= Encoding.UTF8.GetByteCount(next);
     }
@@ -500,8 +541,18 @@ static byte[] EncryptDeterministically(string plaintext, int index, byte[] key)
 {
     // Fixed synthetic key and distinct fixed IVs make the pack reproducible across SDKs.
     // This helper is test-only. Production encryption must use a fresh random IV.
+    if (index < 0)
+    {
+        throw new ArgumentOutOfRangeException(nameof(index));
+    }
+
     byte[] iv = new byte[12];
-    iv[11] = (byte)(index + 1);
+    long slot = (long)index + 1;
+    for (int offset = iv.Length - 1; slot > 0 && offset >= 0; offset--)
+    {
+        iv[offset] = (byte)(slot & 0xff);
+        slot >>= 8;
+    }
     byte[] plaintextBytes = Encoding.UTF8.GetBytes(plaintext);
     byte[] ciphertext = new byte[plaintextBytes.Length];
     byte[] tag = new byte[16];
@@ -582,11 +633,15 @@ static string RenderSummary(bool stressMode, List<object> manifestValues)
         .Where(value => value.TryGetProperty("qr", out _))
         .ToArray();
     int expectedRejects = manifestValues.Count - rendered.Length;
-    string rows = string.Join(Environment.NewLine, rendered
+    IEnumerable<JsonElement> summaryRows = rendered
         .OrderBy(value => value.GetProperty("addressUtf8Bytes").GetInt32())
-        .ThenBy(value => value.GetProperty("id").GetString(), StringComparer.Ordinal)
-        .Take(60)
-        .Select(value =>
+        .ThenBy(value => value.GetProperty("id").GetString(), StringComparer.Ordinal);
+    if (!stressMode)
+    {
+        summaryRows = summaryRows.Take(60);
+    }
+
+    string rows = string.Join(Environment.NewLine, summaryRows.Select(value =>
         {
             JsonElement qr = value.GetProperty("qr");
             return $"| {value.GetProperty("addressUtf8Bytes").GetRawText()} | {H(value.GetProperty("id").GetString()!)} | {H(value.GetProperty("maxErrorCorrection").GetString()!)} | {H(qr.GetProperty("errorCorrectionLevel").GetString()!)} | {qr.GetProperty("version").GetRawText()} | {qr.GetProperty("moduleCount").GetRawText()} | {qr.GetProperty("contentUtf8Bytes").GetRawText()} | {(qr.GetProperty("degraded").GetBoolean() ? "yes" : "no")} |";
