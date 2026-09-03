@@ -109,7 +109,7 @@ public class ServiceCollectionTests
     {
         var services = new ServiceCollection();
         int configureCount = 0;
-        var httpClient = new HttpClient(new FakeHttpHandler());
+        using var httpClient = new HttpClient(new FakeHttpHandler());
         services.AddVerifiablClient(options =>
         {
             configureCount++;
@@ -136,11 +136,12 @@ public class ServiceCollectionTests
                 HttpStatusCode.OK,
                 $"{{\"verifiabl_reference\":\"{Reference}\"}}")),
         };
+        using var httpClient = new HttpClient(handler);
         var services = new ServiceCollection();
         services.AddVerifiablClient(options =>
         {
             options.Auth = VerifiablAuth.ApiKey("static-key");
-            options.HttpClient = new HttpClient(handler);
+            options.HttpClient = httpClient;
         });
 
         using ServiceProvider provider = services.BuildServiceProvider();
@@ -159,7 +160,7 @@ public class ServiceCollectionTests
             options.Auth = VerifiablAuth.ApiKey("static-key"));
 
         using ServiceProvider provider = services.BuildServiceProvider();
-        HttpClient client = provider
+        using HttpClient client = provider
             .GetRequiredService<IHttpClientFactory>()
             .CreateClient(VerifiablServiceCollectionExtensions.HttpClientName);
 
@@ -175,12 +176,13 @@ public class ServiceCollectionTests
         ServicePoint issuerServicePoint = ServicePointManager.FindServicePoint(issuerUri);
         issuerServicePoint.ConnectionLeaseTimeout = -1;
 
+        using var httpClient = new HttpClient(new FakeHttpHandler());
         var services = new ServiceCollection();
         services.AddVerifiablClient(options =>
         {
             options.Auth = VerifiablAuth.ApiKey("static-key");
             options.IssuerBaseUrl = issuerUri;
-            options.HttpClient = new HttpClient(new FakeHttpHandler());
+            options.HttpClient = httpClient;
         });
 
         using ServiceProvider provider = services.BuildServiceProvider();
