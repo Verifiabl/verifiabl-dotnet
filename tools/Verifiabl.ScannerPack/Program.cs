@@ -836,8 +836,8 @@ static string RenderSyntheticPayslip(List<object> manifestValues)
     th, td { border: 1px solid #ccc; padding: 2mm; text-align: left; }
     th { background: #f2f3f7; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7mm; }
-    .qr-panel { margin-top: 7mm; display: grid; grid-template-columns: 1fr 45mm; gap: 8mm; align-items: start; padding: 4mm; border: 2px solid #010a4f; }
-    .qr-panel img { display: block; width: 38mm; height: auto; image-rendering: pixelated; }
+    .qr-panel { margin-top: 7mm; display: grid; grid-template-columns: 1fr 28mm; gap: 8mm; align-items: start; padding: 4mm; border: 2px solid #010a4f; }
+    .qr-panel img { display: block; width: 22mm; height: auto; image-rendering: pixelated; }
     .muted { color: #555; }
     code { font: 10px/1.25 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
     @media print { body { background: #fff; } .page { margin: 0; width: auto; min-height: auto; padding: 0; } }
