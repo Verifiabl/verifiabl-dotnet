@@ -45,7 +45,7 @@ public sealed class VerifiablClientOptions
     /// should be left at its default or set to infinite.
     /// </summary>
     /// <remarks>
-    /// The Verifiabl.Extensions.DependencyInjection package wires this to
+    /// The Verifiabl.Issuer.Extensions.DependencyInjection package wires this to
     /// IHttpClientFactory for you.
     /// </remarks>
     public HttpClient? HttpClient { get; set; }

@@ -6,6 +6,17 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Package ids renamed**: `Verifiabl` is now `Verifiabl.Issuer`, and
+  `Verifiabl.Extensions.DependencyInjection` is now
+  `Verifiabl.Issuer.Extensions.DependencyInjection`. Issuer is the role this
+  SDK serves, matching the Node SDK's `@verifiabl/issuer`; the .NET spelling
+  follows NuGet's PascalCase dotted convention. The old ids stay on nuget.org
+  through 0.4.0 and receive no further releases; they are to be deprecated on
+  nuget.org in favour of the new ids. Assembly names and namespaces are
+  unchanged: code still uses `using Verifiabl;` and `using Verifiabl.Client;`.
+
 ### Added
 
 - V2 barcode and XMP writers are now the default, with canonical uppercase
@@ -19,6 +30,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A synthetic scanner pack generator for screen, print, fold, photocopy, camera,
   and hardware-scanner testing.
 - A pinned Nix development shell with .NET 8 and .NET 10 tooling.
+- Embedded package icon, so the NuGet listing carries the Verifiabl mark.
 - `VerifiablIvReuseException`, thrown when a single registration is rejected
   because the record's encryption IV is already registered to your issuer. It
   derives from `VerifiablApiException`, so existing handling still catches it,
@@ -84,7 +96,8 @@ package had no published consumers, so no migration shim is provided.
 
 - Optional `RegisterNonPiiRequest.VerifiablReference` for callers who want to
   pin the registration's idempotency key themselves.
-- New package `Verifiabl.Extensions.DependencyInjection`, with
+- New package `Verifiabl.Extensions.DependencyInjection` (renamed to
+  `Verifiabl.Issuer.Extensions.DependencyInjection` in a later release), with
   `IServiceCollection.AddVerifiablClient(...)` overloads that register
   `IVerifiablClient` as a singleton wired to `IHttpClientFactory`. The core
   package stays free of `Microsoft.Extensions.*` dependencies.

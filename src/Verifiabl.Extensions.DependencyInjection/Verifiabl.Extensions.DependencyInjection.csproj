@@ -3,8 +3,9 @@
   <PropertyGroup>
     <!-- Same targets as the core package, so DI registration is available everywhere the SDK is. -->
     <TargetFrameworks>net472;net8.0;net10.0</TargetFrameworks>
-    <PackageId>Verifiabl.Extensions.DependencyInjection</PackageId>
-    <Version>0.3.0</Version>
+    <!-- Package id only: the assembly and namespace stay Verifiabl.Extensions.DependencyInjection. -->
+    <PackageId>Verifiabl.Issuer.Extensions.DependencyInjection</PackageId>
+    <Version>0.5.0</Version>
     <Description>Microsoft.Extensions.DependencyInjection integration for the Verifiabl .NET SDK: registers IVerifiablClient as a singleton wired to IHttpClientFactory.</Description>
     <Authors>Verifiabl</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -12,6 +13,7 @@
     <RepositoryUrl>https://github.com/Verifiabl/verifiabl-dotnet</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>verifiabl;payslip;issuer;dependency-injection;aspnetcore</PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -23,6 +25,7 @@
 
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\icon.png" Pack="true" PackagePath="\" />
     <InternalsVisibleTo Include="Verifiabl.Tests" Key="$(VerifiablPublicKey)" />
   </ItemGroup>
 
