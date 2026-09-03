@@ -4,7 +4,7 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.0]
 
 ### Changed
 
@@ -15,7 +15,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   follows NuGet's PascalCase dotted convention. The old ids stay on nuget.org
   through 0.4.0 and receive no further releases; they are to be deprecated on
   nuget.org in favour of the new ids. Assembly names and namespaces are
-  unchanged: code still uses `using Verifiabl;` and `using Verifiabl.Client;`.
+  unchanged for the core package: code still uses `using Verifiabl;` and
+  `using Verifiabl.Client;`. The DI extension methods moved out of the
+  `Microsoft.Extensions.DependencyInjection` namespace into
+  `Verifiabl.Extensions.DependencyInjection`, following Microsoft guidance for
+  third-party library authors; consumers now add that `using` before calling
+  `AddVerifiablClient`.
 
 ### Added
 
@@ -45,6 +50,19 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `VerifiablErrorCodes.IvReused` and `VerifiablErrorCodes.Conflict`. `CONFLICT`
   was already returned for a Verifiabl reference registered with different data
   but was missing from the list.
+
+### Fixed
+
+- The DI extension package now registers `VerifiablClientOptions` through the
+  Microsoft options pipeline with startup validation, so common misconfiguration
+  fails during host startup rather than on the first client resolve.
+- `net472` DI registrations now apply .NET Framework connection recycling via
+  `ServicePoint.ConnectionLeaseTimeout` for the selected issuer API and OAuth
+  origins when the DI package creates the transport, matching the long-lived
+  singleton client mitigation used by modern targets without changing
+  caller-supplied clients or process-wide `ServicePointManager` DNS policy.
+- Repeated `AddVerifiablClient` calls are now fully first-wins: later calls do
+  not reconfigure either the client options or the named `HttpClient`.
 
 ## [0.3.0]
 

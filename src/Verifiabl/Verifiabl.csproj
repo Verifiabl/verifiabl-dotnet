@@ -10,7 +10,7 @@
     <TargetFrameworks>net472;net8.0;net10.0</TargetFrameworks>
     <!-- Package id only: the assembly and root namespace stay Verifiabl. -->
     <PackageId>Verifiabl.Issuer</PackageId>
-    <Version>0.5.0</Version>
+    <Version>0.6.0</Version>
     <Description>Official Verifiabl .NET SDK for issuing payslip QR codes, formatting PII, AES-256-GCM encryption helpers, and typed issuer API calls.</Description>
     <Authors>Verifiabl</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -31,6 +31,7 @@
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
     <None Include="..\..\icon.png" Pack="true" PackagePath="\" />
+    <InternalsVisibleTo Include="Verifiabl.Extensions.DependencyInjection" Key="$(VerifiablPublicKey)" />
     <InternalsVisibleTo Include="Verifiabl.Tests" Key="$(VerifiablPublicKey)" />
   </ItemGroup>
 

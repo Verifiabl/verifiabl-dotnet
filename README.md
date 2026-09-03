@@ -30,6 +30,7 @@ The split is deliberate, so you can see at a glance which half of the SDK touche
 | --- | --- | --- |
 | `Verifiabl` | `Pii`, `PiiFields`, `VerifiablCrypto`, `EncryptedPii`, `EncryptionMetadata`, `VerifiablBarcode`, `BarcodeParts`, `BarcodeSvgOptions`, `VerifiablReference`, `VerifiablEnvironment`, `VerifiablEndpoints` | None. Pure functions you can call from anywhere, including a hot PDF-rendering loop. |
 | `Verifiabl.Client` | `IVerifiablClient`, `VerifiablClient`, `VerifiablClientOptions`, `VerifiablAuth`, the request/response types, `VerifiablApiException` and friends | Calls the Verifiabl issuer API. |
+| `Verifiabl.Extensions.DependencyInjection` | `AddVerifiablClient` and `VerifiablServiceCollectionExtensions.HttpClientName` from the DI integration package | Registers the networked client in your service collection. |
 
 Encryption, PII formatting, reference generation, and barcode rendering all happen on your infrastructure with no network call — the `Verifiabl` namespace has no client in it to make one.
 
@@ -41,6 +42,7 @@ With dependency injection, using `Verifiabl.Issuer.Extensions.DependencyInjectio
 using Microsoft.Extensions.DependencyInjection;
 using Verifiabl;
 using Verifiabl.Client;
+using Verifiabl.Extensions.DependencyInjection;
 
 builder.Services.AddVerifiablClient(options =>
 {
