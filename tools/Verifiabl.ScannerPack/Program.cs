@@ -7,6 +7,9 @@ using Verifiabl;
 string outputDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(
     args.Length > 0 ? args[0] : Path.Join("artifacts", "scanner-pack")));
 byte[] key = Enumerable.Range(0, 32).Select(value => (byte)value).ToArray();
+// Address ECC pairs intentionally reuse the same synthetic payload so scan differences
+// are attributable to ECC level rather than reference/IV/ciphertext changes.
+const int AddressExperimentNonceSlotStart = 5;
 var sharedFields = new PiiFields
 {
     EmployeeName = "Zoë Nguyễn",
@@ -53,6 +56,7 @@ ScannerFixture[] fixtures =
         "Exact 320-byte UTF-8 P2 address boundary",
         FixtureReference(0x44),
         CopyFields(sharedFields, string.Concat(Enumerable.Repeat("東京", 53)) + "AB")),
+    .. AddressExperimentFixtures(sharedFields, AddressExperimentNonceSlotStart),
 ];
 
 if (Directory.Exists(outputDirectory) || File.Exists(outputDirectory))
@@ -79,7 +83,7 @@ try
     {
         ScannerFixture fixture = fixtures[index];
         string plaintext = Pii.Format(fixture.Fields);
-        byte[] ciphertextBytes = EncryptDeterministically(plaintext, index, key);
+        byte[] ciphertextBytes = EncryptDeterministically(plaintext, fixture.EncryptionNonceSlot ?? index, key);
         string encryptedPii = Base64Url(ciphertextBytes);
         var parts = new BarcodeParts(fixture.Reference, encryptedPii);
         BarcodePngResult barcode = VerifiablBarcode.CreatePng(
@@ -87,7 +91,7 @@ try
             new BarcodeSvgOptions
             {
                 Environment = VerifiablEnvironment.Sandbox,
-                MaxErrorCorrection = BarcodeErrorCorrectionLevel.Medium,
+                MaxErrorCorrection = fixture.MaxErrorCorrection,
             },
             720);
         string pngFile = fixture.Id + ".png";
@@ -139,7 +143,9 @@ try
 
     string cards = string.Join(
         Environment.NewLine,
-        manifestFixtures.Select((value, index) => RenderCard(fixtures[index], value)));
+        manifestFixtures.Select((value, index) => (Fixture: fixtures[index], Manifest: value))
+            .Where(item => item.Fixture.IncludeInIndex)
+            .Select(item => RenderCard(item.Fixture, item.Manifest)));
     string html = $$"""
 <!doctype html>
 <html lang="en">
@@ -169,6 +175,10 @@ try
         Path.Join(stagingDirectory, "index.html"),
         html,
         new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+    File.WriteAllText(
+        Path.Join(stagingDirectory, "address-size-matrix.html"),
+        RenderAddressSizeMatrix(fixtures, manifestFixtures),
+        new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     Directory.Move(stagingDirectory, outputDirectory);
     published = true;
     Console.WriteLine($"Wrote {manifestFixtures.Count} scanner fixtures to {outputDirectory}");
@@ -179,6 +189,57 @@ finally
     {
         Directory.Delete(stagingDirectory, recursive: true);
     }
+}
+
+static ScannerFixture[] AddressExperimentFixtures(PiiFields sharedFields, int encryptionNonceSlotStart)
+{
+    var fixtures = new List<ScannerFixture>();
+    byte referenceByte = 0x60;
+    int encryptionNonceSlot = encryptionNonceSlotStart;
+    foreach (int addressBytes in new[] { 160, 200, 240, 320 })
+    {
+        string reference = FixtureReference(referenceByte++);
+        int pairNonceSlot = encryptionNonceSlot++;
+        string address = FullAddressEdge(addressBytes);
+        foreach (BarcodeErrorCorrectionLevel level in new[]
+        {
+            BarcodeErrorCorrectionLevel.Medium,
+            BarcodeErrorCorrectionLevel.Low,
+        })
+        {
+            string suffix = level == BarcodeErrorCorrectionLevel.Medium ? "medium" : "low";
+            string label = level == BarcodeErrorCorrectionLevel.Medium ? "ECC M" : "ECC L";
+            fixtures.Add(new ScannerFixture(
+                $"address-{addressBytes}-{suffix}",
+                $"{addressBytes}-byte UTF-8 P2 address edge case, {label}",
+                reference,
+                CopyFields(sharedFields, address),
+                level,
+                IncludeInIndex: false,
+                EncryptionNonceSlot: pairNonceSlot));
+        }
+    }
+
+    return fixtures.ToArray();
+}
+
+static string FullAddressEdge(int utf8Bytes)
+{
+    if (utf8Bytes <= 0)
+    {
+        throw new ArgumentOutOfRangeException(nameof(utf8Bytes));
+    }
+
+    int cjkPairs = utf8Bytes / 6;
+    int asciiRemainder = utf8Bytes - cjkPairs * 6;
+    string address = string.Concat(Enumerable.Repeat("東京", cjkPairs))
+        + new string('A', asciiRemainder);
+    if (Encoding.UTF8.GetByteCount(address) != utf8Bytes)
+    {
+        throw new InvalidOperationException("Address fixture byte count mismatch.");
+    }
+
+    return address;
 }
 
 static PiiFields CopyFields(PiiFields source, string? address = null) => new()
@@ -243,10 +304,94 @@ static string RenderCard(ScannerFixture fixture, object manifestValue)
 """;
 }
 
+static string RenderAddressSizeMatrix(ScannerFixture[] fixtures, List<object> manifestValues)
+{
+    string rows = string.Join(
+        Environment.NewLine,
+        fixtures.Select((fixture, index) => (Fixture: fixture, Index: index))
+            .Where(item => !item.Fixture.IncludeInIndex)
+            .Select(item =>
+            {
+                ScannerFixture fixture = item.Fixture;
+                JsonElement value = JsonSerializer.SerializeToElement(
+                    manifestValues[item.Index],
+                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                JsonElement qr = value.GetProperty("qr");
+                string file = H(qr.GetProperty("file").GetString()!);
+                string version = qr.GetProperty("version").GetRawText();
+                string ecc = H(qr.GetProperty("errorCorrectionLevel").GetString()!);
+                string addressBytes = value.GetProperty("addressUtf8Bytes").GetRawText();
+                string plaintextBytes = value.GetProperty("plaintextUtf8Bytes").GetRawText();
+                string title = H(fixture.Id);
+                return $$"""
+                  <tr>
+                    <th scope="row">
+                      <strong>{{title}}</strong><br>
+                      {{addressBytes}} address bytes<br>
+                      {{plaintextBytes}} plaintext bytes<br>
+                      QR v{{version}}, ECC {{ecc}}
+                    </th>
+                    <td><img class="qr size-19" src="{{file}}" alt="{{title}} at 19mm badge width"></td>
+                    <td><img class="qr size-22" src="{{file}}" alt="{{title}} at 22mm badge width"></td>
+                    <td><img class="qr size-25" src="{{file}}" alt="{{title}} at 25mm badge width"></td>
+                    <td><img class="qr size-28" src="{{file}}" alt="{{title}} at 28mm badge width"></td>
+                  </tr>
+""";
+            }));
+
+    return $$"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verifiabl address QR ECC and badge-size matrix</title>
+  <style>
+    body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; color: #111; }
+    .notice { padding: 10px; border: 2px solid #010a4f; margin-bottom: 14px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #bbb; padding: 6px; text-align: left; vertical-align: top; }
+    thead th { background: #f2f3f7; }
+    tbody th { width: 54mm; }
+    .qr { display: block; image-rendering: pixelated; }
+    .size-19 { width: 19mm; height: auto; }
+    .size-22 { width: 22mm; height: auto; }
+    .size-25 { width: 25mm; height: auto; }
+    .size-28 { width: 28mm; height: auto; }
+    @media print {
+      body { margin: 6mm; font-size: 10px; }
+      th, td { padding: 3px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="notice"><strong>Address QR comparison page.</strong> Full-address byte caps crossed with ECC Medium/Low and 19/22/25/28mm badge widths (the QR box is 80/96 of each badge). Synthetic test data only.</div>
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">Address + ECC case</th>
+        <th scope="col">19mm badge</th>
+        <th scope="col">22mm badge</th>
+        <th scope="col">25mm badge</th>
+        <th scope="col">28mm badge</th>
+      </tr>
+    </thead>
+    <tbody>
+{{rows}}
+    </tbody>
+  </table>
+</body>
+</html>
+""";
+}
+
 static string H(string value) => WebUtility.HtmlEncode(value);
 
 internal sealed record ScannerFixture(
     string Id,
     string Description,
     string Reference,
-    PiiFields Fields);
+    PiiFields Fields,
+    BarcodeErrorCorrectionLevel MaxErrorCorrection = BarcodeErrorCorrectionLevel.Medium,
+    bool IncludeInIndex = true,
+    int? EncryptionNonceSlot = null);

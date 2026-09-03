@@ -149,12 +149,13 @@ Generate synthetic v2 symbols for screen, print, fold, photocopy, camera, and ha
 dotnet run --project tools/Verifiabl.ScannerPack -- ./artifacts/ver-460
 ```
 
-Open `artifacts/ver-460/index.html` for screen or print tests. The output directory must not already
-exist, so a stale partial pack is never mixed with a fresh run. The pack includes PNG files and a
-`manifest.json` file. The manifest records each exact scan URL, XMP payload, ciphertext byte value,
-QR version, and error-correction level. All fixture details are synthetic. Do not replace them with
-customer data. CI also publishes the same pack as the `verifiabl-dotnet-scanner-pack` workflow
-artifact.
+Open `artifacts/ver-460/index.html` for screen, print, and fold tests. Open
+`artifacts/ver-460/address-size-matrix.html` to compare dense-address QR error-correction and badge
+size trade-offs. The output directory must not already exist, so a stale partial pack is never mixed
+with a fresh run. The pack includes PNG files and a `manifest.json` file. The manifest records each
+exact scan URL, XMP payload, ciphertext byte value, QR version, and error-correction level. All
+fixture details are synthetic. Do not replace them with customer data. CI also publishes the same
+pack as the `verifiabl-dotnet-scanner-pack` workflow artifact.
 
 ### Development shell
 
