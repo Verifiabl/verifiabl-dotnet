@@ -149,10 +149,13 @@ Generate synthetic v2 symbols for screen, print, fold, photocopy, camera, and ha
 dotnet run --project tools/Verifiabl.ScannerPack -- ./artifacts/ver-460
 ```
 
-Open `artifacts/ver-460/index.html` for screen, print, and fold tests. Open
+Open `artifacts/ver-460/index.html` for screen, print, and fold tests. The standard pack includes
+AU-representative fixtures around the observed address median/P95/P99 lengths and a normal-address
+case with no job title, so physical tests cover common records as well as synthetic edges. Open
 `artifacts/ver-460/address-size-matrix.html` to compare dense-address QR error-correction and badge
 size trade-offs. To generate the larger VER-523 stress corpus, including explicit ECC Medium/Low
-rows across address byte lengths and field-density profiles, pass `--stress`:
+rows across AU-representative address lengths, stress lengths, and field-density profiles, pass
+`--stress`:
 
 ```bash
 dotnet run --project tools/Verifiabl.ScannerPack -- ./artifacts/ver-523 --stress
