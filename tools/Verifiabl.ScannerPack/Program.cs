@@ -7,6 +7,9 @@ using Verifiabl;
 string outputDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(
     args.Length > 0 ? args[0] : Path.Join("artifacts", "scanner-pack")));
 byte[] key = Enumerable.Range(0, 32).Select(value => (byte)value).ToArray();
+// Address ECC pairs intentionally reuse the same synthetic payload so scan differences
+// are attributable to ECC level rather than reference/IV/ciphertext changes.
+const int AddressExperimentNonceSlotStart = 5;
 var sharedFields = new PiiFields
 {
     EmployeeName = "Zoë Nguyễn",
@@ -53,7 +56,7 @@ ScannerFixture[] fixtures =
         "Exact 320-byte UTF-8 P2 address boundary",
         FixtureReference(0x44),
         CopyFields(sharedFields, string.Concat(Enumerable.Repeat("東京", 53)) + "AB")),
-    .. AddressExperimentFixtures(sharedFields),
+    .. AddressExperimentFixtures(sharedFields, AddressExperimentNonceSlotStart),
 ];
 
 if (Directory.Exists(outputDirectory) || File.Exists(outputDirectory))
@@ -80,7 +83,7 @@ try
     {
         ScannerFixture fixture = fixtures[index];
         string plaintext = Pii.Format(fixture.Fields);
-        byte[] ciphertextBytes = EncryptDeterministically(plaintext, index, key);
+        byte[] ciphertextBytes = EncryptDeterministically(plaintext, fixture.EncryptionNonceSlot ?? index, key);
         string encryptedPii = Base64Url(ciphertextBytes);
         var parts = new BarcodeParts(fixture.Reference, encryptedPii);
         BarcodePngResult barcode = VerifiablBarcode.CreatePng(
@@ -188,12 +191,16 @@ finally
     }
 }
 
-static ScannerFixture[] AddressExperimentFixtures(PiiFields sharedFields)
+static ScannerFixture[] AddressExperimentFixtures(PiiFields sharedFields, int encryptionNonceSlotStart)
 {
     var fixtures = new List<ScannerFixture>();
     byte referenceByte = 0x60;
+    int encryptionNonceSlot = encryptionNonceSlotStart;
     foreach (int addressBytes in new[] { 160, 200, 240, 320 })
     {
+        string reference = FixtureReference(referenceByte++);
+        int pairNonceSlot = encryptionNonceSlot++;
+        string address = FullAddressEdge(addressBytes);
         foreach (BarcodeErrorCorrectionLevel level in new[]
         {
             BarcodeErrorCorrectionLevel.Medium,
@@ -205,10 +212,11 @@ static ScannerFixture[] AddressExperimentFixtures(PiiFields sharedFields)
             fixtures.Add(new ScannerFixture(
                 $"address-{addressBytes}-{suffix}",
                 $"{addressBytes}-byte UTF-8 P2 address edge case, {label}",
-                FixtureReference(referenceByte++),
-                CopyFields(sharedFields, FullAddressEdge(addressBytes)),
+                reference,
+                CopyFields(sharedFields, address),
                 level,
-                IncludeInIndex: false));
+                IncludeInIndex: false,
+                EncryptionNonceSlot: pairNonceSlot));
         }
     }
 
@@ -385,4 +393,5 @@ internal sealed record ScannerFixture(
     string Reference,
     PiiFields Fields,
     BarcodeErrorCorrectionLevel MaxErrorCorrection = BarcodeErrorCorrectionLevel.Medium,
-    bool IncludeInIndex = true);
+    bool IncludeInIndex = true,
+    int? EncryptionNonceSlot = null);
