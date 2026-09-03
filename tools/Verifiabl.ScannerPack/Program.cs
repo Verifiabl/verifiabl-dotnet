@@ -48,6 +48,11 @@ ScannerFixture[] fixtures =
             AccountNumber = "12345678901234567890",
             AccountName = "Alexandra Example-Synthetic",
         }),
+    new(
+        "address-320-bytes",
+        "Exact 320-byte UTF-8 P2 address boundary",
+        FixtureReference(0x44),
+        CopyFields(sharedFields, string.Concat(Enumerable.Repeat("東京", 53)) + "AB")),
     .. AddressExperimentFixtures(sharedFields),
 ];
 
@@ -135,7 +140,9 @@ try
 
     string cards = string.Join(
         Environment.NewLine,
-        manifestFixtures.Select((value, index) => RenderCard(fixtures[index], value)));
+        manifestFixtures.Select((value, index) => (Fixture: fixtures[index], Manifest: value))
+            .Where(item => item.Fixture.IncludeInIndex)
+            .Select(item => RenderCard(item.Fixture, item.Manifest)));
     string html = $$"""
 <!doctype html>
 <html lang="en">
@@ -146,33 +153,18 @@ try
   <style>
     body { font: 14px/1.4 system-ui, sans-serif; margin: 24px; color: #111; }
     .notice { padding: 12px; border: 2px solid #010a4f; margin-bottom: 24px; }
-    .fixtures { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px 24px; }
-    .fixture { break-inside: avoid; page-break-inside: avoid; max-width: 760px; }
-    img { display: block; width: 19mm; height: auto; margin: 12px 0; image-rendering: pixelated; }
+    .fixture { break-after: page; page-break-after: always; max-width: 760px; }
+    img { display: block; width: 45mm; height: auto; margin: 16px 0; image-rendering: pixelated; }
     dt { font-weight: 700; float: left; clear: left; width: 110px; }
     dd { margin-left: 120px; margin-bottom: 8px; overflow-wrap: anywhere; }
     code { font: 11px/1.3 ui-monospace, monospace; }
-    @media print {
-      body { font-size: 11px; line-height: 1.25; margin: 10mm; }
-      h2, p { margin: 0 0 4px; }
-      .notice { margin-bottom: 8px; padding: 6px; }
-      .fixtures { grid-template-columns: repeat(3, 1fr); gap: 8px 12px; }
-      .fixture { max-width: none; }
-      img { margin: 6px 0; }
-      dt { float: none; clear: none; display: inline; width: auto; }
-      dt::after { content: ": "; }
-      dd { display: inline; margin: 0; }
-      dd::after { content: "\A"; white-space: pre; }
-      code { font-size: 9px; }
-      .expected-scan { display: none; }
-    }
+    .fold-guide { clear: both; margin-top: 30mm; border-top: 1px dashed #555; padding-top: 4px; }
+    @media print { body { margin: 12mm; } .fixture { max-width: none; } }
   </style>
 </head>
 <body>
   <div class="notice"><strong>Synthetic test data only.</strong> Compare scanner output with manifest.json. Do not use customer payslips.</div>
-  <div class="fixtures">
   {{cards}}
-  </div>
 </body>
 </html>
 """;
@@ -215,7 +207,8 @@ static ScannerFixture[] AddressExperimentFixtures(PiiFields sharedFields)
                 $"{addressBytes}-byte UTF-8 P2 address edge case, {label}",
                 FixtureReference(referenceByte++),
                 CopyFields(sharedFields, FullAddressEdge(addressBytes)),
-                level));
+                level,
+                IncludeInIndex: false));
         }
     }
 
@@ -296,8 +289,9 @@ static string RenderCard(ScannerFixture fixture, object manifestValue)
           <dt>QR</dt><dd>Version {{qr.GetProperty("version")}}, ECC {{H(qr.GetProperty("errorCorrectionLevel").GetString()!)}}</dd>
           <dt>Address</dt><dd>{{value.GetProperty("addressUtf8Bytes")}} UTF-8 bytes</dd>
           <dt>Reference</dt><dd><code>{{H(fixture.Reference)}}</code></dd>
-          <dt class="expected-scan">Expected scan</dt><dd class="expected-scan"><code>{{H(qr.GetProperty("content").GetString()!)}}</code></dd>
+          <dt>Expected scan</dt><dd><code>{{H(qr.GetProperty("content").GetString()!)}}</code></dd>
         </dl>
+        <div class="fold-guide">Fold guide: fold on this line, away from the QR, for the fold test.</div>
       </article>
 """;
 }
@@ -307,7 +301,7 @@ static string RenderAddressSizeMatrix(ScannerFixture[] fixtures, List<object> ma
     string rows = string.Join(
         Environment.NewLine,
         fixtures.Select((fixture, index) => (Fixture: fixture, Index: index))
-            .Where(item => item.Fixture.Id.StartsWith("address-", StringComparison.Ordinal))
+            .Where(item => !item.Fixture.IncludeInIndex)
             .Select(item =>
             {
                 ScannerFixture fixture = item.Fixture;
@@ -320,7 +314,6 @@ static string RenderAddressSizeMatrix(ScannerFixture[] fixtures, List<object> ma
                 string ecc = H(qr.GetProperty("errorCorrectionLevel").GetString()!);
                 string addressBytes = value.GetProperty("addressUtf8Bytes").GetRawText();
                 string plaintextBytes = value.GetProperty("plaintextUtf8Bytes").GetRawText();
-                string content = H(qr.GetProperty("content").GetString()!);
                 string title = H(fixture.Id);
                 return $$"""
                   <tr>
@@ -328,14 +321,12 @@ static string RenderAddressSizeMatrix(ScannerFixture[] fixtures, List<object> ma
                       <strong>{{title}}</strong><br>
                       {{addressBytes}} address bytes<br>
                       {{plaintextBytes}} plaintext bytes<br>
-                      QR v{{version}}, ECC {{ecc}}<br>
-                      <span class="expected-label">Expected scan</span>
-                      <code>{{content}}</code>
+                      QR v{{version}}, ECC {{ecc}}
                     </th>
-                    <td><img class="qr size-19" src="{{file}}" alt="{{title}} at 19mm"></td>
-                    <td><img class="qr size-22" src="{{file}}" alt="{{title}} at 22mm"></td>
-                    <td><img class="qr size-25" src="{{file}}" alt="{{title}} at 25mm"></td>
-                    <td><img class="qr size-28" src="{{file}}" alt="{{title}} at 28mm"></td>
+                    <td><img class="qr size-19" src="{{file}}" alt="{{title}} at 19mm badge width"></td>
+                    <td><img class="qr size-22" src="{{file}}" alt="{{title}} at 22mm badge width"></td>
+                    <td><img class="qr size-25" src="{{file}}" alt="{{title}} at 25mm badge width"></td>
+                    <td><img class="qr size-28" src="{{file}}" alt="{{title}} at 28mm badge width"></td>
                   </tr>
 """;
             }));
@@ -346,7 +337,7 @@ static string RenderAddressSizeMatrix(ScannerFixture[] fixtures, List<object> ma
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Verifiabl address QR ECC and size matrix</title>
+  <title>Verifiabl address QR ECC and badge-size matrix</title>
   <style>
     body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; color: #111; }
     .notice { padding: 10px; border: 2px solid #010a4f; margin-bottom: 14px; }
@@ -354,8 +345,6 @@ static string RenderAddressSizeMatrix(ScannerFixture[] fixtures, List<object> ma
     th, td { border: 1px solid #bbb; padding: 6px; text-align: left; vertical-align: top; }
     thead th { background: #f2f3f7; }
     tbody th { width: 54mm; }
-    code { display: block; margin-top: 3px; font: 8px/1.25 ui-monospace, monospace; overflow-wrap: anywhere; word-break: break-all; }
-    .expected-label { display: block; margin-top: 5px; font-weight: 700; }
     .qr { display: block; image-rendering: pixelated; }
     .size-19 { width: 19mm; height: auto; }
     .size-22 { width: 22mm; height: auto; }
@@ -364,20 +353,19 @@ static string RenderAddressSizeMatrix(ScannerFixture[] fixtures, List<object> ma
     @media print {
       body { margin: 6mm; font-size: 10px; }
       th, td { padding: 3px; }
-      code { font-size: 6px; }
     }
   </style>
 </head>
 <body>
-  <div class="notice"><strong>One-off edge-case scan page.</strong> Full-address byte caps crossed with ECC Medium/Low and 19/22/25/28mm render sizes. Synthetic test data only.</div>
+  <div class="notice"><strong>Address QR comparison page.</strong> Full-address byte caps crossed with ECC Medium/Low and 19/22/25/28mm badge widths (the QR box is 80/96 of each badge). Synthetic test data only.</div>
   <table>
     <thead>
       <tr>
         <th scope="col">Address + ECC case</th>
-        <th scope="col">19mm</th>
-        <th scope="col">22mm</th>
-        <th scope="col">25mm</th>
-        <th scope="col">28mm</th>
+        <th scope="col">19mm badge</th>
+        <th scope="col">22mm badge</th>
+        <th scope="col">25mm badge</th>
+        <th scope="col">28mm badge</th>
       </tr>
     </thead>
     <tbody>
@@ -396,4 +384,5 @@ internal sealed record ScannerFixture(
     string Description,
     string Reference,
     PiiFields Fields,
-    BarcodeErrorCorrectionLevel MaxErrorCorrection = BarcodeErrorCorrectionLevel.Medium);
+    BarcodeErrorCorrectionLevel MaxErrorCorrection = BarcodeErrorCorrectionLevel.Medium,
+    bool IncludeInIndex = true);
