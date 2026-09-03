@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -11,6 +12,7 @@ byte[] key = Enumerable.Range(0, 32).Select(value => (byte)value).ToArray();
 // Address ECC pairs intentionally reuse the same synthetic payload so scan differences
 // are attributable to ECC level rather than reference/IV/ciphertext changes.
 const int AddressExperimentNonceSlotStart = 5;
+string[] finderStyles = ["rounded", "square"];
 var sharedFields = new PiiFields
 {
     EmployeeName = "Zoë Nguyễn",
@@ -154,55 +156,93 @@ try
         byte[] ciphertextBytes = EncryptDeterministically(plaintext, fixture.EncryptionNonceSlot ?? index, key);
         string encryptedPii = Base64Url(ciphertextBytes);
         var parts = new BarcodeParts(fixture.Reference, encryptedPii);
-        BarcodePngResult barcode = VerifiablBarcode.CreatePng(
-            parts,
-            new BarcodeSvgOptions
+        foreach (string finderStyle in finderStyles)
+        {
+            BarcodeSvgOptions barcodeOptions = new()
             {
                 Environment = VerifiablEnvironment.Sandbox,
                 MaxErrorCorrection = fixture.MaxErrorCorrection,
-            },
-            720);
-        string pngFile = fixture.Id + ".png";
-        File.WriteAllBytes(Path.Join(stagingDirectory, pngFile), barcode.Png);
+            };
+            string id = finderStyle == "rounded" ? fixture.Id : fixture.Id + "-square-finders";
+            string file;
+            string content;
+            int qrVersion;
+            BarcodeErrorCorrectionLevel errorCorrectionLevel;
+            double width;
+            double height;
+            double modulePx;
+            bool degraded;
+            if (finderStyle == "rounded")
+            {
+                BarcodePngResult barcode = VerifiablBarcode.CreatePng(parts, barcodeOptions, 720);
+                file = fixture.Id + ".png";
+                File.WriteAllBytes(Path.Join(stagingDirectory, file), barcode.Png);
+                content = barcode.Content;
+                qrVersion = barcode.QrVersion;
+                errorCorrectionLevel = barcode.ErrorCorrectionLevel;
+                width = barcode.Width;
+                height = barcode.Height;
+                modulePx = barcode.ModulePx;
+                degraded = barcode.Degraded;
+            }
+            else
+            {
+                BarcodeSvgResult barcode = VerifiablBarcode.CreateSvg(parts, barcodeOptions);
+                file = id + ".svg";
+                File.WriteAllText(
+                    Path.Join(stagingDirectory, file),
+                    AddSquareFinderOverlay(barcode.Svg, barcode),
+                    new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                content = barcode.Content;
+                qrVersion = barcode.QrVersion;
+                errorCorrectionLevel = barcode.ErrorCorrectionLevel;
+                width = barcode.Width;
+                height = barcode.Height;
+                modulePx = barcode.ModulePx;
+                degraded = barcode.Degraded;
+            }
 
-        manifestFixtures.Add(new
-        {
-            fixture.Id,
-            fixture.Description,
-            AddressUtf8Bytes = Encoding.UTF8.GetByteCount(fixture.Fields.Address ?? string.Empty),
-            PlaintextUtf8Bytes = Encoding.UTF8.GetByteCount(plaintext),
-            VerifiablReference = fixture.Reference,
-            Status = "rendered",
-            MaxErrorCorrection = ToNodeLevel(fixture.MaxErrorCorrection),
-            Ciphertext = new
+            manifestFixtures.Add(new
             {
-                ByteLength = ciphertextBytes.Length,
-                Base64url = encryptedPii,
-                Hex = Convert.ToHexString(ciphertextBytes).ToLowerInvariant(),
-            },
-            Qr = new
-            {
-                File = pngFile,
-                Content = barcode.Content,
-                Version = barcode.QrVersion,
-                ErrorCorrectionLevel = ToNodeLevel(barcode.ErrorCorrectionLevel),
-                barcode.Width,
-                barcode.Height,
-                ModuleCount = barcode.QrVersion * 4 + 17,
-                barcode.ModulePx,
-                barcode.Degraded,
-                ContentUtf8Bytes = Encoding.UTF8.GetByteCount(barcode.Content),
-                PhysicalModuleMm = new Dictionary<string, double>
+                Id = id,
+                fixture.Description,
+                FinderStyle = finderStyle,
+                fixture.IncludeInIndex,
+                AddressUtf8Bytes = Encoding.UTF8.GetByteCount(fixture.Fields.Address ?? string.Empty),
+                PlaintextUtf8Bytes = Encoding.UTF8.GetByteCount(plaintext),
+                VerifiablReference = fixture.Reference,
+                Status = "rendered",
+                MaxErrorCorrection = ToNodeLevel(fixture.MaxErrorCorrection),
+                Ciphertext = new
                 {
-                    ["19"] = PhysicalModuleMm(barcode.ModulePx, barcode.Width, 19),
-                    ["22"] = PhysicalModuleMm(barcode.ModulePx, barcode.Width, 22),
-                    ["25"] = PhysicalModuleMm(barcode.ModulePx, barcode.Width, 25),
-                    ["28"] = PhysicalModuleMm(barcode.ModulePx, barcode.Width, 28),
+                    ByteLength = ciphertextBytes.Length,
+                    Base64url = encryptedPii,
+                    Hex = Convert.ToHexString(ciphertextBytes).ToLowerInvariant(),
                 },
-                Segments = new[] { "byte", "alphanumeric" },
-            },
-            XmpPayload = VerifiablBarcode.BuildPayload(parts),
-        });
+                Qr = new
+                {
+                    File = file,
+                    Content = content,
+                    Version = qrVersion,
+                    ErrorCorrectionLevel = ToNodeLevel(errorCorrectionLevel),
+                    Width = width,
+                    Height = height,
+                    ModuleCount = qrVersion * 4 + 17,
+                    ModulePx = modulePx,
+                    Degraded = degraded,
+                    ContentUtf8Bytes = Encoding.UTF8.GetByteCount(content),
+                    PhysicalModuleMm = new Dictionary<string, double>
+                    {
+                        ["19"] = PhysicalModuleMm(modulePx, width, 19),
+                        ["22"] = PhysicalModuleMm(modulePx, width, 22),
+                        ["25"] = PhysicalModuleMm(modulePx, width, 25),
+                        ["28"] = PhysicalModuleMm(modulePx, width, 28),
+                    },
+                    Segments = new[] { "byte", "alphanumeric" },
+                },
+                XmpPayload = VerifiablBarcode.BuildPayload(parts),
+            });
+        }
     }
 
     var manifest = new
@@ -232,9 +272,9 @@ try
 
     string cards = string.Join(
         Environment.NewLine,
-        manifestFixtures.Select((value, index) => (Fixture: fixtures[index], Manifest: value))
-            .Where(item => item.Fixture.IncludeInIndex)
-            .Select(item => RenderCard(item.Fixture, item.Manifest)));
+        manifestFixtures
+            .Where(ShouldIncludeInIndex)
+            .Select(RenderCard));
     string html = $$"""
 <!doctype html>
 <html lang="en">
@@ -451,6 +491,32 @@ static IEnumerable<(string Density, PiiFields Fields)> StressDensityProfiles(int
     });
 }
 
+static string AddSquareFinderOverlay(string svg, BarcodeSvgResult result)
+{
+    double scale = result.Width / 96.0;
+    double moduleSize = result.ModulePx / scale;
+    int size = result.QrVersion * 4 + 17;
+    double lastFinderOrigin = (size - 7) * moduleSize;
+    string overlay = SquareFinder(0, 0, moduleSize)
+        + SquareFinder(lastFinderOrigin, 0, moduleSize)
+        + SquareFinder(0, lastFinderOrigin, moduleSize);
+    return svg.Replace("</g></svg>", $"<g shape-rendering=\"crispEdges\">{overlay}</g></g></svg>", StringComparison.Ordinal);
+}
+
+static string SquareFinder(double originX, double originY, double moduleSize)
+{
+    double outer = 7 * moduleSize;
+    double innerOffset = moduleSize;
+    double inner = 5 * moduleSize;
+    double dotOffset = 2 * moduleSize;
+    double dot = 3 * moduleSize;
+    return $"<rect x=\"{F2(originX)}\" y=\"{F2(originY)}\" width=\"{F2(outer)}\" height=\"{F2(outer)}\" fill=\"#000000\"/>"
+        + $"<rect x=\"{F2(originX + innerOffset)}\" y=\"{F2(originY + innerOffset)}\" width=\"{F2(inner)}\" height=\"{F2(inner)}\" fill=\"#FFFFFF\"/>"
+        + $"<rect x=\"{F2(originX + dotOffset)}\" y=\"{F2(originY + dotOffset)}\" width=\"{F2(dot)}\" height=\"{F2(dot)}\" fill=\"#000000\"/>";
+}
+
+static string F2(double value) => Math.Round(value, 2).ToString("0.##", CultureInfo.InvariantCulture);
+
 static string ExactUtf8String(int bytes, string script)
 {
     string[] chunks = script switch
@@ -578,14 +644,14 @@ static string ToNodeLevel(BarcodeErrorCorrectionLevel level) => level switch
     _ => "L",
 };
 
-static double PhysicalModuleMm(double modulePx, int pixelWidth, int badgeMm) =>
+static double PhysicalModuleMm(double modulePx, double pixelWidth, int badgeMm) =>
     Math.Round(badgeMm * (modulePx / pixelWidth), 4);
 
 static string RenderResultsCsv(List<object> manifestValues)
 {
     var rows = new List<string>
     {
-        "id,status,addressUtf8Bytes,plaintextUtf8Bytes,ciphertextBytes,contentUtf8Bytes,maxErrorCorrection,errorCorrectionLevel,qrVersion,moduleCount,modulePx,degraded,scanUrl",
+        "id,status,finderStyle,addressUtf8Bytes,plaintextUtf8Bytes,ciphertextBytes,contentUtf8Bytes,maxErrorCorrection,errorCorrectionLevel,qrVersion,moduleCount,modulePx,degraded,scanUrl",
     };
     foreach (object manifestValue in manifestValues)
     {
@@ -599,7 +665,7 @@ static string RenderResultsCsv(List<object> manifestValues)
         string addressBytes = value.GetProperty("addressUtf8Bytes").GetRawText();
         if (!value.TryGetProperty("qr", out JsonElement qr))
         {
-            rows.Add(string.Join(',', [id, status, addressBytes, "", "", "", "", "", "", "", "", "", ""]));
+            rows.Add(string.Join(',', [id, status, "", addressBytes, "", "", "", "", "", "", "", "", "", ""]));
             continue;
         }
 
@@ -608,6 +674,7 @@ static string RenderResultsCsv(List<object> manifestValues)
         [
             id,
             status,
+            Csv(value.GetProperty("finderStyle").GetString()!),
             addressBytes,
             value.GetProperty("plaintextUtf8Bytes").GetRawText(),
             ciphertext.GetProperty("byteLength").GetRawText(),
@@ -644,7 +711,7 @@ static string RenderSummary(bool stressMode, List<object> manifestValues)
     string rows = string.Join(Environment.NewLine, summaryRows.Select(value =>
         {
             JsonElement qr = value.GetProperty("qr");
-            return $"| {value.GetProperty("addressUtf8Bytes").GetRawText()} | {H(value.GetProperty("id").GetString()!)} | {H(value.GetProperty("maxErrorCorrection").GetString()!)} | {H(qr.GetProperty("errorCorrectionLevel").GetString()!)} | {qr.GetProperty("version").GetRawText()} | {qr.GetProperty("moduleCount").GetRawText()} | {qr.GetProperty("contentUtf8Bytes").GetRawText()} | {(qr.GetProperty("degraded").GetBoolean() ? "yes" : "no")} |";
+            return $"| {value.GetProperty("addressUtf8Bytes").GetRawText()} | {H(value.GetProperty("id").GetString()!)} | {H(value.GetProperty("finderStyle").GetString()!)} | {H(value.GetProperty("maxErrorCorrection").GetString()!)} | {H(qr.GetProperty("errorCorrectionLevel").GetString()!)} | {qr.GetProperty("version").GetRawText()} | {qr.GetProperty("moduleCount").GetRawText()} | {qr.GetProperty("contentUtf8Bytes").GetRawText()} | {(qr.GetProperty("degraded").GetBoolean() ? "yes" : "no")} |";
         }));
 
     return $$"""
@@ -662,13 +729,13 @@ Synthetic data only. Generated by the .NET SDK ScannerPack{{(stressMode ? " stre
 
 ## QR density sample
 
-| Address bytes | Fixture | ECC ceiling | ECC used | QR version | Modules | URL bytes | Degraded |
-| ---: | --- | --- | --- | ---: | ---: | ---: | --- |
+| Address bytes | Fixture | Finder style | ECC ceiling | ECC used | QR version | Modules | URL bytes | Degraded |
+| ---: | --- | --- | --- | --- | ---: | ---: | ---: | --- |
 {{rows}}
 
 ## VER-373 notes
 
-The .NET stress mode includes explicit Medium and Low error-correction rows, which complements the Node stress harness where Low is reached only by the degradation ladder. Address lengths 36/48/58/80 approximate the AU median/P95/P99/P99.9 bands; 120+ byte rows are stress cases, not representative records. Use the generated `address-size-matrix.html`, `manifest.json`, and `results.csv` to decide the address cap, badge-size floor, and whether Low/degraded output is acceptable.
+The .NET stress mode includes explicit Medium and Low error-correction rows, which complements the Node stress harness where Low is reached only by the degradation ladder. Address lengths 36/48/58/80 approximate the AU median/P95/P99/P99.9 bands; 120+ byte rows are stress cases, not representative records. Rounded and square finder variants share the same encoded payloads, so scanner differences isolate the visual finder treatment. Use the generated `address-size-matrix.html`, `manifest.json`, and `results.csv` to decide the address cap, badge-size floor, finder style, and whether Low/degraded output is acceptable.
 """;
 }
 
@@ -677,21 +744,33 @@ static string Csv(string value) =>
         ? $"\"{value.Replace("\"", "\"\"")}\""
         : value;
 
-static string RenderCard(ScannerFixture fixture, object manifestValue)
+static bool ShouldIncludeInIndex(object manifestValue)
+{
+    JsonElement value = JsonSerializer.SerializeToElement(
+        manifestValue,
+        new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+    return value.TryGetProperty("includeInIndex", out JsonElement includeInIndex)
+        && includeInIndex.GetBoolean()
+        && value.TryGetProperty("qr", out _);
+}
+
+static string RenderCard(object manifestValue)
 {
     JsonElement value = JsonSerializer.SerializeToElement(
         manifestValue,
         new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
     JsonElement qr = value.GetProperty("qr");
+    string id = value.GetProperty("id").GetString()!;
     return $$"""
       <article class="fixture">
-        <h2>{{H(fixture.Id)}}</h2>
-        <p>{{H(fixture.Description)}}</p>
-        <img src="{{H(qr.GetProperty("file").GetString()!)}}" alt="{{H(fixture.Id)}} QR fixture">
+        <h2>{{H(id)}}</h2>
+        <p>{{H(value.GetProperty("description").GetString()!)}}</p>
+        <img src="{{H(qr.GetProperty("file").GetString()!)}}" alt="{{H(id)}} QR fixture">
         <dl>
           <dt>QR</dt><dd>Version {{qr.GetProperty("version")}}, ECC {{H(qr.GetProperty("errorCorrectionLevel").GetString()!)}}</dd>
+          <dt>Finder style</dt><dd>{{H(value.GetProperty("finderStyle").GetString()!)}}</dd>
           <dt>Address</dt><dd>{{value.GetProperty("addressUtf8Bytes")}} UTF-8 bytes</dd>
-          <dt>Reference</dt><dd><code>{{H(fixture.Reference)}}</code></dd>
+          <dt>Reference</dt><dd><code>{{H(value.GetProperty("verifiablReference").GetString()!)}}</code></dd>
           <dt>Expected scan</dt><dd><code>{{H(qr.GetProperty("content").GetString()!)}}</code></dd>
         </dl>
         <div class="fold-guide">Fold guide: fold on this line, away from the QR, for the fold test.</div>
@@ -701,32 +780,34 @@ static string RenderCard(ScannerFixture fixture, object manifestValue)
 
 static string RenderAddressSizeMatrix(ScannerFixture[] fixtures, List<object> manifestValues)
 {
+    _ = fixtures;
     string rows = string.Join(
         Environment.NewLine,
-        fixtures.Select((fixture, index) => (Fixture: fixture, Index: index))
-            .Where(item => !item.Fixture.IncludeInIndex)
-            .Select(item =>
+        manifestValues
+            .Select(value => JsonSerializer.SerializeToElement(
+                value,
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }))
+            .Where(value =>
+                value.TryGetProperty("includeInIndex", out JsonElement includeInIndex)
+                && !includeInIndex.GetBoolean()
+                && value.TryGetProperty("qr", out _))
+            .Select(value =>
             {
-                ScannerFixture fixture = item.Fixture;
-                JsonElement value = JsonSerializer.SerializeToElement(
-                    manifestValues[item.Index],
-                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-                if (!value.TryGetProperty("qr", out JsonElement qr))
-                {
-                    return string.Empty;
-                }
+                JsonElement qr = value.GetProperty("qr");
                 string file = H(qr.GetProperty("file").GetString()!);
                 string version = qr.GetProperty("version").GetRawText();
                 string ecc = H(qr.GetProperty("errorCorrectionLevel").GetString()!);
                 string addressBytes = value.GetProperty("addressUtf8Bytes").GetRawText();
                 string plaintextBytes = value.GetProperty("plaintextUtf8Bytes").GetRawText();
-                string title = H(fixture.Id);
+                string finderStyle = H(value.GetProperty("finderStyle").GetString()!);
+                string title = H(value.GetProperty("id").GetString()!);
                 return $$"""
                   <tr>
                     <th scope="row">
                       <strong>{{title}}</strong><br>
                       {{addressBytes}} address bytes<br>
                       {{plaintextBytes}} plaintext bytes<br>
+                      {{finderStyle}} finders<br>
                       QR v{{version}}, ECC {{ecc}}
                     </th>
                     <td><img class="qr size-19" src="{{file}}" alt="{{title}} at 19mm badge width"></td>
