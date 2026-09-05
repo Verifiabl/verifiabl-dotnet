@@ -8,11 +8,12 @@ namespace Verifiabl.Internal;
 /// </summary>
 /// <remarks>
 /// Everything here is integer arithmetic on exact rational coordinates. Module
-/// geometry is rational by construction (modulePx = 80W / (96(n + 2i))), so the
-/// same inputs produce the identical raster in every implementation of this
-/// spec; this file mirrors blit.ts in the Node SDK, and CI byte-compares the
-/// rasters. Do not introduce floating point here: cross-runtime float
-/// differences (e.g. x87 on .NET Framework x86) would silently break parity.
+/// geometry is rational by construction (modulePx = BW / (96(n + 2i)) for the
+/// QR box size B), so the same inputs produce the identical raster in every
+/// implementation of this spec; this file mirrors blit.ts in the Node SDK, and
+/// CI byte-compares the rasters. Do not introduce floating point here:
+/// cross-runtime float differences (e.g. x87 on .NET Framework x86) would
+/// silently break parity.
 /// </remarks>
 internal static class BadgeCompositor
 {
@@ -22,9 +23,15 @@ internal static class BadgeCompositor
     private const int SubTwice = 2 * Subsamples;
 
     /// <summary>Finder corner radii in eightieths of a module: 1.4m, 1.0m, 0.65m.</summary>
+    private const int RadiusDenom = 80;
     private const int OuterRadius80ths = 112;
     private const int InnerRadius80ths = 80;
     private const int DotRadius80ths = 52;
+
+    // Q units per pixel-over-denom: lcm(SubTwice, RadiusDenom), so subsample
+    // centres and the corner radii are both integral in Q for every box size and width.
+    private const int QPerPixel = 80;
+    private const int QPerSubsampleStep = QPerPixel / SubTwice;
 
     /// <summary>Draw the QR modules and finders onto <paramref name="rgba"/> in place.</summary>
     internal static void BlitQrOntoFrame(
@@ -41,12 +48,12 @@ internal static class BadgeCompositor
         long NumX(int k) =>
             pixelWidth
             * ((long)SvgBadgeRenderer.FrameQrBoxX * (size + 2 * insetModules)
-                + 80L * (insetModules + k));
+                + (long)SvgBadgeRenderer.FrameQrBoxSize * (insetModules + k));
 
         long NumY(int k) =>
             pixelWidth
             * ((long)SvgBadgeRenderer.FrameQrBoxY * (size + 2 * insetModules)
-                + 80L * (insetModules + k));
+                + (long)SvgBadgeRenderer.FrameQrBoxSize * (insetModules + k));
 
         // Round half up; edges are >= 2px apart (modulePx >= 3), so never degenerate.
         int Snap(long num) => (int)((2 * num + denom) / (2 * denom));
@@ -84,24 +91,25 @@ internal static class BadgeCompositor
 
         void RenderFinder(int moduleX, int moduleY)
         {
-            // Q units: 1/(SubTwice * denom) of a pixel. All geometry below is integer in Q.
-            long qPerPixel = SubTwice * denom;
-            long moduleQ = 80L * pixelWidth * SubTwice;
+            // Q units: 1/(QPerPixel * denom) of a pixel. All geometry below is integer in Q.
+            long qPerPixel = QPerPixel * denom;
+            long moduleQ = (long)SvgBadgeRenderer.FrameQrBoxSize * pixelWidth * QPerPixel;
+            long radiusUnit = (long)SvgBadgeRenderer.FrameQrBoxSize * pixelWidth * QPerPixel / RadiusDenom;
             var outer = new RoundedRect(
-                NumX(moduleX) * SubTwice,
-                NumY(moduleY) * SubTwice,
+                NumX(moduleX) * QPerPixel,
+                NumY(moduleY) * QPerPixel,
                 SvgBadgeRenderer.FinderSize * moduleQ,
-                OuterRadius80ths * (long)pixelWidth * SubTwice);
+                OuterRadius80ths * radiusUnit);
             var inner = new RoundedRect(
                 outer.X0 + moduleQ,
                 outer.Y0 + moduleQ,
                 (SvgBadgeRenderer.FinderSize - 2) * moduleQ,
-                InnerRadius80ths * (long)pixelWidth * SubTwice);
+                InnerRadius80ths * radiusUnit);
             var dot = new RoundedRect(
                 outer.X0 + 2 * moduleQ,
                 outer.Y0 + 2 * moduleQ,
                 (SvgBadgeRenderer.FinderSize - 4) * moduleQ,
-                DotRadius80ths * (long)pixelWidth * SubTwice);
+                DotRadius80ths * radiusUnit);
 
             bool BlackAt(long xQ, long yQ)
             {
@@ -146,10 +154,11 @@ internal static class BadgeCompositor
                         count = 0;
                         for (int sy = 0; sy < Subsamples; sy++)
                         {
-                            long yQ = ((long)py * SubTwice + 2 * sy + 1) * denom;
+                            long yQ = ((long)py * QPerPixel + (2 * sy + 1) * QPerSubsampleStep) * denom;
                             for (int sx = 0; sx < Subsamples; sx++)
                             {
-                                if (BlackAt(((long)px * SubTwice + 2 * sx + 1) * denom, yQ))
+                                long xQ = ((long)px * QPerPixel + (2 * sx + 1) * QPerSubsampleStep) * denom;
+                                if (BlackAt(xQ, yQ))
                                 {
                                     count++;
                                 }
@@ -162,14 +171,14 @@ internal static class BadgeCompositor
                         continue;
                     }
 
-                    // Black coverage over the white frame, rounded half up.
-                    byte grey = (byte)((510 * (SubsampleCount - count) + SubsampleCount)
-                        / (2 * SubsampleCount));
+                    // Black at the coverage as straight alpha, rounded half up; the QR
+                    // box is transparent, so the host document shows through the edge pixels.
+                    byte alpha = (byte)((510 * count + SubsampleCount) / (2 * SubsampleCount));
                     int offset = (py * rasterWidth + px) * 4;
-                    rgba[offset] = grey;
-                    rgba[offset + 1] = grey;
-                    rgba[offset + 2] = grey;
-                    rgba[offset + 3] = 255;
+                    rgba[offset] = 0;
+                    rgba[offset + 1] = 0;
+                    rgba[offset + 2] = 0;
+                    rgba[offset + 3] = alpha;
                 }
             }
         }

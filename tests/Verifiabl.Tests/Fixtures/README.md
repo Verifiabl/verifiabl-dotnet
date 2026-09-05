@@ -12,3 +12,7 @@ The default fixtures were regenerated for VER-463 from the Node v2 writer and re
 short-host URL with an explicit byte/alphanumeric segment split. The `v1-default` fixtures retain
 cross-SDK coverage for the explicit rollback writer. Anything that changes a fixture's encoded
 content changes its raster, not just the frame.
+
+All fixtures and frame assets were regenerated again for VER-537 (Node SDK 0.21.0), which removed
+the badge border and card and made the QR span the full badge width. The rasters now carry a
+transparent ground (white with zero alpha) and finder edges as black with coverage alpha.
