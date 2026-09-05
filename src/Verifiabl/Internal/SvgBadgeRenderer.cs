@@ -18,18 +18,21 @@ internal static class SvgBadgeRenderer
     private const string DefaultNavy = "#010A4F";
     private const string DefaultQr = "#000000";
     private const string DefaultText = "#FFFFFF";
-    private const string FrameBorder = "#ADADAD";
 
-    // White frame body so the QR quiet zone is always light, independent of the
-    // host document. The fill follows the rounded border path (rx=7), so the four
-    // corners outside that radius stay transparent.
-    private const string FrameBackground = "#FFFFFF";
+    // The badge is the navy header plus the QR modules; everything else is
+    // transparent. The host document supplies the light quiet zone on the left,
+    // right and bottom, so the QR box spans the full badge width.
     internal const int FrameViewboxWidth = 96;
-    private const int FrameViewboxHeight = 151;
     private const int FrameHeaderHeight = 47;
-    internal const int FrameQrBoxX = 8;
-    internal const int FrameQrBoxY = 59;
-    private const int FrameQrBoxSize = 80;
+
+    // Transparent gap between the header and the QR box: the only light margin
+    // the badge itself supplies (the header above it is dark). Odd so the viewBox
+    // height is even and every supported PNG width has an integer pixel height.
+    private const int FrameQrGap = 7;
+    internal const int FrameQrBoxX = 0;
+    internal const int FrameQrBoxY = FrameHeaderHeight + FrameQrGap;
+    internal const int FrameQrBoxSize = FrameViewboxWidth;
+    private const int FrameViewboxHeight = FrameQrBoxY + FrameQrBoxSize;
 
     // At this width, a realistic fully-populated PII record renders QR modules at
     // or above IdealModulePx at the default Medium ceiling (the pristine tier).
@@ -49,13 +52,11 @@ internal static class SvgBadgeRenderer
     private const int QuietZoneModules = 4;
 
     // Smallest internal inset (in modules) padded inside the fixed QR box.
-    private const int MinQrInsetModules = 1;
+    private const int MinQrInsetModules = 0;
 
-    // Light gutter (viewBox units) on the tightest side: from the QR box edge to
-    // the inner edge of the frame border (border path at x=1, ~1u half-stroke).
-    // The frame body inside this gutter is white, so it counts toward the quiet
-    // zone. The top/bottom gutters are larger, so this side is the binding one.
-    private const double FrameQrGutter = FrameQrBoxX - 2;
+    // Light gutter (viewBox units) on the binding side: the top, where the header
+    // sits above the QR box. The other three sides open onto the host document.
+    private const double FrameQrGutter = FrameQrGap;
 
     // Degradation ladder, highest-ECC-first (Quartile is the densest, most
     // damage-tolerant level). The branded frame's outer size is fixed, so the
@@ -108,8 +109,6 @@ internal static class SvgBadgeRenderer
             .Append(' ')
             .Append(FrameViewboxHeight)
             .Append("\" role=\"img\" aria-label=\"Secured by Verifiabl verification barcode\">")
-            .Append($"<rect x=\"1\" y=\"1\" width=\"94\" height=\"149\" rx=\"7\" fill=\"{FrameBackground}\"/>")
-            .Append($"<rect x=\"1\" y=\"1\" width=\"94\" height=\"149\" rx=\"7\" stroke=\"{FrameBorder}\" stroke-width=\"2\" fill=\"none\"/>")
             .Append(header)
             .Append("<g transform=\"translate(")
             .Append(F(Round2(FrameQrBoxX + qrPadding)))
@@ -247,13 +246,12 @@ internal static class SvgBadgeRenderer
     };
 
     /// <summary>
-    /// Internal inset (in modules) needed so the total light margin around the
-    /// QR — the fixed white gutter plus the inset — is at least
+    /// Internal inset (in modules) needed so the light margin between the header
+    /// and the QR (the fixed gap plus the inset) is at least
     /// <see cref="QuietZoneModules"/>. Dense symbols (small modules) already clear
-    /// it from the gutter alone and keep the minimum inset; only small/sparse
-    /// symbols, which have large modules and huge scannability headroom, need a
-    /// larger inset. So this never affects the degradation thresholds, which bite
-    /// for dense payloads.
+    /// it from the gap alone and take no inset; only small/sparse symbols, which
+    /// have large modules and huge scannability headroom, need one. So this never
+    /// affects the degradation thresholds, which bite for dense payloads.
     /// </summary>
     private static int QuietZoneInsetModules(int size)
     {

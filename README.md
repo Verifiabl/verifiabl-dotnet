@@ -176,6 +176,10 @@ The compiler enforces the mandatory fields: `Schema`, `IssuedAt`, `PayslipNonPii
 
 `VerifiablBarcode.CreateSvg` produces a standalone SVG that scales to any size without losing quality; embed it directly in your PDF pipeline when it supports vector images. If it needs a raster image, use `VerifiablBarcode.CreatePng`: it composites the badge deterministically with no native dependencies, so the same record produces the byte-identical raster in every Verifiabl SDK, and QR module edges stay crisp (rasterising the SVG with a general renderer blurs them and costs scannability). PNG output comes in fixed pixel widths (480, 720, 960 or 1440; the physical print size is set where you place the image in the PDF). See the [docs](https://docs.verifiabl.io/) for both flows.
 
+### Placing the badge
+
+The badge is the navy header and the QR code, and the QR code spans the full badge width. Everything else is transparent. Place the badge on a light background and keep a clear margin of at least a tenth of the badge width on the left, the right and the bottom. That margin is the QR quiet zone. Scanners need it, and the badge does not carry it itself.
+
 ### Retries and idempotency
 
 Failed requests are retried automatically with exponential backoff (`VerifiablClientOptions.MaxRetries`, default 2). The Verifiabl reference is the idempotency key, so retries are only applied where they are safe. `RegisterNonPiiAsync` generates a reference client-side (or uses the one you set on the request), so the API deduplicates a re-send and the SDK retries it on throttling, timeouts, `5xx`, and network faults — same as batch registration. `RegisterAndBuildBarcodeAsync` lets the API assign the reference and cannot be deduplicated, so it retries only `429`, which is enforced before any processing.

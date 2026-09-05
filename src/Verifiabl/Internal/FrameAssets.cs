@@ -64,7 +64,7 @@ internal static class FrameAssets
         int width = ReadUInt16(container, 4);
         int height = ReadUInt16(container, 6);
         int paletteCount = ReadUInt16(container, 8);
-        // Baked frames sit near height = 1.57 * width, so 2x bounds the raster
+        // Baked frames sit at height = 1.5625 * width, so 2x bounds the raster
         // allocation (max 1440 * 2880) before a tampered height can force it.
         if (width != expectedWidth || height <= 0 || height > width * 2)
         {
