@@ -263,6 +263,49 @@ internal static class Wire
     internal static RegisterAndBuildBarcodeResponse RegisterAndBuildBarcodeFromWire(JsonElement root)
     {
         string reference = ReadReference(root, "verifiabl_reference");
+        BarcodeImage barcode = ReadBarcodeImage(root);
+        return new RegisterAndBuildBarcodeResponse(reference, barcode);
+    }
+
+    internal static RegisterAndBuildBarcodeArtifactsResponse RegisterAndBuildBarcodeArtifactsFromWire(
+        JsonElement root)
+    {
+        string reference = ReadReference(root, "verifiabl_reference");
+        BarcodeImage barcode = ReadBarcodeImage(root);
+        if (!TryGetObject(root, "pdf_metadata", out JsonElement pdfMetadataElement))
+        {
+            throw UnexpectedShape("pdf_metadata");
+        }
+
+        string xmpNamespace = ReadString(pdfMetadataElement, "xmp_namespace")
+            ?? throw UnexpectedShape("pdf_metadata.xmp_namespace");
+        if (xmpNamespace != Verifiabl.VerifiablBarcode.PdfPayloadXmpNamespace)
+        {
+            throw UnexpectedShape("pdf_metadata.xmp_namespace");
+        }
+
+        string xmpProperty = ReadString(pdfMetadataElement, "xmp_property")
+            ?? throw UnexpectedShape("pdf_metadata.xmp_property");
+        if (xmpProperty != Verifiabl.VerifiablBarcode.PdfPayloadXmpProperty)
+        {
+            throw UnexpectedShape("pdf_metadata.xmp_property");
+        }
+
+        string payload = ReadString(pdfMetadataElement, "payload")
+            ?? throw UnexpectedShape("pdf_metadata.payload");
+        if (payload.Length == 0)
+        {
+            throw UnexpectedShape("pdf_metadata.payload");
+        }
+
+        return new RegisterAndBuildBarcodeArtifactsResponse(
+            reference,
+            barcode,
+            new PdfMetadata(xmpNamespace, xmpProperty, payload));
+    }
+
+    private static BarcodeImage ReadBarcodeImage(JsonElement root)
+    {
         if (!TryGetObject(root, "barcode", out JsonElement barcode))
         {
             throw UnexpectedShape("barcode");
@@ -280,7 +323,7 @@ internal static class Wire
             throw UnexpectedShape("barcode.data");
         }
 
-        return new RegisterAndBuildBarcodeResponse(reference, new BarcodeImage(format, data));
+        return new BarcodeImage(format, data);
     }
 
     internal static RegisterNonPiiBatchResponse BatchFromWire(JsonElement root)

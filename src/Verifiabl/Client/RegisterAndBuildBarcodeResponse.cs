@@ -16,6 +16,26 @@ public sealed class BarcodeImage
     public string Data { get; }
 }
 
+/// <summary>PDF XMP metadata copy returned by the API.</summary>
+public sealed class PdfMetadata
+{
+    internal PdfMetadata(string xmpNamespace, string xmpProperty, string payload)
+    {
+        XmpNamespace = xmpNamespace;
+        XmpProperty = xmpProperty;
+        Payload = payload;
+    }
+
+    /// <summary>XMP namespace URI for the Verifiabl payload property.</summary>
+    public string XmpNamespace { get; }
+
+    /// <summary>Local XMP property name; with the verifiabl prefix this appears as verifiabl:payload.</summary>
+    public string XmpProperty { get; }
+
+    /// <summary>Pipe-delimited payload to write into XMP metadata.</summary>
+    public string Payload { get; }
+}
+
 /// <summary>Response from <see cref="IVerifiablClient.RegisterAndBuildBarcodeAsync"/>.</summary>
 public sealed class RegisterAndBuildBarcodeResponse
 {
@@ -30,4 +50,27 @@ public sealed class RegisterAndBuildBarcodeResponse
 
     /// <summary>The server-generated barcode image.</summary>
     public BarcodeImage Barcode { get; }
+}
+
+/// <summary>Response from <see cref="IVerifiablClient.RegisterAndBuildBarcodeArtifactsAsync"/>.</summary>
+public sealed class RegisterAndBuildBarcodeArtifactsResponse
+{
+    internal RegisterAndBuildBarcodeArtifactsResponse(
+        string verifiablReference,
+        BarcodeImage barcode,
+        PdfMetadata pdfMetadata)
+    {
+        VerifiablReference = verifiablReference;
+        Barcode = barcode;
+        PdfMetadata = pdfMetadata;
+    }
+
+    /// <summary>22-character base64url Verifiabl reference embedded in the returned barcode.</summary>
+    public string VerifiablReference { get; }
+
+    /// <summary>The server-generated barcode image.</summary>
+    public BarcodeImage Barcode { get; }
+
+    /// <summary>The PDF XMP metadata copy to write alongside the QR barcode.</summary>
+    public PdfMetadata PdfMetadata { get; }
 }

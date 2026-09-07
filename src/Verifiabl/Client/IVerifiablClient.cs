@@ -36,6 +36,23 @@ public interface IVerifiablClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Register non-PII payslip data and have the API build the barcode and PDF
+    /// XMP metadata payload. Sends the encrypted PII alongside the non-PII data.
+    /// </summary>
+    /// <param name="request">The payslip registration, including the ciphertext.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <exception cref="ArgumentException">The request is incomplete or malformed.</exception>
+    /// <exception cref="VerifiablIvReuseException">The record's encryption IV is already registered to this issuer.</exception>
+    /// <exception cref="VerifiablApiException">The API returned a non-2xx response.</exception>
+    /// <exception cref="VerifiablAuthException">An OAuth token could not be obtained.</exception>
+    /// <exception cref="VerifiablTimeoutException">The call exceeded the configured timeout.</exception>
+    /// <exception cref="VerifiablTransportException">A network fault prevented a response, or the response was not usable JSON.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
+    Task<RegisterAndBuildBarcodeArtifactsResponse> RegisterAndBuildBarcodeArtifactsAsync(
+        RegisterAndBuildBarcodeRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Register non-PII payslip data and have the API build the barcode. Sends the
     /// encrypted PII alongside the non-PII data.
     /// </summary>
@@ -48,6 +65,7 @@ public interface IVerifiablClient
     /// <exception cref="VerifiablTimeoutException">The call exceeded the configured timeout.</exception>
     /// <exception cref="VerifiablTransportException">A network fault prevented a response, or the response was not usable JSON.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
+    [Obsolete("Use RegisterAndBuildBarcodeArtifactsAsync, which returns the PDF XMP metadata payload with the QR barcode.")]
     Task<RegisterAndBuildBarcodeResponse> RegisterAndBuildBarcodeAsync(
         RegisterAndBuildBarcodeRequest request,
         CancellationToken cancellationToken = default);

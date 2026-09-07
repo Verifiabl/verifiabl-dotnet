@@ -319,6 +319,46 @@ public class ClientRequestTests
     }
 
     [Fact]
+    public async Task MapsTheApiResponseToBarcodeAndPdfMetadataForRegisterAndBuildBarcodeArtifacts()
+    {
+        var handler = new FakeHttpHandler
+        {
+            Responder = (_, _, _) => Task.FromResult(FakeHttpHandler.Json(
+                HttpStatusCode.OK,
+                $"{{\"verifiabl_reference\":\"{Reference}\"," +
+                "\"barcode\":{\"format\":\"png\",\"data\":\"aGVsbG8=\"}," +
+                "\"pdf_metadata\":{" +
+                "\"xmp_namespace\":\"https://verifiabl.io/ns/\"," +
+                "\"xmp_property\":\"payload\"," +
+                $"\"payload\":\"2|{Reference}|MZXW6A\"}}}}")),
+        };
+        VerifiablClient client = Client(handler);
+
+        var request = new RegisterAndBuildBarcodeRequest
+        {
+            Schema = "au.payslip.v1",
+            IssuedAt = DateTimeOffset.UtcNow,
+            PayslipNonPii = new PayslipNonPii { PeriodStart = "2026-05-01", PeriodEnd = "2026-05-31" },
+            EncryptionMetadata = ValidRequest().EncryptionMetadata,
+            EncryptedPii = "abc123",
+        };
+        RegisterAndBuildBarcodeArtifactsResponse response =
+            await client.RegisterAndBuildBarcodeArtifactsAsync(request);
+
+        Assert.Equal(Reference, response.VerifiablReference);
+        Assert.Equal("png", response.Barcode.Format);
+        Assert.Equal("aGVsbG8=", response.Barcode.Data);
+        Assert.Equal("https://verifiabl.io/ns/", response.PdfMetadata.XmpNamespace);
+        Assert.Equal("payload", response.PdfMetadata.XmpProperty);
+        Assert.Equal($"2|{Reference}|MZXW6A", response.PdfMetadata.Payload);
+        Assert.Equal(
+            "https://register.verifiabl.io/v1/registerAndBuildBarcodeArtifacts",
+            Assert.Single(handler.Requests).Uri.ToString());
+        using JsonDocument body = JsonDocument.Parse(handler.Requests[0].Body);
+        Assert.Equal("abc123", body.RootElement.GetProperty("encrypted_pii").GetString());
+    }
+
+    [Fact]
     public async Task MapsTheApiResponseToABarcodeImageForRegisterAndBuildBarcode()
     {
         var handler = new FakeHttpHandler

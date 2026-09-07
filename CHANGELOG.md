@@ -6,6 +6,18 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.0]
+
+### Added
+
+- `RegisterAndBuildBarcodeArtifactsAsync`, returning the QR barcode and PDF XMP
+  metadata payload together for API-managed barcode flows.
+
+### Deprecated
+
+- `RegisterAndBuildBarcodeAsync`; use `RegisterAndBuildBarcodeArtifactsAsync` so
+  the XMP metadata copy comes from the same API response as the QR barcode.
+
 ## [0.6.0]
 
 ### Changed

@@ -176,6 +176,23 @@ public sealed class VerifiablClient : IVerifiablClient
     }
 
     /// <inheritdoc />
+    public Task<RegisterAndBuildBarcodeArtifactsResponse> RegisterAndBuildBarcodeArtifactsAsync(
+        RegisterAndBuildBarcodeRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        JsonObject body = Wire.ToWire(request);
+        // The API mints this endpoint's reference and cannot deduplicate a
+        // resend, so only failures enforced before processing (429) are retried.
+        return PostAsync(
+            "/v1/registerAndBuildBarcodeArtifacts",
+            body,
+            Wire.RegisterAndBuildBarcodeArtifactsFromWire,
+            idempotent: false,
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
+    [Obsolete("Use RegisterAndBuildBarcodeArtifactsAsync, which returns the PDF XMP metadata payload with the QR barcode.")]
     public Task<RegisterAndBuildBarcodeResponse> RegisterAndBuildBarcodeAsync(
         RegisterAndBuildBarcodeRequest request,
         CancellationToken cancellationToken = default)

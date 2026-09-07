@@ -178,7 +178,7 @@ The compiler enforces the mandatory fields: `Schema`, `IssuedAt`, `PayslipNonPii
 
 ### Retries and idempotency
 
-Failed requests are retried automatically with exponential backoff (`VerifiablClientOptions.MaxRetries`, default 2). The Verifiabl reference is the idempotency key, so retries are only applied where they are safe. `RegisterNonPiiAsync` generates a reference client-side (or uses the one you set on the request), so the API deduplicates a re-send and the SDK retries it on throttling, timeouts, `5xx`, and network faults — same as batch registration. `RegisterAndBuildBarcodeAsync` lets the API assign the reference and cannot be deduplicated, so it retries only `429`, which is enforced before any processing.
+Failed requests are retried automatically with exponential backoff (`VerifiablClientOptions.MaxRetries`, default 2). The Verifiabl reference is the idempotency key, so retries are only applied where they are safe. `RegisterNonPiiAsync` generates a reference client-side (or uses the one you set on the request), so the API deduplicates a re-send and the SDK retries it on throttling, timeouts, `5xx`, and network faults — same as batch registration. `RegisterAndBuildBarcodeArtifactsAsync` lets the API assign the reference and cannot be deduplicated, so it retries only `429`, which is enforced before any processing. `RegisterAndBuildBarcodeAsync` is deprecated because it omits the PDF XMP metadata payload.
 
 ## Batch registration
 
