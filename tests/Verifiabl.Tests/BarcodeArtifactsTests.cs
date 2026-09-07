@@ -27,7 +27,7 @@ public sealed class BarcodeArtifactsTests
         Assert.Equal(VerifiablBarcode.PdfPayloadXmpProperty, result.PdfMetadata.XmpProperty);
         Assert.Equal(VerifiablBarcode.BuildPayload(parts), result.PdfMetadata.Payload);
         Assert.Equal(
-            result.Barcode.Content.Split("#2.")[1],
+            result.Barcode.Content.Split(new[] { "#2." }, StringSplitOptions.None)[1],
             result.PdfMetadata.Payload.Split('|')[2]);
     }
 
