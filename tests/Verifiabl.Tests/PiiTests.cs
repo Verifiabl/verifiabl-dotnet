@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Xunit;
 
 namespace Verifiabl.Tests;
@@ -152,10 +153,106 @@ public class PiiTests
     [InlineData("bad|address")]
     [InlineData("bad\naddress")]
     [InlineData("bad\u200Baddress")]
+    [InlineData("bad\u2028address")]
+    [InlineData("bad\u2029address")]
     [InlineData("bad\U000E0001address")]
-    public void V2RejectsDelimiterControlAndFormatCharacters(string address)
+    public void V2RejectsDelimiterControlFormatAndSeparatorCharacters(string address)
     {
         Assert.Throws<ArgumentException>(() => Pii.Format(V2Fields(address)));
+    }
+
+    [Fact]
+    public void V2MatchesTheCanonicalTextProfile()
+    {
+        string path = Path.Combine(
+            AppContext.BaseDirectory,
+            "Fixtures",
+            "p2-pii-text-profile-v1.json");
+        using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path));
+        JsonElement profile = document.RootElement;
+
+        Assert.Equal(Pii.TextProfileId, profile.GetProperty("id").GetString());
+        Assert.Equal(
+            Pii.TextProfileUnicodeVersion,
+            profile.GetProperty("unicodeVersion").GetString());
+        Assert.Equal(
+            Pii.FieldMaxUtf16CodeUnits,
+            profile.GetProperty("nonAddressMaxUtf16CodeUnits").GetInt32());
+        Assert.Equal(
+            Pii.AddressMaxBytes,
+            profile.GetProperty("addressMaxUtf8Bytes").GetInt32());
+
+        foreach (JsonElement range in profile.GetProperty("controlCharacterRanges").EnumerateArray())
+        {
+            int start = Convert.ToInt32(range[0].GetString(), 16);
+            int end = Convert.ToInt32(range[1].GetString(), 16);
+            for (int codePoint = start; codePoint <= end; codePoint++)
+            {
+                Assert.Throws<ArgumentException>(
+                    () => Pii.Format(
+                        new PiiFields { EmployeeName = char.ConvertFromUtf32(codePoint) }));
+            }
+        }
+
+        foreach (JsonElement codePointValue in profile.GetProperty("lineSeparatorCodePoints").EnumerateArray())
+        {
+            int codePoint = Convert.ToInt32(codePointValue.GetString(), 16);
+            Assert.Throws<ArgumentException>(
+                () => Pii.Format(
+                    new PiiFields { EmployeeName = char.ConvertFromUtf32(codePoint) }));
+        }
+
+        foreach (JsonElement range in profile.GetProperty("formatCharacterRanges").EnumerateArray())
+        {
+            int start = Convert.ToInt32(range[0].GetString(), 16);
+            int end = Convert.ToInt32(range[1].GetString(), 16);
+            for (int codePoint = start; codePoint <= end; codePoint++)
+            {
+                Assert.Throws<ArgumentException>(
+                    () => Pii.Format(
+                        new PiiFields { EmployeeName = char.ConvertFromUtf32(codePoint) }));
+            }
+        }
+
+        foreach (JsonElement vector in profile.GetProperty("validText").EnumerateArray())
+        {
+            string value = vector.GetProperty("value").GetString()!;
+            Assert.Contains(value, Pii.Format(new PiiFields { EmployeeName = value }));
+            Assert.EndsWith("|" + value, Pii.Format(new PiiFields { Address = value }));
+        }
+
+        foreach (JsonElement vector in profile.GetProperty("invalidText").EnumerateArray())
+        {
+            string value = string.Concat(
+                vector.GetProperty("codePoints")
+                    .EnumerateArray()
+                    .Select(codePoint => char.ConvertFromUtf32(
+                        Convert.ToInt32(codePoint.GetString(), 16))));
+            Assert.Throws<ArgumentException>(
+                () => Pii.Format(new PiiFields { EmployeeName = value }));
+            Assert.Throws<ArgumentException>(
+                () => Pii.Format(new PiiFields { Address = value }));
+        }
+
+        foreach (JsonElement vector in profile.GetProperty("invalidUtf16").EnumerateArray())
+        {
+            char[] codeUnits = vector.GetProperty("codeUnits")
+                .EnumerateArray()
+                .Select(value => (char)value.GetInt32())
+                .ToArray();
+            Assert.Throws<ArgumentException>(
+                () => Pii.Format(new PiiFields { EmployeeName = new string(codeUnits) }));
+        }
+    }
+
+    [Fact]
+    public void V2AppliesTheCoreFieldLimitInUtf16CodeUnits()
+    {
+        string boundary = string.Concat(Enumerable.Repeat("😀", 128));
+        Assert.Equal(256, boundary.Length);
+        Assert.Contains("😀", Pii.Format(new PiiFields { EmployeeName = boundary }));
+        Assert.Throws<ArgumentException>(
+            () => Pii.Format(new PiiFields { EmployeeName = boundary + "x" }));
     }
 
     [Theory]

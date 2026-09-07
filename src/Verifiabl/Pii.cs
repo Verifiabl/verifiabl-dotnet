@@ -21,8 +21,16 @@ public static class Pii
 {
     private const string V1Prefix = "P1|";
     private const string V2Prefix = "P2|";
-    private const int MaxFieldLength = 256;
     private static readonly Encoding StrictUtf8 = new UTF8Encoding(false, true);
+
+    /// <summary>Versioned identifier for the P2 plaintext validation contract.</summary>
+    public const string TextProfileId = "io.verifiabl.p2-pii-text.v1";
+
+    /// <summary>Unicode version used by the P2 format-character table.</summary>
+    public const string TextProfileUnicodeVersion = "15.1.0";
+
+    /// <summary>Maximum UTF-16 code units in each non-address P2 field.</summary>
+    public const int FieldMaxUtf16CodeUnits = 256;
 
     /// <summary>Maximum UTF-8 size of the optional P2 address.</summary>
     public const int AddressMaxBytes = 320;
@@ -162,9 +170,11 @@ public static class Pii
             return string.Empty;
         }
 
-        if (value.Length > MaxFieldLength)
+        if (value.Length > FieldMaxUtf16CodeUnits)
         {
-            throw new ArgumentException($"{name} exceeds {MaxFieldLength} characters.", name);
+            throw new ArgumentException(
+                $"{name} exceeds {FieldMaxUtf16CodeUnits} UTF-16 code units.",
+                name);
         }
 
         if (!IsPrintableWithoutPipe(value))
@@ -181,9 +191,11 @@ public static class Pii
     {
         value = ValidateField(value, name);
         ValidateStrictUtf8(value, name);
-        if (ContainsFormatCharacter(value))
+        if (ContainsFormatCharacter(value) || ContainsLineOrParagraphSeparator(value))
         {
-            throw new ArgumentException($"{name} must not contain format characters.", name);
+            throw new ArgumentException(
+                $"{name} must not contain format characters or line or paragraph separators.",
+                name);
         }
 
         return value;
@@ -198,10 +210,13 @@ public static class Pii
 
         const string name = nameof(PiiFields.Address);
         int byteCount = ValidateStrictUtf8(value, name);
-        if (!IsPrintableWithoutPipe(value) || ContainsFormatCharacter(value))
+        if (
+            !IsPrintableWithoutPipe(value)
+            || ContainsFormatCharacter(value)
+            || ContainsLineOrParagraphSeparator(value))
         {
             throw new ArgumentException(
-                $"{name} must not contain '|', control, or format characters.",
+                $"{name} must not contain '|', control or format characters, or line or paragraph separators.",
                 name);
         }
 
@@ -225,11 +240,14 @@ public static class Pii
         }
     }
 
+    private static bool ContainsLineOrParagraphSeparator(string value) =>
+        value.IndexOf('\u2028') >= 0 || value.IndexOf('\u2029') >= 0;
+
     private static bool ContainsFormatCharacter(string value)
     {
         // Unicode 15.1 General_Category=Cf, fixed here rather than delegated to
-        // each target runtime's Unicode tables. Keep this in sync with the Node
-        // writer's supported Unicode version when that baseline changes.
+        // each target runtime's Unicode tables. Keep this in sync with the P2
+        // profile at docs.verifiabl.io/spec/p2-pii-text-profile-v1.json.
         for (int index = 0; index < value.Length; index++)
         {
             int codePoint = value[index];
@@ -311,6 +329,8 @@ public static class Pii
     /// </summary>
     private static bool IsPrintableWithoutPipe(string value)
     {
-        return !value.Any(c => c == '|' || char.IsControl(c));
+        // Unicode Cc is permanently assigned to these C0 and C1 ranges.
+        return !value.Any(
+            c => c == '|' || c <= '\u001F' || c is >= '\u007F' and <= '\u009F');
     }
 }
