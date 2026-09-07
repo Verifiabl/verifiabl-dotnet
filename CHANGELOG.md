@@ -17,7 +17,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   light margin of at least a tenth of the badge width on those three sides.
   The viewBox is now 96 x 150 and PNG heights are 750, 1125, 1500 and 2250
   pixels for the four supported widths. Byte-identical with the Node SDK
-  0.21.0 badge.
+  0.22.0 badge.
 
 ## [0.6.0]
 

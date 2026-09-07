@@ -27,8 +27,8 @@ internal static class SvgBadgeRenderer
     internal const int FrameViewboxWidth = 96;
     private const int FrameHeaderHeight = 47;
 
-    // Transparent gap between the header and the QR box: the only light margin
-    // the badge itself supplies (the header above it is dark). Odd so the viewBox
+    // White gap between the header and the QR box: the only quiet-zone margin the
+    // badge itself supplies (the header above it is dark). Odd so the viewBox
     // height is even and every supported PNG width has an integer pixel height.
     private const int FrameQrGap = 7;
     internal const int FrameQrBoxX = 0;
