@@ -312,6 +312,11 @@ try
         Path.Join(stagingDirectory, "sample-payslip.html"),
         RenderSyntheticPayslip(manifestFixtures),
         new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+    if (stressMode)
+    {
+        RenderCaptureOutputs(stagingDirectory, manifestFixtures, jsonOptions);
+    }
+
     Directory.Move(stagingDirectory, outputDirectory);
     published = true;
     Console.WriteLine($"Wrote {manifestFixtures.Count} scanner fixtures to {outputDirectory}");
@@ -908,6 +913,235 @@ static string RenderSyntheticPayslip(List<object> manifestValues)
 """;
 }
 
+static void RenderCaptureOutputs(
+    string stagingDirectory,
+    List<object> manifestValues,
+    JsonSerializerOptions jsonOptions)
+{
+    CaptureSource[] sources =
+    [
+        CaptureSourceFromManifest(manifestValues, "p2-au-typical-ascii-addr-36-medium", 19, 1),
+        CaptureSourceFromManifest(manifestValues, "p2-au-typical-ascii-addr-36-medium", 22, 2, "-22mm"),
+        CaptureSourceFromManifest(manifestValues, "p2-jobtitle-absent-ascii-addr-40-medium", 22, 3),
+        CaptureSourceFromManifest(manifestValues, "p2-au-typical-ascii-addr-58-medium", 22, 4),
+        CaptureSourceFromManifest(manifestValues, "p2-au-typical-ascii-addr-80-medium", 25, 5),
+        CaptureSourceFromManifest(manifestValues, "p2-dense-fields-ascii-addr-36-medium", 28, 6),
+        CaptureSourceFromManifest(manifestValues, "p2-au-typical-ascii-addr-320-medium", 28, 7),
+        CaptureSourceFromManifest(manifestValues, "p2-au-typical-ascii-addr-36-medium", 22, 8, "-rounded-comparison"),
+        CaptureSourceFromManifest(manifestValues, "p2-au-typical-ascii-addr-36-medium-square-finders", 22, 9),
+    ];
+    CaptureCase[] cases =
+    [
+        CaptureCaseFor(sources[0], "normal", "Photograph the entire payslip straight-on in normal, diffuse light.", true),
+        CaptureCaseFor(sources[0], "angle-20", "Photograph the entire payslip at approximately a 20 degree angle.", true),
+        CaptureCaseFor(sources[1], "normal", "Photograph the entire payslip straight-on in normal, diffuse light.", true),
+        CaptureCaseFor(sources[1], "low-light", "Photograph the entire payslip in even low light without flash.", true),
+        CaptureCaseFor(sources[2], "normal", "Photograph the entire payslip straight-on in normal, diffuse light.", true),
+        CaptureCaseFor(sources[2], "fold-near-qr", "Fold near, but not through, the QR and photograph the entire payslip straight-on.", true),
+        CaptureCaseFor(sources[3], "normal", "Photograph the entire payslip straight-on in normal, diffuse light.", true),
+        CaptureCaseFor(sources[3], "glare", "Introduce mild glare near the QR while keeping the entire payslip in frame.", false),
+        CaptureCaseFor(sources[4], "normal", "Photograph the entire payslip straight-on in normal, diffuse light.", true),
+        CaptureCaseFor(sources[4], "angle-20", "Photograph the entire payslip at approximately a 20 degree angle.", true),
+        CaptureCaseFor(sources[4], "fold-near-qr", "Fold near, but not through, the QR and photograph the entire payslip straight-on.", false),
+        CaptureCaseFor(sources[5], "normal", "Photograph the entire payslip straight-on in normal, diffuse light.", true),
+        CaptureCaseFor(sources[5], "glare", "Introduce mild glare near the QR while keeping the entire payslip in frame.", false),
+        CaptureCaseFor(sources[6], "normal", "Photograph the entire payslip straight-on in normal, diffuse light.", true),
+        CaptureCaseFor(sources[6], "low-light", "Photograph the entire payslip in even low light without flash.", false),
+        CaptureCaseFor(sources[7], "normal", "Photograph the rounded-finder comparison payslip straight-on in normal, diffuse light.", true),
+        CaptureCaseFor(sources[8], "normal", "Photograph the square-finder comparison payslip straight-on in normal, diffuse light.", true),
+    ];
+    var plan = new
+    {
+        Format = "verifiabl-qr-capture-plan-v1",
+        SyntheticDataOnly = true,
+        Environment = "sandbox",
+        Cases = cases,
+    };
+
+    string captureDirectory = Path.Join(stagingDirectory, "capture");
+    Directory.CreateDirectory(captureDirectory);
+    File.WriteAllText(
+        Path.Join(captureDirectory, "capture-plan.json"),
+        JsonSerializer.Serialize(plan, jsonOptions) + Environment.NewLine,
+        new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+    File.WriteAllText(
+        Path.Join(captureDirectory, "capture-pack.html"),
+        RenderCapturePack(sources),
+        new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+    File.WriteAllText(
+        Path.Join(captureDirectory, "instructions.md"),
+        RenderCaptureInstructions(sources.Length, cases.Length),
+        new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+}
+
+static CaptureSource CaptureSourceFromManifest(
+    List<object> manifestValues,
+    string fixtureId,
+    int badgeMm,
+    int printPage,
+    string idSuffix = "")
+{
+    JsonElement fixture = manifestValues
+        .Select(value => JsonSerializer.SerializeToElement(
+            value,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }))
+        .Single(value =>
+            value.TryGetProperty("qr", out _)
+            && value.GetProperty("id").GetString() == fixtureId);
+    JsonElement qr = fixture.GetProperty("qr");
+    return new CaptureSource(
+        fixtureId + idSuffix,
+        fixtureId,
+        fixture.GetProperty("description").GetString()!,
+        qr.GetProperty("file").GetString()!,
+        qr.GetProperty("content").GetString()!,
+        qr.GetProperty("version").GetInt32(),
+        qr.GetProperty("errorCorrectionLevel").GetString()!,
+        fixture.GetProperty("finderStyle").GetString()!,
+        badgeMm,
+        printPage);
+}
+
+static CaptureCase CaptureCaseFor(
+    CaptureSource source,
+    string scenario,
+    string instruction,
+    bool requiredPass) => new(
+        $"{source.Id}-{scenario}",
+        source.Id,
+        source.PrintPage,
+        source.BadgeMm,
+        source.ExpectedScanUrl,
+        scenario,
+        instruction,
+        requiredPass);
+
+static string RenderCapturePack(CaptureSource[] sources)
+{
+    string pages = string.Join(Environment.NewLine, sources.Select(source => $$"""
+  <article class="page" data-fixture-id="{{H(source.Id)}}">
+    <div class="print-warning">PRINT AT 100% — DISABLE “FIT TO PAGE”</div>
+    <header>
+      <section>
+        <div class="brand">AURORA PAYROLL SERVICES</div>
+        <h1>PAYSLIP</h1>
+        <p>ABN 53 004 085 616<br>Level 12, 100 Collins Street, Melbourne VIC 3000</p>
+      </section>
+      <section class="period"><strong>Pay period</strong><br>1–31 January 2026<br><br><strong>Pay date</strong><br>5 February 2026</section>
+    </header>
+    <div class="fixture-id">FIXTURE: {{H(source.Id)}}</div>
+    <div class="grid">
+      <section>
+        <h2>Employee</h2>
+        <dl><dt>Name</dt><dd>Alex Example-Synthetic</dd><dt>Employee ID</dt><dd>SYN-0017</dd><dt>Department</dt><dd>Payroll Operations</dd><dt>Address</dt><dd>12 Example Street, Richmond VIC 3121</dd></dl>
+      </section>
+      <section>
+        <h2>Payment summary</h2>
+        <table><tr><th>Gross pay</th><td>$6,000.00</td></tr><tr><th>PAYG withholding</th><td>$1,500.00</td></tr><tr><th>Net pay</th><td>$4,500.00</td></tr></table>
+      </section>
+    </div>
+    <h2>Earnings and deductions</h2>
+    <table><thead><tr><th>Description</th><th>Hours</th><th>Rate</th><th>Amount</th></tr></thead><tbody><tr><td>Ordinary hours</td><td>152.00</td><td>$39.47</td><td>$6,000.00</td></tr><tr><td>PAYG withholding</td><td></td><td></td><td>-$1,500.00</td></tr></tbody></table>
+    <section class="verification">
+      <div>
+        <h2>Verify this synthetic payslip</h2>
+        <p>Scan this sandbox-only Verifiabl badge. This page contains exactly one QR.</p>
+        <p><strong>Declared badge width:</strong> {{source.BadgeMm}} mm<br><strong>QR:</strong> version {{source.QrVersion}}, ECC {{H(source.Ecc)}}, {{H(source.FinderStyle)}} finders<br><strong>Print page:</strong> {{source.PrintPage}} of {{sources.Length}}</p>
+      </div>
+      <div class="badge-placement" style="--badge-width: {{source.BadgeMm}}mm; --placement-margin: {{F2(source.BadgeMm / 10.0)}}mm">
+        <img src="../{{H(source.QrFile)}}" alt="Sandbox Verifiabl badge for {{H(source.Id)}}">
+      </div>
+    </section>
+    <section class="calibration">
+      <strong>Print calibration</strong>
+      <div class="rule"><span>50 mm</span></div>
+      <p>Measure the line above. It must be exactly 50 mm before capture.</p>
+    </section>
+    <footer>SYNTHETIC DATA ONLY · SANDBOX · DO NOT SUBSTITUTE A REAL PAYSLIP</footer>
+  </article>
+"""));
+
+    return $$"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verifiabl physical QR capture pack</title>
+  <style>
+    @page { size: A4; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #ddd; color: #111; font: 11pt/1.35 Arial, Helvetica, sans-serif; }
+    .page { position: relative; width: 210mm; height: 297mm; padding: 10mm 12mm; margin: 0 auto 8mm; overflow: hidden; background: white; break-after: page; page-break-after: always; }
+    .page:last-child { break-after: auto; page-break-after: auto; }
+    .print-warning { margin-bottom: 5mm; padding: 2.5mm; border: 1mm solid #b00020; color: #b00020; text-align: center; font-weight: 800; font-size: 13pt; }
+    header { display: flex; justify-content: space-between; gap: 12mm; border-bottom: .6mm solid #111; padding-bottom: 4mm; }
+    .brand { color: #010a4f; font-weight: 800; letter-spacing: .05em; }
+    h1 { margin: 1mm 0; font-size: 22pt; }
+    h2 { margin: 4mm 0 2mm; color: #010a4f; font-size: 12pt; }
+    p { margin: 1.5mm 0; }
+    .period { text-align: right; }
+    .fixture-id { margin: 4mm 0; padding: 2.5mm; background: #010a4f; color: white; font: 800 16pt/1.2 ui-monospace, monospace; overflow-wrap: anywhere; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; }
+    dl { display: grid; grid-template-columns: 31mm 1fr; margin: 0; }
+    dt, dd { margin: 0; padding: 1.2mm; border-bottom: .2mm solid #bbb; }
+    dt { font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 1.6mm; border: .2mm solid #aaa; text-align: left; }
+    th { background: #f1f2f6; }
+    .verification { display: grid; grid-template-columns: 1fr auto; gap: 8mm; align-items: start; margin-top: 6mm; padding: 4mm; border: .7mm solid #010a4f; }
+    .badge-placement { width: calc(var(--badge-width) + 2 * var(--placement-margin)); padding: 0 var(--placement-margin) var(--placement-margin); background: white; }
+    .badge-placement img { display: block; width: var(--badge-width); height: auto; image-rendering: pixelated; }
+    .calibration { margin-top: 7mm; }
+    .rule { position: relative; width: 50mm; height: 5mm; margin-top: 2mm; border-bottom: .5mm solid black; }
+    .rule::before, .rule::after { content: ""; position: absolute; bottom: -1.5mm; height: 3mm; border-left: .5mm solid black; }
+    .rule::before { left: 0; } .rule::after { right: 0; }
+    .rule span { position: absolute; left: 21mm; bottom: 1mm; font-size: 8pt; }
+    footer { position: absolute; left: 12mm; right: 12mm; bottom: 7mm; padding-top: 2mm; border-top: .3mm solid #777; color: #555; text-align: center; font-size: 8pt; }
+    @media print { html, body { background: white; } .page { margin: 0; } }
+  </style>
+</head>
+<body>
+{{pages}}
+</body>
+</html>
+""";
+}
+
+static string RenderCaptureInstructions(int pageCount, int caseCount) => $$"""
+# Verifiabl physical QR capture pack
+
+This pack contains **{{pageCount}} synthetic A4 payslips** and a **{{caseCount}}-case guided plan** for each mobile platform. It contains sandbox URLs and synthetic data only. Never substitute a real or customer payslip.
+
+## Print
+
+1. Open `capture-pack.html` from the generated output directory.
+2. Select A4 paper, 100% / Actual Size, and disable Fit to Page or other scaling.
+3. Print single-sided.
+4. Measure every 50 mm calibration rule. Stop if it is not exactly 50 mm.
+5. Keep the complete printed set together; `printPage` in the plan identifies each sheet.
+
+The rendered badge image itself has the declared physical width. A clear white placement margin equal to one tenth of that width is included on its left, right, and bottom. Do not crop or mark this margin.
+
+## Capture
+
+1. Import `capture-plan.json` into the iOS or Android qualification mode.
+2. Match the displayed fixture ID and print page to the sheet.
+3. Follow the instruction exactly. Keep the full synthetic payslip in frame.
+4. Accept both successful and failed detections when the photograph represents the requested scenario; use Retake only for an accidental capture.
+5. Export the result bundle after the final case.
+
+Use one recent iPhone and one representative Android device. The same plan is intended to produce {{caseCount}} captures on each platform; diagnostic glare/fold/low-light cases are not all marked as required passes.
+
+## Review before retention
+
+- Confirm each image contains only this synthetic payslip.
+- Reject images containing people, reflections, screens, other documents, or identifiable background information.
+- Confirm fixture attribution and result status.
+- Confirm exported JPEGs contain no EXIF, GPS, TIFF, timestamp, thumbnail, or device-owner metadata.
+- Retain full diagnostic bundles as access-controlled GitHub artifacts, not as a committed corpus.
+""" + Environment.NewLine;
+
 static string RenderAddressSizeMatrix(ScannerFixture[] fixtures, List<object> manifestValues)
 {
     _ = fixtures;
@@ -974,7 +1208,7 @@ static string RenderAddressSizeMatrix(ScannerFixture[] fixtures, List<object> ma
   </style>
 </head>
 <body>
-  <div class="notice"><strong>Address QR comparison page.</strong> Full-address byte caps crossed with ECC Medium/Low and 19/22/25/28mm badge widths (the QR box is 80/96 of each badge). Synthetic test data only.</div>
+  <div class="notice"><strong>Address QR comparison page.</strong> Full-address byte caps crossed with ECC Medium/Low and 19/22/25/28mm badge widths (the QR box is 92/96 of each badge). Synthetic test data only.</div>
   <table>
     <thead>
       <tr>
@@ -995,6 +1229,28 @@ static string RenderAddressSizeMatrix(ScannerFixture[] fixtures, List<object> ma
 }
 
 static string H(string value) => WebUtility.HtmlEncode(value);
+
+internal sealed record CaptureSource(
+    string Id,
+    string ManifestFixtureId,
+    string Description,
+    string QrFile,
+    string ExpectedScanUrl,
+    int QrVersion,
+    string Ecc,
+    string FinderStyle,
+    int BadgeMm,
+    int PrintPage);
+
+internal sealed record CaptureCase(
+    string Id,
+    string SourceFixtureId,
+    int PrintPage,
+    int BadgeMm,
+    string ExpectedScanUrl,
+    string Scenario,
+    string Instruction,
+    bool RequiredPass);
 
 internal sealed record ScannerFixture(
     string Id,

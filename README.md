@@ -164,7 +164,12 @@ dotnet run --project tools/Verifiabl.ScannerPack -- ./artifacts/ver-523 --stress
 
 The output directory must not already exist, so a stale partial pack is never mixed with a fresh run.
 The pack includes PNG files, `index.html`, `sample-payslip.html`, `address-size-matrix.html`,
-`manifest.json`, `results.csv`, and `summary.md`. The manifest records each exact scan URL, XMP
+`manifest.json`, `results.csv`, and `summary.md`. Stress mode also writes a deterministic physical
+qualification pack under `capture/`: printable synthetic A4 payslips in `capture-pack.html`, the shared
+mobile workflow in `capture-plan.json`, and operator guidance in `instructions.md`. Print at 100% with
+Fit to Page disabled, and verify each 50 mm calibration rule before capturing. The capture plan contains
+only sandbox URLs copied from its generated fixtures; it includes no image or ciphertext checksums.
+The manifest records each exact scan URL, XMP
 payload, ciphertext byte value, QR version, error-correction level, degraded flag, module count, and
 physical module sizes. All fixture details are synthetic. Do not replace them with customer data. CI also publishes the standard pack as the `verifiabl-dotnet-scanner-pack`
 workflow artifact.
