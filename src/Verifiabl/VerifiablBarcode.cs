@@ -130,21 +130,25 @@ public static class VerifiablBarcode
         BarcodeArtifactsOptions? options = null)
     {
         options ??= new BarcodeArtifactsOptions();
+        // Snapshot caller-owned options so concurrent reuse cannot make the QR
+        // and XMP copies select different formats.
         BarcodeSvgOptions rendererOptions = options.ToRendererOptions();
-        BarcodeImageArtifact barcode = options.ImageFormat switch
+        BarcodeImageFormat imageFormat = options.ImageFormat;
+        int pixelWidth = options.PixelWidth;
+        BarcodeImageArtifact barcode = imageFormat switch
         {
             BarcodeImageFormat.Svg => new BarcodeImageArtifact(CreateSvg(parts, rendererOptions)),
             BarcodeImageFormat.Png => new BarcodeImageArtifact(
-                CreatePng(parts, rendererOptions, options.PixelWidth)),
+                CreatePng(parts, rendererOptions, pixelWidth)),
             _ => throw new ArgumentOutOfRangeException(
                 $"{nameof(options)}.{nameof(options.ImageFormat)}",
-                options.ImageFormat,
+                imageFormat,
                 "ImageFormat must be Svg or Png."),
         };
 
         return new BarcodeArtifactsResult(
             barcode,
-            new BarcodePdfMetadata(BuildPayload(parts, options.Format)));
+            new BarcodePdfMetadata(BuildPayload(parts, rendererOptions.Format)));
     }
 
     /// <summary>
