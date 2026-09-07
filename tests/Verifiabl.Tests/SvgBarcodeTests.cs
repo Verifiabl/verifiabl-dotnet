@@ -58,14 +58,14 @@ public class SvgBarcodeTests
             new BarcodeParts(Reference, RealisticCiphertext()));
 
         Assert.Equal(480, result.Width);
-        Assert.Equal(740, result.Height);
-        Assert.StartsWith("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"480\" height=\"740\" ", result.Svg);
-        Assert.Contains("viewBox=\"0 0 96 148\"", result.Svg);
+        Assert.Equal(750, result.Height);
+        Assert.StartsWith("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"480\" height=\"750\" ", result.Svg);
+        Assert.Contains("viewBox=\"0 0 96 150\"", result.Svg);
         Assert.Contains("aria-label=\"Secured by Verifiabl verification barcode\"", result.Svg);
         // No border: a full-width white ground under the header and the QR box,
         // then the navy header on top of it.
         Assert.Matches(
-            "^<svg [^>]*><rect x=\"0\" y=\"39\" width=\"96\" height=\"109\" fill=\"#FFFFFF\"/><path d=\"M0 8C0 3\\.58172",
+            "^<svg [^>]*><rect x=\"0\" y=\"39\" width=\"96\" height=\"111\" fill=\"#FFFFFF\"/><path d=\"M0 8C0 3\\.58172",
             result.Svg);
         Assert.Contains("fill=\"#010A4F\"", result.Svg);
         Assert.DoesNotContain("stroke=", result.Svg);
@@ -75,16 +75,16 @@ public class SvgBarcodeTests
     }
 
     [Fact]
-    public void FillsTheQrBoxForADenseRecord()
+    public void SpansTheFullBadgeWidthForADenseRecord()
     {
         // A fully populated P2 record (the parity fixture payload) encodes as a
         // symbol dense enough that the 7u gap alone covers the top quiet zone,
-        // so it takes no inset: the QR box starts at x=2u (the white margin),
-        // y=54u (header 47u plus the gap).
+        // so it takes no inset: the QR box starts at x=0, y=54u (header 47u
+        // plus the gap).
         string dense = string.Concat(Enumerable.Repeat("Ab3", 80)) + "Zz19-w";
         BarcodeSvgResult result = VerifiablBarcode.CreateSvg(new BarcodeParts(Reference, dense));
 
-        Assert.Contains("<g transform=\"translate(2 54)\"><g shape-rendering=\"crispEdges\">", result.Svg);
+        Assert.Contains("<g transform=\"translate(0 54)\"><g shape-rendering=\"crispEdges\">", result.Svg);
     }
 
     [Fact]
@@ -97,8 +97,8 @@ public class SvgBarcodeTests
 
         Assert.Equal(small.Width, large.Width);
         Assert.Equal(small.Height, large.Height);
-        Assert.Contains("viewBox=\"0 0 96 148\"", small.Svg);
-        Assert.Contains("viewBox=\"0 0 96 148\"", large.Svg);
+        Assert.Contains("viewBox=\"0 0 96 150\"", small.Svg);
+        Assert.Contains("viewBox=\"0 0 96 150\"", large.Svg);
     }
 
     [Fact]
@@ -109,8 +109,8 @@ public class SvgBarcodeTests
             new BarcodeSvgOptions { Width = 720 });
 
         Assert.Equal(720, result.Width);
-        Assert.Equal(1110, result.Height);
-        Assert.StartsWith("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"720\" height=\"1110\" ", result.Svg);
+        Assert.Equal(1125, result.Height);
+        Assert.StartsWith("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"720\" height=\"1125\" ", result.Svg);
     }
 
     [Theory]
