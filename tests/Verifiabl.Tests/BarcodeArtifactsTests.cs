@@ -1,5 +1,6 @@
 using System.Text;
 using Verifiabl;
+using Xunit;
 
 namespace Verifiabl.Tests;
 
