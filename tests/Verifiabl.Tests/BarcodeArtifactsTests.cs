@@ -1,3 +1,4 @@
+using System.Text;
 using Verifiabl;
 
 namespace Verifiabl.Tests;
@@ -8,14 +9,19 @@ public sealed class BarcodeArtifactsTests
     private const string Ciphertext = "Zm9vYmFyYmF6cXV4XzEyMzQ1Njc4OTBhYmNkZWZnaGlqa2xtbm9w";
 
     [Fact]
-    public void ReturnsMatchingSvgAndXmpMetadataInOneCall()
+    public void ReturnsMatchingSvgAndXmpMetadataByDefault()
     {
         var parts = new BarcodeParts(Reference, Ciphertext);
-        var options = new BarcodeSvgOptions { Environment = VerifiablEnvironment.Sandbox };
+        var options = new BarcodeArtifactsOptions { Environment = VerifiablEnvironment.Sandbox };
 
         BarcodeArtifactsResult result = VerifiablBarcode.CreateArtifacts(parts, options);
+        BarcodeSvgResult expected = VerifiablBarcode.CreateSvg(
+            parts,
+            new BarcodeSvgOptions { Environment = VerifiablEnvironment.Sandbox });
 
-        Assert.Equal(VerifiablBarcode.CreateSvg(parts, options).Svg, result.Barcode.Svg);
+        Assert.Equal(BarcodeImageFormat.Svg, result.Barcode.Format);
+        Assert.Equal(expected.Svg, Encoding.UTF8.GetString(result.Barcode.Data));
+        Assert.Equal(expected.Content, result.Barcode.Content);
         Assert.Equal(VerifiablBarcode.PdfPayloadXmpNamespace, result.PdfMetadata.XmpNamespace);
         Assert.Equal(VerifiablBarcode.PdfPayloadXmpProperty, result.PdfMetadata.XmpProperty);
         Assert.Equal(VerifiablBarcode.BuildPayload(parts), result.PdfMetadata.Payload);
@@ -25,13 +31,36 @@ public sealed class BarcodeArtifactsTests
     }
 
     [Fact]
+    public void ReturnsPngBytesAtTheRequestedWidth()
+    {
+        var parts = new BarcodeParts(Reference, Ciphertext);
+
+        BarcodeArtifactsResult result = VerifiablBarcode.CreateArtifacts(
+            parts,
+            new BarcodeArtifactsOptions
+            {
+                ImageFormat = BarcodeImageFormat.Png,
+                PixelWidth = 480,
+            });
+
+        Assert.Equal(BarcodeImageFormat.Png, result.Barcode.Format);
+        Assert.Equal(480, result.Barcode.Width);
+        byte[] signature = { 137, 80, 78, 71, 13, 10, 26, 10 };
+        Assert.Equal(signature, result.Barcode.Data.Take(signature.Length).ToArray());
+    }
+
+    [Fact]
     public void AppliesTheSameRollbackFormatToQrAndXmpCopies()
     {
         var parts = new BarcodeParts(Reference, Ciphertext);
 
         BarcodeArtifactsResult result = VerifiablBarcode.CreateArtifacts(
             parts,
-            new BarcodeSvgOptions { Format = BarcodePayloadFormat.V1 });
+            new BarcodeArtifactsOptions
+            {
+                Format = BarcodePayloadFormat.V1,
+                ImageFormat = BarcodeImageFormat.Png,
+            });
 
         Assert.Contains("#1.", result.Barcode.Content);
         Assert.Equal(

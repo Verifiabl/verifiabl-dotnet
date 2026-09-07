@@ -117,7 +117,7 @@ public static class VerifiablBarcode
     }
 
     /// <summary>
-    /// Render the branded SVG barcode and build its matching PDF XMP metadata copy.
+    /// Render a branded SVG or PNG barcode and build its matching PDF XMP metadata copy.
     /// </summary>
     /// <remarks>
     /// Both artifacts use the same reference, ciphertext bytes and format option.
@@ -127,11 +127,23 @@ public static class VerifiablBarcode
     /// </remarks>
     public static BarcodeArtifactsResult CreateArtifacts(
         BarcodeParts parts,
-        BarcodeSvgOptions? options = null)
+        BarcodeArtifactsOptions? options = null)
     {
-        options ??= new BarcodeSvgOptions();
+        options ??= new BarcodeArtifactsOptions();
+        BarcodeSvgOptions rendererOptions = options.ToRendererOptions();
+        BarcodeImageArtifact barcode = options.ImageFormat switch
+        {
+            BarcodeImageFormat.Svg => new BarcodeImageArtifact(CreateSvg(parts, rendererOptions)),
+            BarcodeImageFormat.Png => new BarcodeImageArtifact(
+                CreatePng(parts, rendererOptions, options.PixelWidth)),
+            _ => throw new ArgumentOutOfRangeException(
+                $"{nameof(options)}.{nameof(options.ImageFormat)}",
+                options.ImageFormat,
+                "ImageFormat must be Svg or Png."),
+        };
+
         return new BarcodeArtifactsResult(
-            CreateSvg(parts, options),
+            barcode,
             new BarcodePdfMetadata(BuildPayload(parts, options.Format)));
     }
 

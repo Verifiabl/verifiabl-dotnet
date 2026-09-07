@@ -118,8 +118,12 @@ RegisterNonPiiResponse registration = await client.RegisterNonPiiAsync(new Regis
 // 3. Build both matching PDF artifacts in one call.
 BarcodeArtifactsResult artifacts = VerifiablBarcode.CreateArtifacts(
     new BarcodeParts(registration.VerifiablReference, encrypted.Ciphertext),
-    new BarcodeSvgOptions { Environment = VerifiablEnvironment.Sandbox });
-// Embed artifacts.Barcode.Svg, then write artifacts.PdfMetadata.Payload under
+    new BarcodeArtifactsOptions
+    {
+        Environment = VerifiablEnvironment.Sandbox,
+        ImageFormat = BarcodeImageFormat.Svg,
+    });
+// Embed artifacts.Barcode.Data (UTF-8 SVG bytes), then write artifacts.PdfMetadata.Payload under
 // artifacts.PdfMetadata.XmpProperty in artifacts.PdfMetadata.XmpNamespace.
 ```
 
@@ -131,14 +135,15 @@ The final address is unstructured, optional, preserved verbatim, and limited to 
 Pipes, control characters, Unicode format characters, and malformed Unicode are rejected before
 encryption. A v2 QR uses the short scan host with `#2.<BASE32>` and an explicit byte/alphanumeric
 segment split; its XMP copy is the matching `2|reference|BASE32`. Use
-`VerifiablBarcode.CreateArtifacts(parts)` to build the SVG and XMP copy together.
+`VerifiablBarcode.CreateArtifacts(parts)` to build the image and XMP copy together. Set
+`ImageFormat` to `Svg` (the default) or `Png`; for PNG, `PixelWidth` defaults to 720.
 
 V1/P1 remain permanently supported for existing documents and emergency writer rollback. Select
 both explicitly so QR and XMP never mix versions:
 
 ```csharp
 string legacyPlaintext = Pii.FormatV1(fields);
-var legacyOptions = new BarcodeSvgOptions { Format = BarcodePayloadFormat.V1 };
+var legacyOptions = new BarcodeArtifactsOptions { Format = BarcodePayloadFormat.V1 };
 BarcodeArtifactsResult legacyArtifacts = VerifiablBarcode.CreateArtifacts(parts, legacyOptions);
 ```
 
