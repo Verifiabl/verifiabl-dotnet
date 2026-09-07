@@ -115,10 +115,12 @@ RegisterNonPiiResponse registration = await client.RegisterNonPiiAsync(new Regis
     EncryptionMetadata = encrypted.Metadata,
 });
 
-// 3. Render the QR code and embed the SVG in your payslip PDF.
-BarcodeSvgResult badge = VerifiablBarcode.CreateSvg(
+// 3. Build both matching PDF artifacts in one call.
+BarcodeArtifactsResult artifacts = VerifiablBarcode.CreateArtifacts(
     new BarcodeParts(registration.VerifiablReference, encrypted.Ciphertext),
     new BarcodeSvgOptions { Environment = VerifiablEnvironment.Sandbox });
+// Embed artifacts.Barcode.Svg, then write artifacts.PdfMetadata.Payload under
+// artifacts.PdfMetadata.XmpProperty in artifacts.PdfMetadata.XmpNamespace.
 ```
 
 ### V2 / P2 format and V1 rollback
@@ -128,8 +130,8 @@ New documents use P2 plaintext and v2 barcode/XMP output by default. P2 is exact
 The final address is unstructured, optional, preserved verbatim, and limited to 320 UTF-8 bytes.
 Pipes, control characters, Unicode format characters, and malformed Unicode are rejected before
 encryption. A v2 QR uses the short scan host with `#2.<BASE32>` and an explicit byte/alphanumeric
-segment split; its XMP copy is the matching `2|reference|BASE32` returned by
-`VerifiablBarcode.BuildPayload(parts)`.
+segment split; its XMP copy is the matching `2|reference|BASE32`. Use
+`VerifiablBarcode.CreateArtifacts(parts)` to build the SVG and XMP copy together.
 
 V1/P1 remain permanently supported for existing documents and emergency writer rollback. Select
 both explicitly so QR and XMP never mix versions:
@@ -137,8 +139,7 @@ both explicitly so QR and XMP never mix versions:
 ```csharp
 string legacyPlaintext = Pii.FormatV1(fields);
 var legacyOptions = new BarcodeSvgOptions { Format = BarcodePayloadFormat.V1 };
-BarcodeSvgResult legacyBadge = VerifiablBarcode.CreateSvg(parts, legacyOptions);
-string legacyXmpPayload = VerifiablBarcode.BuildPayload(parts, BarcodePayloadFormat.V1);
+BarcodeArtifactsResult legacyArtifacts = VerifiablBarcode.CreateArtifacts(parts, legacyOptions);
 ```
 
 ### Scanner test pack

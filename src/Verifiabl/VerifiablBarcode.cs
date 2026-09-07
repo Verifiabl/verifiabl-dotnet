@@ -117,6 +117,25 @@ public static class VerifiablBarcode
     }
 
     /// <summary>
+    /// Render the branded SVG barcode and build its matching PDF XMP metadata copy.
+    /// </summary>
+    /// <remarks>
+    /// Both artifacts use the same reference, ciphertext bytes and format option.
+    /// Prefer this for self-managed PDFs over separate <see cref="CreateSvg"/> and
+    /// <see cref="BuildPayload(BarcodeParts, BarcodePayloadFormat)"/> calls, where
+    /// mismatched format options can make the QR and metadata copies disagree.
+    /// </remarks>
+    public static BarcodeArtifactsResult CreateArtifacts(
+        BarcodeParts parts,
+        BarcodeSvgOptions? options = null)
+    {
+        options ??= new BarcodeSvgOptions();
+        return new BarcodeArtifactsResult(
+            CreateSvg(parts, options),
+            new BarcodePdfMetadata(BuildPayload(parts, options.Format)));
+    }
+
+    /// <summary>
     /// Render the branded Verifiabl barcode as a standalone SVG suitable for
     /// embedding in a payslip PDF.
     /// </summary>

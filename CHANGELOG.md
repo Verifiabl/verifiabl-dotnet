@@ -6,6 +6,13 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.0]
+
+### Added
+
+- `VerifiablBarcode.CreateArtifacts`, returning a locally rendered SVG barcode
+  and its matching PDF XMP metadata payload together for self-managed flows.
+
 ## [0.6.0]
 
 ### Changed
