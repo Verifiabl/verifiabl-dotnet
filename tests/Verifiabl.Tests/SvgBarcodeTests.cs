@@ -62,8 +62,11 @@ public class SvgBarcodeTests
         Assert.StartsWith("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"480\" height=\"750\" ", result.Svg);
         Assert.Contains("viewBox=\"0 0 96 150\"", result.Svg);
         Assert.Contains("aria-label=\"Secured by Verifiabl verification barcode\"", result.Svg);
-        // Navy header first; no border and no card, so the ground stays transparent.
-        Assert.Matches("^<svg [^>]*><path d=\"M0 8C0 3\\.58172", result.Svg);
+        // No border: a full-width white ground under the header and the QR box,
+        // then the navy header on top of it.
+        Assert.Matches(
+            "^<svg [^>]*><rect x=\"0\" y=\"39\" width=\"96\" height=\"111\" fill=\"#FFFFFF\"/><path d=\"M0 8C0 3\\.58172",
+            result.Svg);
         Assert.Contains("fill=\"#010A4F\"", result.Svg);
         Assert.DoesNotContain("stroke=", result.Svg);
         Assert.DoesNotContain("<rect x=\"1\" y=\"1\"", result.Svg);

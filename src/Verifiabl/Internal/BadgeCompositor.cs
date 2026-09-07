@@ -171,14 +171,14 @@ internal static class BadgeCompositor
                         continue;
                     }
 
-                    // Black at the coverage as straight alpha, rounded half up; the QR
-                    // box is transparent, so the host document shows through the edge pixels.
-                    byte alpha = (byte)((510 * count + SubsampleCount) / (2 * SubsampleCount));
+                    // Black coverage over the white ground, rounded half up.
+                    byte grey = (byte)((510 * (SubsampleCount - count) + SubsampleCount)
+                        / (2 * SubsampleCount));
                     int offset = (py * rasterWidth + px) * 4;
-                    rgba[offset] = 0;
-                    rgba[offset + 1] = 0;
-                    rgba[offset + 2] = 0;
-                    rgba[offset + 3] = alpha;
+                    rgba[offset] = grey;
+                    rgba[offset + 1] = grey;
+                    rgba[offset + 2] = grey;
+                    rgba[offset + 3] = 255;
                 }
             }
         }

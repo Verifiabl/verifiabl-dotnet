@@ -178,7 +178,7 @@ The compiler enforces the mandatory fields: `Schema`, `IssuedAt`, `PayslipNonPii
 
 ### Placing the badge
 
-The badge is the navy header and the QR code, and the QR code spans the full badge width. Everything else is transparent. Place the badge on a light background and keep a clear margin of at least a tenth of the badge width on the left, the right and the bottom. That margin is the QR quiet zone. Scanners need it, and the badge does not carry it itself.
+The badge is the navy header and the QR code on a white ground, and the QR code spans the full badge width. Keep a clear light margin of at least a tenth of the badge width on the left, the right and the bottom of the badge. That margin is the QR quiet zone. Scanners need it, and the badge does not carry it itself.
 
 ### Retries and idempotency
 

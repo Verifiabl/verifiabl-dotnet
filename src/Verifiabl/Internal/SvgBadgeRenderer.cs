@@ -19,9 +19,11 @@ internal static class SvgBadgeRenderer
     private const string DefaultQr = "#000000";
     private const string DefaultText = "#FFFFFF";
 
-    // The badge is the navy header plus the QR modules; everything else is
-    // transparent. The host document supplies the light quiet zone on the left,
-    // right and bottom, so the QR box spans the full badge width.
+    // White ground under the QR box and the gap above it, so the symbol's light
+    // modules and its top quiet zone are light on any host document. The QR box
+    // spans the full badge width, so the badge carries no quiet zone on the left,
+    // right and bottom: the host document supplies that margin.
+    private const string FrameBackground = "#FFFFFF";
     internal const int FrameViewboxWidth = 96;
     private const int FrameHeaderHeight = 47;
 
@@ -109,6 +111,9 @@ internal static class SvgBadgeRenderer
             .Append(' ')
             .Append(FrameViewboxHeight)
             .Append("\" role=\"img\" aria-label=\"Secured by Verifiabl verification barcode\">")
+            // Starts under the opaque header so no anti-aliased seam shows at its edge.
+            .Append($"<rect x=\"0\" y=\"{FrameHeaderHeight - 8}\" width=\"{FrameViewboxWidth}\" ")
+            .Append($"height=\"{FrameViewboxHeight - FrameHeaderHeight + 8}\" fill=\"{FrameBackground}\"/>")
             .Append(header)
             .Append("<g transform=\"translate(")
             .Append(F(Round2(FrameQrBoxX + qrPadding)))

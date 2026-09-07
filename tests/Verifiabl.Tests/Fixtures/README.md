@@ -14,5 +14,4 @@ cross-SDK coverage for the explicit rollback writer. Anything that changes a fix
 content changes its raster, not just the frame.
 
 All fixtures and frame assets were regenerated again for VER-537 (Node SDK 0.21.0), which removed
-the badge border and card and made the QR span the full badge width. The rasters now carry a
-transparent ground (white with zero alpha) and finder edges as black with coverage alpha.
+the badge border and side gutters and made the QR span the full badge width on a white ground.
