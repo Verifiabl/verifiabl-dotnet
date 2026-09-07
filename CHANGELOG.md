@@ -6,6 +6,19 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.0]
+
+### Changed
+
+- The badge no longer has a grey border. It is the navy header and the QR
+  code on a white ground, with the QR box widened from 80 to 92 units inside
+  a 2-unit white margin, so each QR module is about 18% larger at the same
+  badge width. The badge carries no quiet zone on the left, right and bottom:
+  keep a clear light margin of at least a tenth of the badge width on those
+  three sides. The viewBox is now 96 x 148 and PNG heights are 740, 1110,
+  1480 and 2220 pixels for the four supported widths. Byte-identical with the
+  Node SDK 0.21.0 badge.
+
 ## [0.6.0]
 
 ### Changed
