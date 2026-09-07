@@ -19,22 +19,26 @@ internal static class SvgBadgeRenderer
     private const string DefaultQr = "#000000";
     private const string DefaultText = "#FFFFFF";
 
-    // White ground under the QR box and the gap above it, so the symbol's light
-    // modules and its top quiet zone are light on any host document. The QR box
-    // spans the full badge width, so the badge carries no quiet zone on the left,
-    // right and bottom: the host document supplies that margin.
+    // White ground under the QR box, the gap above it and the margin around it,
+    // so the symbol's light modules and its top quiet zone are light on any host
+    // document. The side and bottom margin is visual only: the badge carries no
+    // quiet zone there, the host document supplies that.
     private const string FrameBackground = "#FFFFFF";
     internal const int FrameViewboxWidth = 96;
     private const int FrameHeaderHeight = 47;
 
-    // Transparent gap between the header and the QR box: the only light margin
-    // the badge itself supplies (the header above it is dark). Odd so the viewBox
-    // height is even and every supported PNG width has an integer pixel height.
+    // Gap between the header and the QR box: the only quiet-zone margin the badge
+    // itself supplies (the header above it is dark).
     private const int FrameQrGap = 7;
-    internal const int FrameQrBoxX = 0;
+
+    // White margin on the left, right and bottom so the QR sits inside the ground.
+    // Gap and margin sum to an odd number so the viewBox height is even and every
+    // supported PNG width has an integer pixel height.
+    private const int FrameQrMargin = 2;
+    internal const int FrameQrBoxX = FrameQrMargin;
     internal const int FrameQrBoxY = FrameHeaderHeight + FrameQrGap;
-    internal const int FrameQrBoxSize = FrameViewboxWidth;
-    private const int FrameViewboxHeight = FrameQrBoxY + FrameQrBoxSize;
+    internal const int FrameQrBoxSize = FrameViewboxWidth - 2 * FrameQrMargin;
+    private const int FrameViewboxHeight = FrameQrBoxY + FrameQrBoxSize + FrameQrMargin;
 
     // At this width, a realistic fully-populated PII record renders QR modules at
     // or above IdealModulePx at the default Medium ceiling (the pristine tier).

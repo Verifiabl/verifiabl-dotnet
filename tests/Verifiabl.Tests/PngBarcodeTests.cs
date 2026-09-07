@@ -20,10 +20,10 @@ public class PngBarcodeTests
     }
 
     [Theory]
-    [InlineData(480, 750)]
-    [InlineData(720, 1125)]
-    [InlineData(960, 1500)]
-    [InlineData(1440, 2250)]
+    [InlineData(480, 740)]
+    [InlineData(720, 1110)]
+    [InlineData(960, 1480)]
+    [InlineData(1440, 2220)]
     public void RendersAPngAtEachSupportedPixelWidth(int pixelWidth, int expectedHeight)
     {
         BarcodePngResult result = VerifiablBarcode.CreatePng(Parts(), pixelWidth: pixelWidth);
