@@ -8,7 +8,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- P2 PII text validation now follows the versioned Unicode 15.1 profile: it
+- P2 PII text validation now follows the versioned Unicode 17.0 profile: it
   rejects Cc, Cf, Zl, and Zp characters, applies the existing 256 UTF-16-code-unit
   limit to non-address fields, and shares conformance vectors with the Node SDK
   and verifier.

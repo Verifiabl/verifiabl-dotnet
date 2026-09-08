@@ -27,7 +27,7 @@ public static class Pii
     public const string TextProfileId = "io.verifiabl.p2-pii-text.v1";
 
     /// <summary>Unicode version used by the P2 format-character table.</summary>
-    public const string TextProfileUnicodeVersion = "15.1.0";
+    public const string TextProfileUnicodeVersion = PiiTextProfile.UnicodeVersion;
 
     /// <summary>Maximum UTF-16 code units in each non-address P2 field.</summary>
     public const int FieldMaxUtf16CodeUnits = 256;
@@ -245,9 +245,6 @@ public static class Pii
 
     private static bool ContainsFormatCharacter(string value)
     {
-        // Unicode 15.1 General_Category=Cf, fixed here rather than delegated to
-        // each target runtime's Unicode tables. Keep this in sync with the P2
-        // profile at docs.verifiabl.io/spec/p2-pii-text-profile-v1.json.
         for (int index = 0; index < value.Length; index++)
         {
             int codePoint = value[index];
@@ -256,7 +253,7 @@ public static class Pii
                 codePoint = char.ConvertToUtf32(value[index], value[++index]);
             }
 
-            if (IsUnicode15FormatCharacter(codePoint))
+            if (PiiTextProfile.IsFormatCharacter(codePoint))
             {
                 return true;
             }
@@ -264,29 +261,6 @@ public static class Pii
 
         return false;
     }
-
-    private static bool IsUnicode15FormatCharacter(int codePoint) =>
-        codePoint == 0x00AD
-        || codePoint is >= 0x0600 and <= 0x0605
-        || codePoint == 0x061C
-        || codePoint == 0x06DD
-        || codePoint == 0x070F
-        || codePoint is >= 0x0890 and <= 0x0891
-        || codePoint == 0x08E2
-        || codePoint == 0x180E
-        || codePoint is >= 0x200B and <= 0x200F
-        || codePoint is >= 0x202A and <= 0x202E
-        || codePoint is >= 0x2060 and <= 0x2064
-        || codePoint is >= 0x2066 and <= 0x206F
-        || codePoint == 0xFEFF
-        || codePoint is >= 0xFFF9 and <= 0xFFFB
-        || codePoint == 0x110BD
-        || codePoint == 0x110CD
-        || codePoint is >= 0x13430 and <= 0x1343F
-        || codePoint is >= 0x1BCA0 and <= 0x1BCA3
-        || codePoint is >= 0x1D173 and <= 0x1D17A
-        || codePoint == 0xE0001
-        || codePoint is >= 0xE0020 and <= 0xE007F;
 
     private static string? NormalizeSegment(string value, string name, bool isV2)
     {

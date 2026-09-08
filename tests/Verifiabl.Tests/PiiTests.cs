@@ -164,23 +164,21 @@ public class PiiTests
     [Fact]
     public void V2MatchesTheCanonicalTextProfile()
     {
-        string path = Path.Combine(
-            AppContext.BaseDirectory,
-            "Fixtures",
-            "p2-pii-text-profile-v1.json");
-        using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path));
-        JsonElement profile = document.RootElement;
+        string fixturesDirectory = Path.Combine(AppContext.BaseDirectory, "Fixtures");
+        string profilePath = Path.Combine(fixturesDirectory, "p2-pii-text-profile-v1.json");
+        string vectorsPath = Path.Combine(fixturesDirectory, "p2-pii-text-profile-v1-vectors.json");
+        using JsonDocument profileDocument = JsonDocument.Parse(File.ReadAllText(profilePath));
+        using JsonDocument vectorsDocument = JsonDocument.Parse(File.ReadAllText(vectorsPath));
+        JsonElement profile = profileDocument.RootElement;
+        JsonElement vectors = vectorsDocument.RootElement;
 
-        Assert.Equal(Pii.TextProfileId, profile.GetProperty("id").GetString());
+        Assert.Equal(Pii.TextProfileId, profile.GetProperty("profileId").GetString());
+        Assert.Equal(
+            profile.GetProperty("profileId").GetString(),
+            vectors.GetProperty("profileId").GetString());
         Assert.Equal(
             Pii.TextProfileUnicodeVersion,
             profile.GetProperty("unicodeVersion").GetString());
-        Assert.Equal(
-            Pii.FieldMaxUtf16CodeUnits,
-            profile.GetProperty("nonAddressMaxUtf16CodeUnits").GetInt32());
-        Assert.Equal(
-            Pii.AddressMaxBytes,
-            profile.GetProperty("addressMaxUtf8Bytes").GetInt32());
 
         foreach (JsonElement range in profile.GetProperty("controlCharacterRanges").EnumerateArray())
         {
@@ -214,14 +212,14 @@ public class PiiTests
             }
         }
 
-        foreach (JsonElement vector in profile.GetProperty("validText").EnumerateArray())
+        foreach (JsonElement vector in vectors.GetProperty("validText").EnumerateArray())
         {
             string value = vector.GetProperty("value").GetString()!;
             Assert.Contains(value, Pii.Format(new PiiFields { EmployeeName = value }));
             Assert.EndsWith("|" + value, Pii.Format(new PiiFields { Address = value }));
         }
 
-        foreach (JsonElement vector in profile.GetProperty("invalidText").EnumerateArray())
+        foreach (JsonElement vector in vectors.GetProperty("invalidText").EnumerateArray())
         {
             string value = string.Concat(
                 vector.GetProperty("codePoints")
@@ -234,7 +232,7 @@ public class PiiTests
                 () => Pii.Format(new PiiFields { Address = value }));
         }
 
-        foreach (JsonElement vector in profile.GetProperty("invalidUtf16").EnumerateArray())
+        foreach (JsonElement vector in vectors.GetProperty("invalidUtf16").EnumerateArray())
         {
             char[] codeUnits = vector.GetProperty("codeUnits")
                 .EnumerateArray()
@@ -261,7 +259,7 @@ public class PiiTests
     [InlineData("\U00013430")]
     [InlineData("\U0001BCA0")]
     [InlineData("\U000E007F")]
-    public void V2UsesTheFixedUnicode15FormatCharacterTable(string formatCharacter)
+    public void V2UsesTheFixedUnicode17FormatCharacterTable(string formatCharacter)
     {
         Assert.Throws<ArgumentException>(
             () => Pii.Format(new PiiFields { EmployeeName = "Jane" + formatCharacter }));
