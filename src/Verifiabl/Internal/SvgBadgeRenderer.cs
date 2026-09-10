@@ -18,18 +18,23 @@ internal static class SvgBadgeRenderer
     private const string DefaultNavy = "#010A4F";
     private const string DefaultQr = "#000000";
     private const string DefaultText = "#FFFFFF";
-    private const string FrameBorder = "#ADADAD";
 
-    // White frame body so the QR quiet zone is always light, independent of the
-    // host document. The fill follows the rounded border path (rx=7), so the four
-    // corners outside that radius stay transparent.
+    // White ground under the QR box and the gap above it, so the symbol's light
+    // modules and its top quiet zone are light on any host document. The QR box
+    // spans the full badge width, so the badge carries no quiet zone on the left,
+    // right and bottom: the host document supplies that margin.
     private const string FrameBackground = "#FFFFFF";
     internal const int FrameViewboxWidth = 96;
-    private const int FrameViewboxHeight = 151;
     private const int FrameHeaderHeight = 47;
-    internal const int FrameQrBoxX = 8;
-    internal const int FrameQrBoxY = 59;
-    private const int FrameQrBoxSize = 80;
+
+    // White gap between the header and the QR box: the only quiet-zone margin the
+    // badge itself supplies (the header above it is dark). Odd so the viewBox
+    // height is even and every supported PNG width has an integer pixel height.
+    private const int FrameQrGap = 7;
+    internal const int FrameQrBoxX = 0;
+    internal const int FrameQrBoxY = FrameHeaderHeight + FrameQrGap;
+    internal const int FrameQrBoxSize = FrameViewboxWidth;
+    private const int FrameViewboxHeight = FrameQrBoxY + FrameQrBoxSize;
 
     // At this width, a realistic fully-populated PII record renders QR modules at
     // or above IdealModulePx at the default Medium ceiling (the pristine tier).
@@ -44,18 +49,6 @@ internal static class SvgBadgeRenderer
     // real-world scans, so we hard-error rather than emit it. Evaluated at the
     // badge's width.
     private const double MinModulePx = 3;
-
-    // QR spec quiet zone: at least this many light modules around the symbol.
-    private const int QuietZoneModules = 4;
-
-    // Smallest internal inset (in modules) padded inside the fixed QR box.
-    private const int MinQrInsetModules = 1;
-
-    // Light gutter (viewBox units) on the tightest side: from the QR box edge to
-    // the inner edge of the frame border (border path at x=1, ~1u half-stroke).
-    // The frame body inside this gutter is white, so it counts toward the quiet
-    // zone. The top/bottom gutters are larger, so this side is the binding one.
-    private const double FrameQrGutter = FrameQrBoxX - 2;
 
     // Degradation ladder, highest-ECC-first (Quartile is the densest, most
     // damage-tolerant level). The branded frame's outer size is fixed, so the
@@ -91,7 +84,6 @@ internal static class SvgBadgeRenderer
             || selected.ModulePx < IdealModulePx;
 
         double height = Round2((badgeWidth * FrameViewboxHeight) / FrameViewboxWidth);
-        double qrPadding = selected.InsetModules * selected.ModuleSize;
 
         string headerBackground =
             $"<path d=\"M0 8C0 3.58172 3.58172 0 8 0H88C92.4183 0 96 3.58172 96 8V" +
@@ -108,13 +100,14 @@ internal static class SvgBadgeRenderer
             .Append(' ')
             .Append(FrameViewboxHeight)
             .Append("\" role=\"img\" aria-label=\"Secured by Verifiabl verification barcode\">")
-            .Append($"<rect x=\"1\" y=\"1\" width=\"94\" height=\"149\" rx=\"7\" fill=\"{FrameBackground}\"/>")
-            .Append($"<rect x=\"1\" y=\"1\" width=\"94\" height=\"149\" rx=\"7\" stroke=\"{FrameBorder}\" stroke-width=\"2\" fill=\"none\"/>")
+            // Starts under the opaque header so no anti-aliased seam shows at its edge.
+            .Append($"<rect x=\"0\" y=\"{FrameHeaderHeight - 8}\" width=\"{FrameViewboxWidth}\" ")
+            .Append($"height=\"{FrameViewboxHeight - FrameHeaderHeight + 8}\" fill=\"{FrameBackground}\"/>")
             .Append(header)
             .Append("<g transform=\"translate(")
-            .Append(F(Round2(FrameQrBoxX + qrPadding)))
+            .Append(FrameQrBoxX)
             .Append(' ')
-            .Append(F(Round2(FrameQrBoxY + qrPadding)))
+            .Append(FrameQrBoxY)
             .Append(")\">")
             .Append("<g shape-rendering=\"crispEdges\">")
             .Append(RenderModules(selected.Qr, selected.Size, selected.ModuleSize, DefaultQr))
@@ -191,12 +184,11 @@ internal static class SvgBadgeRenderer
             }
 
             int size = qr.Size;
-            int insetModules = QuietZoneInsetModules(size);
-            double moduleSize = FrameQrBoxSize / (size + insetModules * 2.0);
+            double moduleSize = FrameQrBoxSize / (double)size;
             double modulePx = moduleSize * scale;
             if (modulePx >= MinModulePx)
             {
-                return new SelectedQrRendering(qr, level, size, moduleSize, modulePx, insetModules);
+                return new SelectedQrRendering(qr, level, size, moduleSize, modulePx);
             }
 
             densestSize = size;
@@ -245,29 +237,6 @@ internal static class SvgBadgeRenderer
         BarcodeErrorCorrectionLevel.Medium => QrCode.Ecc.Medium,
         _ => QrCode.Ecc.Low,
     };
-
-    /// <summary>
-    /// Internal inset (in modules) needed so the total light margin around the
-    /// QR — the fixed white gutter plus the inset — is at least
-    /// <see cref="QuietZoneModules"/>. Dense symbols (small modules) already clear
-    /// it from the gutter alone and keep the minimum inset; only small/sparse
-    /// symbols, which have large modules and huge scannability headroom, need a
-    /// larger inset. So this never affects the degradation thresholds, which bite
-    /// for dense payloads.
-    /// </summary>
-    private static int QuietZoneInsetModules(int size)
-    {
-        for (int inset = MinQrInsetModules; inset < QuietZoneModules; inset++)
-        {
-            double moduleSize = FrameQrBoxSize / (size + inset * 2.0);
-            if (FrameQrGutter / moduleSize + inset >= QuietZoneModules)
-            {
-                return inset;
-            }
-        }
-
-        return QuietZoneModules;
-    }
 
     private static string RenderModules(QrCode qr, int size, double moduleSize, string color)
     {
@@ -386,15 +355,13 @@ internal static class SvgBadgeRenderer
             BarcodeErrorCorrectionLevel errorCorrectionLevel,
             int size,
             double moduleSize,
-            double modulePx,
-            int insetModules)
+            double modulePx)
         {
             Qr = qr;
             ErrorCorrectionLevel = errorCorrectionLevel;
             Size = size;
             ModuleSize = moduleSize;
             ModulePx = modulePx;
-            InsetModules = insetModules;
         }
 
         internal QrCode Qr { get; }
@@ -409,8 +376,6 @@ internal static class SvgBadgeRenderer
         internal double ModuleSize { get; }
 
         internal double ModulePx { get; }
-
-        internal int InsetModules { get; }
     }
 
     private const int WordmarkViewboxWidth = 80; // 80x16 design units

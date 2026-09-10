@@ -5,13 +5,11 @@ namespace Verifiabl.Internal;
 
 /// <summary>
 /// Pre-rasterised badge frames for the PNG compositor: everything in the badge
-/// except the QR content, baked per supported pixel width by the Node SDK's
-/// scripts/bake-frames.mjs and embedded as VFR1 containers (RGBA palette plus
-/// raw-deflated pixel indices).
+/// except the QR content, centrally generated per supported pixel width and
+/// embedded as VFR1 containers (RGBA palette plus raw-deflated pixel indices).
 /// </summary>
-internal static class FrameAssets
+internal static partial class FrameAssets
 {
-    internal static readonly int[] SupportedPixelWidths = [480, 720, 960, 1440];
 
     private static readonly ConcurrentDictionary<int, ParsedFrame> Cache = new();
 
@@ -64,7 +62,7 @@ internal static class FrameAssets
         int width = ReadUInt16(container, 4);
         int height = ReadUInt16(container, 6);
         int paletteCount = ReadUInt16(container, 8);
-        // Baked frames sit near height = 1.57 * width, so 2x bounds the raster
+        // Baked frames sit at height = 1.5625 * width, so 2x bounds the raster
         // allocation (max 1440 * 2880) before a tampered height can force it.
         if (width != expectedWidth || height <= 0 || height > width * 2)
         {

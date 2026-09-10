@@ -5,9 +5,11 @@ namespace Verifiabl;
 /// optional; omitted fields are encoded as empty segments and skipped by Verifiabl.
 /// </summary>
 /// <remarks>
-/// Values must not contain the pipe character <c>|</c> (the wire delimiter),
-/// control characters, or Unicode format characters. Fields other than Address
-/// are limited to 256 characters; Address is limited to 320 UTF-8 bytes.
+/// P2 values must contain valid Unicode and must not contain the pipe character
+/// <c>|</c> (the wire delimiter) or Unicode General Categories Cc (control), Cf
+/// (format), Zl (line separator), or Zp (paragraph separator). The complete P2
+/// plaintext, including framing and delimiters, is limited to 1024 UTF-8 bytes
+/// when written. Values are preserved without Unicode normalization.
 /// </remarks>
 public class PiiFields
 {

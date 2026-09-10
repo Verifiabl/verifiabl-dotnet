@@ -10,7 +10,7 @@
     <TargetFrameworks>net472;net8.0;net10.0</TargetFrameworks>
     <!-- Package id only: the assembly and root namespace stay Verifiabl. -->
     <PackageId>Verifiabl.Issuer</PackageId>
-    <Version>0.6.0</Version>
+    <Version>0.7.0</Version>
     <Description>Official Verifiabl .NET SDK for issuing payslip QR codes, formatting PII, AES-256-GCM encryption helpers, and typed issuer API calls.</Description>
     <Authors>Verifiabl</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -36,22 +36,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="3.0.0" />
+    <PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="3.2.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Pre-rasterised badge frames for CreatePng, baked by the Node SDK's
-         scripts/bake-frames.mjs (the shared source of truth for PNG parity). -->
-    <EmbeddedResource Include="Assets\frame-480.vfr1" LogicalName="Verifiabl.Assets.frame-480.vfr1" />
-    <EmbeddedResource Include="Assets\frame-720.vfr1" LogicalName="Verifiabl.Assets.frame-720.vfr1" />
-    <EmbeddedResource Include="Assets\frame-960.vfr1" LogicalName="Verifiabl.Assets.frame-960.vfr1" />
-    <EmbeddedResource Include="Assets\frame-1440.vfr1" LogicalName="Verifiabl.Assets.frame-1440.vfr1" />
+    <!-- Centrally generated pre-rasterised badge frames for CreatePng. -->
+    <EmbeddedResource Include="Assets\frame-*.vfr1" LogicalName="Verifiabl.Assets.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
     <Reference Include="System.Net.Http" />
-    <PackageReference Include="Microsoft.Bcl.Cryptography" Version="10.0.5" />
-    <PackageReference Include="System.Text.Json" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Bcl.Cryptography" Version="10.0.12" />
+    <PackageReference Include="System.Text.Json" Version="10.0.12" />
   </ItemGroup>
 
 </Project>

@@ -6,6 +6,29 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.0]
+
+### Changed
+
+- P2 PII text validation now follows the versioned Unicode 17.0 profile: it
+  rejects Cc, Cf, Zl, and Zp characters, limits newly written complete plaintext
+  to 1024 UTF-8 bytes, accepts legacy oversized P2 plaintext when reading, and
+  shares conformance vectors with the Node SDK and verifier.
+- The badge no longer has a grey border or side gutters. It is the navy
+  header and the QR code on a white ground, and the QR code spans the full
+  badge width, so each QR module is about 24% larger at the same badge width.
+  The badge carries no quiet zone on the left, right and bottom: keep a clear
+  light margin of at least a tenth of the badge width on those three sides.
+  The viewBox is now 96 x 150 and PNG heights are 750, 1125, 1500 and 2250
+  pixels for the four supported widths. Byte-identical with the Node SDK
+  0.22.0 badge.
+
+### Removed
+
+- The repository-only `Verifiabl.ScannerPack` development utility and its CI
+  artifact. Neither was included in the NuGet packages or part of the supported
+  SDK API; QR rendering remains covered by the standalone test suite.
+
 ## [0.6.0]
 
 ### Changed

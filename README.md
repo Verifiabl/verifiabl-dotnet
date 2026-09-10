@@ -125,9 +125,12 @@ BarcodeSvgResult badge = VerifiablBarcode.CreateSvg(
 
 New documents use P2 plaintext and v2 barcode/XMP output by default. P2 is exactly
 `P2|employeeName|position|department|employerAbn|bsb|accountNumber|accountName|address`.
-The final address is unstructured, optional, preserved verbatim, and limited to 320 UTF-8 bytes.
-Pipes, control characters, Unicode format characters, and malformed Unicode are rejected before
-encryption. A v2 QR uses the short scan host with `#2.<BASE32>` and an explicit byte/alphanumeric
+P2 preserves valid Unicode without normalization. Writers limit the complete plaintext, including
+framing and delimiters, to 1024 UTF-8 bytes. Readers continue to accept oversized P2 plaintext from
+legacy documents. The pipe, malformed Unicode, and Unicode General Categories Cc (control), Cf
+(format), Zl (line separator), and Zp (paragraph separator) are rejected before encryption. Ordinary
+international Unicode remains
+valid. A v2 QR uses the short scan host with `#2.<BASE32>` and an explicit byte/alphanumeric
 segment split; its XMP copy is the matching `2|reference|BASE32` returned by
 `VerifiablBarcode.BuildPayload(parts)`.
 
@@ -141,30 +144,15 @@ BarcodeSvgResult legacyBadge = VerifiablBarcode.CreateSvg(parts, legacyOptions);
 string legacyXmpPayload = VerifiablBarcode.BuildPayload(parts, BarcodePayloadFormat.V1);
 ```
 
-### Scanner test pack
+### Development
 
-Generate synthetic v2 symbols for screen, print, fold, photocopy, camera, and hardware-scanner tests:
-
-```bash
-dotnet run --project tools/Verifiabl.ScannerPack -- ./artifacts/ver-460
-```
-
-Open `artifacts/ver-460/index.html` for screen, print, and fold tests. Open
-`artifacts/ver-460/address-size-matrix.html` to compare dense-address QR error-correction and badge
-size trade-offs. The output directory must not already exist, so a stale partial pack is never mixed
-with a fresh run. The pack includes PNG files and a `manifest.json` file. The manifest records each
-exact scan URL, XMP payload, ciphertext byte value, QR version, and error-correction level. All
-fixture details are synthetic. Do not replace them with customer data. CI also publishes the same
-pack as the `verifiabl-dotnet-scanner-pack` workflow artifact.
-
-### Development shell
-
-The pinned Nix shell supplies the .NET 8 and .NET 10 SDKs and runtimes:
+Install the .NET 8 and .NET 10 SDKs, matching the versions exercised by public CI, then restore,
+build, and test with the standard .NET CLI:
 
 ```bash
-nix develop
 dotnet restore
-dotnet test
+dotnet build --configuration Release --no-restore
+dotnet test --configuration Release --no-build
 ```
 
 Linux and macOS can build all library targets. Windows CI runs the .NET Framework 4.7.2 tests.
@@ -175,6 +163,10 @@ The compiler enforces the mandatory fields: `Schema`, `IssuedAt`, `PayslipNonPii
 `AdditionalData` is passed to the API verbatim under the exact keys you supply. Values may be strings, booleans, numbers, `null`, nested dictionaries, or sequences of those; anything else throws an `ArgumentException` naming the key. Which keys your schema requires is documented per schema — the `au.payslip.v1` set is shown above.
 
 `VerifiablBarcode.CreateSvg` produces a standalone SVG that scales to any size without losing quality; embed it directly in your PDF pipeline when it supports vector images. If it needs a raster image, use `VerifiablBarcode.CreatePng`: it composites the badge deterministically with no native dependencies, so the same record produces the byte-identical raster in every Verifiabl SDK, and QR module edges stay crisp (rasterising the SVG with a general renderer blurs them and costs scannability). PNG output comes in fixed pixel widths (480, 720, 960 or 1440; the physical print size is set where you place the image in the PDF). See the [docs](https://docs.verifiabl.io/) for both flows.
+
+### Placing the badge
+
+The badge is the navy header and the QR code on a white ground, and the QR code spans the full badge width. Keep a clear light margin of at least a tenth of the badge width on the left, the right and the bottom of the badge. That margin is the QR quiet zone. Scanners need it, and the badge does not carry it itself.
 
 ### Retries and idempotency
 

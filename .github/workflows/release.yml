@@ -41,25 +41,18 @@ jobs:
           dotnet-version: |
             8.0.x
             10.0.x
-      # The release tag is the single source of truth for the package version;
-      # the <Version> in the csproj is only a fallback for local builds.
-      - name: Resolve the package version from the release tag
+      # This validator and its target config are generated from the private
+      # monorepo's central release-targets.json manifest.
+      - name: Resolve and validate the release target
         env:
           TAG: ${{ github.event.release.tag_name }}
-        run: |
-          VERSION="${TAG#v}"
-          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
-            echo "Release tag '$TAG' is not a SemVer version (expected v<major>.<minor>.<patch>[-prerelease])." >&2
-            exit 1
-          fi
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+        run: node .github/scripts/release-tool.mjs validate "$TAG"
       - run: dotnet restore
       - run: dotnet build --configuration Release --no-restore -p:Version="$VERSION"
       # Tests gate every publish, mirroring the CI pipeline.
       - run: dotnet test --configuration Release --no-build
-      # Both packages ship from the same tag, so they always carry the same version.
-      - run: dotnet pack src/Verifiabl/Verifiabl.csproj --configuration Release --no-build --output artifacts -p:Version="$VERSION"
-      - run: dotnet pack src/Verifiabl.Extensions.DependencyInjection/Verifiabl.Extensions.DependencyInjection.csproj --configuration Release --no-build --output artifacts -p:Version="$VERSION"
+      # Pack commands and the coupled package set come from the generated target config.
+      - run: node .github/scripts/release-tool.mjs pack "$RELEASE_TARGET_ID" "$VERSION"
       - name: NuGet login (OIDC → temp API key)
         uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1
         id: login
