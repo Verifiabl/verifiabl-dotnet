@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "versionPolicy": {
+    "name": "SemVer 2.0 without build metadata",
+    "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-(?:(?:0|[1-9][0-9]*)|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:(?:0|[1-9][0-9]*)|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?$"
+  },
+  "targets": [
+    {
+      "id": "dotnet/issuer",
+      "ecosystem": "dotnet",
+      "role": "issuer",
+      "publicRepository": "Verifiabl/verifiabl-dotnet",
+      "changelog": "CHANGELOG.md",
+      "tags": {
+        "privatePrefix": "dotnet/issuer/v",
+        "publicPrefix": "issuer/v"
+      },
+      "packages": [
+        {
+          "id": "Verifiabl.Issuer",
+          "versionSource": {
+            "kind": "xml",
+            "path": "src/Verifiabl/Verifiabl.csproj",
+            "versionElement": "Version",
+            "packageIdElement": "PackageId"
+          }
+        },
+        {
+          "id": "Verifiabl.Issuer.Extensions.DependencyInjection",
+          "versionSource": {
+            "kind": "xml",
+            "path": "src/Verifiabl.Extensions.DependencyInjection/Verifiabl.Extensions.DependencyInjection.csproj",
+            "versionElement": "Version",
+            "packageIdElement": "PackageId"
+          }
+        }
+      ],
+      "coupledVersionGroups": [
+        [
+          "Verifiabl.Issuer",
+          "Verifiabl.Issuer.Extensions.DependencyInjection"
+        ]
+      ],
+      "packCommands": [
+        [
+          "dotnet",
+          "pack",
+          "src/Verifiabl/Verifiabl.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--output",
+          "artifacts",
+          "-p:Version={version}"
+        ],
+        [
+          "dotnet",
+          "pack",
+          "src/Verifiabl.Extensions.DependencyInjection/Verifiabl.Extensions.DependencyInjection.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--output",
+          "artifacts",
+          "-p:Version={version}"
+        ]
+      ]
+    }
+  ]
+}
