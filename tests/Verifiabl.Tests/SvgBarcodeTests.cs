@@ -77,11 +77,10 @@ public class SvgBarcodeTests
     [Fact]
     public void SpansTheFullBadgeWidthForEveryPayload()
     {
-        foreach (string ciphertext in new[] { "AA", RealisticCiphertext() })
+        foreach (BarcodeSvgResult result in new[] { "AA", RealisticCiphertext() }
+                     .Select(ciphertext => VerifiablBarcode.CreateSvg(
+                         new BarcodeParts(Reference, ciphertext))))
         {
-            BarcodeSvgResult result = VerifiablBarcode.CreateSvg(
-                new BarcodeParts(Reference, ciphertext));
-
             Assert.Contains("<g transform=\"translate(0 54)\"><g shape-rendering=\"crispEdges\">", result.Svg);
             Assert.Equal(Math.Round(480.0 / (17.0 + 4.0 * result.QrVersion), 2), result.ModulePx);
         }

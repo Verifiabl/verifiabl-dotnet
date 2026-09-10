@@ -6,6 +6,18 @@ namespace Verifiabl.Tests;
 
 public class PiiTests
 {
+    private static string AppendRelativePath(string basePath, string relativePath)
+    {
+        if (Path.IsPathRooted(relativePath))
+        {
+            throw new ArgumentException("Path must be relative.", nameof(relativePath));
+        }
+
+        return basePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + Path.DirectorySeparatorChar
+            + relativePath;
+    }
+
     [Fact]
     public void FormatsP2ByDefaultInWireOrder()
     {
@@ -162,9 +174,9 @@ public class PiiTests
     [Fact]
     public void V2MatchesTheCanonicalTextProfile()
     {
-        string fixturesDirectory = Path.Combine(AppContext.BaseDirectory, "Fixtures");
-        string profilePath = Path.Combine(fixturesDirectory, "p2-pii-text-profile-v1.json");
-        string vectorsPath = Path.Combine(fixturesDirectory, "p2-pii-text-profile-v1-vectors.json");
+        string fixturesDirectory = AppendRelativePath(AppContext.BaseDirectory, "Fixtures");
+        string profilePath = AppendRelativePath(fixturesDirectory, "p2-pii-text-profile-v1.json");
+        string vectorsPath = AppendRelativePath(fixturesDirectory, "p2-pii-text-profile-v1-vectors.json");
         using JsonDocument profileDocument = JsonDocument.Parse(File.ReadAllText(profilePath));
         using JsonDocument vectorsDocument = JsonDocument.Parse(File.ReadAllText(vectorsPath));
         JsonElement profile = profileDocument.RootElement;
@@ -179,10 +191,12 @@ public class PiiTests
             profile.GetProperty("unicodeVersion").GetString());
         Assert.Equal(Pii.PayloadMaxBytes, profile.GetProperty("writerPayloadMaxUtf8Bytes").GetInt32());
 
-        foreach (JsonElement range in profile.GetProperty("controlCharacterRanges").EnumerateArray())
+        foreach ((int start, int end) in profile.GetProperty("controlCharacterRanges")
+                     .EnumerateArray()
+                     .Select(range => (
+                         Convert.ToInt32(range[0].GetString(), 16),
+                         Convert.ToInt32(range[1].GetString(), 16))))
         {
-            int start = Convert.ToInt32(range[0].GetString(), 16);
-            int end = Convert.ToInt32(range[1].GetString(), 16);
             for (int codePoint = start; codePoint <= end; codePoint++)
             {
                 Assert.Throws<ArgumentException>(
@@ -191,18 +205,21 @@ public class PiiTests
             }
         }
 
-        foreach (JsonElement codePointValue in profile.GetProperty("lineSeparatorCodePoints").EnumerateArray())
+        foreach (int codePoint in profile.GetProperty("lineSeparatorCodePoints")
+                     .EnumerateArray()
+                     .Select(value => Convert.ToInt32(value.GetString(), 16)))
         {
-            int codePoint = Convert.ToInt32(codePointValue.GetString(), 16);
             Assert.Throws<ArgumentException>(
                 () => Pii.Format(
                     new PiiFields { EmployeeName = char.ConvertFromUtf32(codePoint) }));
         }
 
-        foreach (JsonElement range in profile.GetProperty("formatCharacterRanges").EnumerateArray())
+        foreach ((int start, int end) in profile.GetProperty("formatCharacterRanges")
+                     .EnumerateArray()
+                     .Select(range => (
+                         Convert.ToInt32(range[0].GetString(), 16),
+                         Convert.ToInt32(range[1].GetString(), 16))))
         {
-            int start = Convert.ToInt32(range[0].GetString(), 16);
-            int end = Convert.ToInt32(range[1].GetString(), 16);
             for (int codePoint = start; codePoint <= end; codePoint++)
             {
                 Assert.Throws<ArgumentException>(
@@ -211,9 +228,10 @@ public class PiiTests
             }
         }
 
-        foreach (JsonElement vector in vectors.GetProperty("validText").EnumerateArray())
+        foreach (string value in vectors.GetProperty("validText")
+                     .EnumerateArray()
+                     .Select(vector => vector.GetProperty("value").GetString()!))
         {
-            string value = vector.GetProperty("value").GetString()!;
             Assert.Contains(value, Pii.Format(new PiiFields { EmployeeName = value }));
             Assert.EndsWith("|" + value, Pii.Format(new PiiFields { Address = value }));
         }
