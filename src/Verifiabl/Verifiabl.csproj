@@ -36,7 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="3.0.0" />
+    <PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="3.2.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -46,8 +46,8 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
     <Reference Include="System.Net.Http" />
-    <PackageReference Include="Microsoft.Bcl.Cryptography" Version="10.0.5" />
-    <PackageReference Include="System.Text.Json" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Bcl.Cryptography" Version="10.0.12" />
+    <PackageReference Include="System.Text.Json" Version="10.0.12" />
   </ItemGroup>
 
 </Project>
