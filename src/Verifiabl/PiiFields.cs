@@ -35,7 +35,9 @@ public class PiiFields
     public string? AccountName { get; set; }
 
     /// <summary>
-    /// Optional unstructured address, preserved verbatim. Maximum 320 UTF-8 bytes.
+    /// Optional unstructured address, preserved verbatim. P2 has no
+    /// address-specific limit; the complete newly written P2 plaintext,
+    /// including framing and delimiters, is limited to 1024 UTF-8 bytes.
     /// </summary>
     public string? Address { get; set; }
 }
