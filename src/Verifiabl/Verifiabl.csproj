@@ -40,12 +40,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Pre-rasterised badge frames for CreatePng, baked by the Node SDK's
-         scripts/bake-frames.mjs (the shared source of truth for PNG parity). -->
-    <EmbeddedResource Include="Assets\frame-480.vfr1" LogicalName="Verifiabl.Assets.frame-480.vfr1" />
-    <EmbeddedResource Include="Assets\frame-720.vfr1" LogicalName="Verifiabl.Assets.frame-720.vfr1" />
-    <EmbeddedResource Include="Assets\frame-960.vfr1" LogicalName="Verifiabl.Assets.frame-960.vfr1" />
-    <EmbeddedResource Include="Assets\frame-1440.vfr1" LogicalName="Verifiabl.Assets.frame-1440.vfr1" />
+    <!-- Centrally generated pre-rasterised badge frames for CreatePng. -->
+    <EmbeddedResource Include="Assets\frame-*.vfr1" LogicalName="Verifiabl.Assets.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net472'">

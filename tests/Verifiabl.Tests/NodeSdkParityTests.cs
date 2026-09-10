@@ -42,6 +42,21 @@ public class NodeSdkParityTests
     }
 
     [Fact]
+    public void MatchesTheNodeRendererForAShortBadge()
+    {
+        BarcodeSvgResult result = VerifiablBarcode.CreateSvg(
+            new BarcodeParts(Reference, "AA"));
+
+        using JsonDocument meta = JsonDocument.Parse(Fixture("node-svg-meta.json"));
+        JsonElement expected = meta.RootElement.GetProperty("short-default-480");
+
+        Assert.Equal(expected.GetProperty("content").GetString(), result.Content);
+        Assert.Equal(expected.GetProperty("qrVersion").GetInt32(), result.QrVersion);
+        Assert.Equal(expected.GetProperty("modulePx").GetDouble(), result.ModulePx);
+        Assert.Equal(Fixture("node-svg-short-default-480.svg"), result.Svg);
+    }
+
+    [Fact]
     public void MatchesTheNodeRendererForTheExplicitV1Badge()
     {
         BarcodeSvgResult result = VerifiablBarcode.CreateSvg(
@@ -89,16 +104,18 @@ public class NodeSdkParityTests
     /// scannability proof.
     /// </summary>
     [Theory]
-    [InlineData("png-default-1440", 1440, false, false, null)]
-    [InlineData("png-default-720", 720, false, false, null)]
-    [InlineData("png-sandbox-q-480", 480, true, true, null)]
-    [InlineData("png-v1-default-720", 720, false, false, BarcodePayloadFormat.V1)]
+    [InlineData("png-default-1440", 1440, false, false, null, false)]
+    [InlineData("png-default-720", 720, false, false, null, false)]
+    [InlineData("png-short-default-480", 480, false, false, null, true)]
+    [InlineData("png-sandbox-q-480", 480, true, true, null, false)]
+    [InlineData("png-v1-default-720", 720, false, false, BarcodePayloadFormat.V1, false)]
     public void PngRasterMatchesTheNodeCompositor(
         string caseName,
         int pixelWidth,
         bool sandbox,
         bool quartile,
-        BarcodePayloadFormat? format)
+        BarcodePayloadFormat? format,
+        bool shortPayload)
     {
         var options = new BarcodeSvgOptions
         {
@@ -113,7 +130,7 @@ public class NodeSdkParityTests
         }
 
         Internal.PngBadgeRenderer.CompositedBadge badge = Internal.PngBadgeRenderer.Compose(
-            new BarcodeParts(Reference, Ciphertext()),
+            new BarcodeParts(Reference, shortPayload ? "AA" : Ciphertext()),
             options,
             pixelWidth);
 

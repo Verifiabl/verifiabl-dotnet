@@ -55,7 +55,6 @@ internal static class PngBadgeRenderer
             frame.Width,
             selected.Qr,
             selected.Size,
-            selected.InsetModules,
             pixelWidth);
 
         return new CompositedBadge(

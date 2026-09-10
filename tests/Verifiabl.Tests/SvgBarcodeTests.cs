@@ -58,16 +58,33 @@ public class SvgBarcodeTests
             new BarcodeParts(Reference, RealisticCiphertext()));
 
         Assert.Equal(480, result.Width);
-        Assert.Equal(755, result.Height);
-        Assert.StartsWith("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"480\" height=\"755\" ", result.Svg);
-        Assert.Contains("viewBox=\"0 0 96 151\"", result.Svg);
+        Assert.Equal(750, result.Height);
+        Assert.StartsWith("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"480\" height=\"750\" ", result.Svg);
+        Assert.Contains("viewBox=\"0 0 96 150\"", result.Svg);
         Assert.Contains("aria-label=\"Secured by Verifiabl verification barcode\"", result.Svg);
-        // White frame body, grey border, navy header.
-        Assert.Contains("<rect x=\"1\" y=\"1\" width=\"94\" height=\"149\" rx=\"7\" fill=\"#FFFFFF\"/>", result.Svg);
-        Assert.Contains("stroke=\"#ADADAD\"", result.Svg);
+        // No border: a full-width white ground under the header and the QR box,
+        // then the navy header on top of it.
+        Assert.Matches(
+            "^<svg [^>]*><rect x=\"0\" y=\"39\" width=\"96\" height=\"111\" fill=\"#FFFFFF\"/><path d=\"M0 8C0 3\\.58172",
+            result.Svg);
         Assert.Contains("fill=\"#010A4F\"", result.Svg);
+        Assert.DoesNotContain("stroke=", result.Svg);
+        Assert.DoesNotContain("<rect x=\"1\" y=\"1\"", result.Svg);
         // Three rounded finder patterns.
         Assert.Equal(3, Regex.Matches(result.Svg, "fill-rule=\"evenodd\"").Count);
+    }
+
+    [Fact]
+    public void SpansTheFullBadgeWidthForEveryPayload()
+    {
+        foreach (string ciphertext in new[] { "AA", RealisticCiphertext() })
+        {
+            BarcodeSvgResult result = VerifiablBarcode.CreateSvg(
+                new BarcodeParts(Reference, ciphertext));
+
+            Assert.Contains("<g transform=\"translate(0 54)\"><g shape-rendering=\"crispEdges\">", result.Svg);
+            Assert.Equal(Math.Round(480.0 / (17 + 4 * result.QrVersion), 2), result.ModulePx);
+        }
     }
 
     [Fact]
@@ -80,8 +97,8 @@ public class SvgBarcodeTests
 
         Assert.Equal(small.Width, large.Width);
         Assert.Equal(small.Height, large.Height);
-        Assert.Contains("viewBox=\"0 0 96 151\"", small.Svg);
-        Assert.Contains("viewBox=\"0 0 96 151\"", large.Svg);
+        Assert.Contains("viewBox=\"0 0 96 150\"", small.Svg);
+        Assert.Contains("viewBox=\"0 0 96 150\"", large.Svg);
     }
 
     [Fact]
@@ -92,8 +109,8 @@ public class SvgBarcodeTests
             new BarcodeSvgOptions { Width = 720 });
 
         Assert.Equal(720, result.Width);
-        Assert.Equal(1132.5, result.Height);
-        Assert.StartsWith("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"720\" height=\"1132.5\" ", result.Svg);
+        Assert.Equal(1125, result.Height);
+        Assert.StartsWith("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"720\" height=\"1125\" ", result.Svg);
     }
 
     [Theory]
