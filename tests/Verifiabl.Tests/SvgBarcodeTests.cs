@@ -83,7 +83,7 @@ public class SvgBarcodeTests
                 new BarcodeParts(Reference, ciphertext));
 
             Assert.Contains("<g transform=\"translate(0 54)\"><g shape-rendering=\"crispEdges\">", result.Svg);
-            Assert.Equal(Math.Round(480.0 / (17 + 4 * result.QrVersion), 2), result.ModulePx);
+            Assert.Equal(Math.Round(480.0 / (17.0 + 4.0 * result.QrVersion), 2), result.ModulePx);
         }
     }
 
