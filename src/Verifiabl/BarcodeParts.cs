@@ -9,9 +9,9 @@ public sealed class BarcodeParts
     /// (or generated with <see cref="VerifiablReference.Generate"/> for batches).
     /// </param>
     /// <param name="encryptedPii">
-    /// Encrypted PII ciphertext (base64url) from <see cref="VerifiablCrypto.EncryptPii"/>.
+    /// Encrypted PII ciphertext bytes from <see cref="VerifiablCrypto.EncryptPii"/>.
     /// </param>
-    public BarcodeParts(string verifiablReference, string encryptedPii)
+    public BarcodeParts(string verifiablReference, byte[] encryptedPii)
     {
         VerifiablReference = verifiablReference;
         EncryptedPii = encryptedPii;
@@ -20,6 +20,6 @@ public sealed class BarcodeParts
     /// <summary>Verifiabl reference registered for this payslip.</summary>
     public string VerifiablReference { get; }
 
-    /// <summary>Encrypted PII ciphertext (base64url).</summary>
-    public string EncryptedPii { get; }
+    /// <summary>Encrypted PII ciphertext bytes.</summary>
+    public byte[] EncryptedPii { get; }
 }

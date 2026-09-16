@@ -12,8 +12,8 @@ public class ClientRetryTests
 
     private static EncryptionMetadata Metadata() => new()
     {
-        Iv = "AAAAAAAAAAAAAAAA",
-        Tag = "AAAAAAAAAAAAAAAAAAAAAA",
+        Iv = new byte[12],
+        Tag = new byte[16],
     };
 
     private static RegisterNonPiiRequest SingleRequest() => new()
@@ -77,7 +77,7 @@ public class ClientRetryTests
         IssuedAt = new DateTimeOffset(2026, 5, 31, 0, 0, 0, TimeSpan.Zero),
         PayslipNonPii = new PayslipNonPii { PeriodStart = "2026-05-01", PeriodEnd = "2026-05-31" },
         EncryptionMetadata = Metadata(),
-        EncryptedPii = "abc123DEF456-_",
+        EncryptedPii = TestBinary.DecodeBase64Url("abc123DEF456-_"),
     };
 
     [Fact]

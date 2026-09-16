@@ -129,10 +129,15 @@ P2 preserves valid Unicode without normalization. Writers limit the complete pla
 framing and delimiters, to 1024 UTF-8 bytes. Readers continue to accept oversized P2 plaintext from
 legacy documents. The pipe, malformed Unicode, and Unicode General Categories Cc (control), Cf
 (format), Zl (line separator), and Zp (paragraph separator) are rejected before encryption. Ordinary
-international Unicode remains
-valid. A v2 QR uses the short scan host with `#2.<BASE32>` and an explicit byte/alphanumeric
-segment split; its XMP copy is the matching `2|reference|BASE32` returned by
+international Unicode remains valid. A v2 QR uses uppercase, unpadded RFC 4648 Base32 and the
+short scan host with `#2.<BASE32>`, with an explicit byte/alphanumeric segment split; its XMP copy
+is the matching `2|reference|BASE32` returned by
 `VerifiablBarcode.BuildPayload(parts)`.
+
+Ciphertext, IV, and authentication tags are binary values and the SDK exposes
+all three as `byte[]`. You can persist them directly in binary database columns.
+The SDK performs encoding only at an external boundary: base64url for issuer API
+requests and legacy v1 output, or Base32 for v2 barcode and XMP output.
 
 V1/P1 remain permanently supported for existing documents and emergency writer rollback. Select
 both explicitly so QR and XMP never mix versions:

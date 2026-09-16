@@ -6,6 +6,17 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.0]
+
+### Changed
+
+- **Breaking:** ciphertext, AES-GCM IV, and authentication tag values are now
+  exposed and accepted as `byte[]` throughout the public API. The SDK applies
+  base64url encoding only when sending the issuer API or building legacy v1
+  output, and Base32 encoding when building v2 barcode and XMP output. This
+  allows integrations to persist the values directly in binary database columns
+  without decoding and re-encoding SDK strings.
+
 ## [0.7.1]
 
 ### Fixed

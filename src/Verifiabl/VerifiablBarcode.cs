@@ -57,14 +57,14 @@ public static class VerifiablBarcode
         string reference = VerifiablReference.Validate(
             parts.VerifiablReference,
             nameof(parts.VerifiablReference));
-        string ciphertext = Validation.ValidateCiphertext(
+        byte[] ciphertext = Validation.ValidateCiphertext(
             parts.EncryptedPii,
             nameof(parts.EncryptedPii));
         format = ValidateFormat(format, nameof(format));
 
         return format == BarcodePayloadFormat.V1
-            ? $"{V1PayloadVersion}|{reference}|{ciphertext}"
-            : $"{V2PayloadVersion}|{reference}|{VerifiablBase32.Encode(Base64Url.DecodeCanonical(ciphertext))}";
+            ? $"{V1PayloadVersion}|{reference}|{Base64Url.Encode(ciphertext)}"
+            : $"{V2PayloadVersion}|{reference}|{VerifiablBase32.Encode(ciphertext)}";
     }
 
     /// <summary>
@@ -103,16 +103,16 @@ public static class VerifiablBarcode
         string reference = VerifiablReference.Validate(
             parts.VerifiablReference,
             nameof(parts.VerifiablReference));
-        string ciphertext = Validation.ValidateCiphertext(
+        byte[] ciphertext = Validation.ValidateCiphertext(
             parts.EncryptedPii,
             nameof(parts.EncryptedPii));
 
         if (format == BarcodePayloadFormat.V1)
         {
-            return $"{baseUrl}/v/{reference}{V1ScanUrlFragmentMarker}{ciphertext}";
+            return $"{baseUrl}/v/{reference}{V1ScanUrlFragmentMarker}{Base64Url.Encode(ciphertext)}";
         }
 
-        string base32 = VerifiablBase32.Encode(Base64Url.DecodeCanonical(ciphertext));
+        string base32 = VerifiablBase32.Encode(ciphertext);
         return $"{baseUrl}/v/{reference}{V2ScanUrlFragmentMarker}{base32}";
     }
 

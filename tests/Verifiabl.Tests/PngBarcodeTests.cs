@@ -9,9 +9,10 @@ public class PngBarcodeTests
 {
     private const string Reference = "u0FE9WLIS7GYKQnpJPygBw";
 
-    private static string Ciphertext()
+    private static byte[] Ciphertext()
     {
-        return string.Concat(Enumerable.Repeat("Ab3", 80)) + "Zz19-w";
+        return TestBinary.DecodeBase64Url(
+            string.Concat(Enumerable.Repeat("Ab3", 80)) + "Zz19-w");
     }
 
     private static BarcodeParts Parts()

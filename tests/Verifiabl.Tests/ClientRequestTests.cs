@@ -36,8 +36,8 @@ public class ClientRequestTests
         },
         EncryptionMetadata = new EncryptionMetadata
         {
-            Iv = "AAAAAAAAAAAAAAAA",
-            Tag = "AAAAAAAAAAAAAAAAAAAAAA",
+            Iv = new byte[12],
+            Tag = new byte[16],
         },
     };
 
@@ -336,7 +336,7 @@ public class ClientRequestTests
             IssuedAt = DateTimeOffset.UtcNow,
             PayslipNonPii = new PayslipNonPii { PeriodStart = "2026-05-01", PeriodEnd = "2026-05-31" },
             EncryptionMetadata = ValidRequest().EncryptionMetadata,
-            EncryptedPii = "abc123",
+            EncryptedPii = TestBinary.DecodeBase64Url("abc12w"),
         };
         RegisterAndBuildBarcodeResponse response = await client.RegisterAndBuildBarcodeAsync(request);
 
@@ -347,7 +347,7 @@ public class ClientRequestTests
             "https://register.verifiabl.io/v1/registerAndBuildBarcode",
             Assert.Single(handler.Requests).Uri.ToString());
         using JsonDocument body = JsonDocument.Parse(handler.Requests[0].Body);
-        Assert.Equal("abc123", body.RootElement.GetProperty("encrypted_pii").GetString());
+        Assert.Equal("abc12w", body.RootElement.GetProperty("encrypted_pii").GetString());
     }
 
     [Fact]

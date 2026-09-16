@@ -7,9 +7,9 @@ namespace Verifiabl;
 /// </summary>
 public sealed class EncryptionMetadata
 {
-    /// <summary>96-bit IV, exactly 16 base64url characters.</summary>
-    public required string Iv { get; set; }
+    /// <summary>96-bit (12-byte) IV.</summary>
+    public required byte[] Iv { get; set; }
 
-    /// <summary>128-bit GCM authentication tag, exactly 22 base64url characters.</summary>
-    public required string Tag { get; set; }
+    /// <summary>128-bit (16-byte) GCM authentication tag.</summary>
+    public required byte[] Tag { get; set; }
 }

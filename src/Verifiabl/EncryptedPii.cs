@@ -3,17 +3,17 @@ namespace Verifiabl;
 /// <summary>Result of <see cref="VerifiablCrypto.EncryptPii"/>.</summary>
 public sealed class EncryptedPii
 {
-    internal EncryptedPii(string ciphertext, EncryptionMetadata metadata)
+    internal EncryptedPii(byte[] ciphertext, EncryptionMetadata metadata)
     {
         Ciphertext = ciphertext;
         Metadata = metadata;
     }
 
     /// <summary>
-    /// Base64url ciphertext to embed in the barcode or send with
-    /// <see cref="Client.VerifiablClient.RegisterAndBuildBarcodeAsync"/>.
+    /// AES-256-GCM ciphertext bytes to store or pass to the barcode and client APIs.
+    /// The SDK applies Base32 or base64url encoding at the relevant output boundary.
     /// </summary>
-    public string Ciphertext { get; }
+    public byte[] Ciphertext { get; }
 
     /// <summary>Server-side decryption metadata for the registration endpoints.</summary>
     public EncryptionMetadata Metadata { get; }

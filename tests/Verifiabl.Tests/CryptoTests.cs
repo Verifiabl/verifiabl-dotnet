@@ -14,22 +14,6 @@ public class CryptoTests
         return key;
     }
 
-    private static byte[] FromBase64Url(string value)
-    {
-        string padded = value.Replace('-', '+').Replace('_', '/');
-        switch (padded.Length % 4)
-        {
-            case 2:
-                padded += "==";
-                break;
-            case 3:
-                padded += "=";
-                break;
-        }
-
-        return Convert.FromBase64String(padded);
-    }
-
     [Fact]
     public void ProducesTheVerifiablCiphertextShape()
     {
@@ -38,12 +22,9 @@ public class CryptoTests
 
         EncryptedPii encrypted = VerifiablCrypto.EncryptPii(plaintext, key);
 
-        // 96-bit IV = 16 base64url chars; 128-bit tag = 22 base64url chars.
-        Assert.Equal(16, encrypted.Metadata.Iv!.Length);
-        Assert.Equal(22, encrypted.Metadata.Tag!.Length);
-        Assert.Matches("^[A-Za-z0-9_-]+$", encrypted.Ciphertext);
-        Assert.Matches("^[A-Za-z0-9_-]+$", encrypted.Metadata.Iv);
-        Assert.Matches("^[A-Za-z0-9_-]+$", encrypted.Metadata.Tag);
+        Assert.Equal(12, encrypted.Metadata.Iv.Length);
+        Assert.Equal(16, encrypted.Metadata.Tag.Length);
+        Assert.Equal(Encoding.UTF8.GetByteCount(plaintext), encrypted.Ciphertext.Length);
     }
 
     [Fact]
@@ -59,13 +40,12 @@ public class CryptoTests
 
         EncryptedPii encrypted = VerifiablCrypto.EncryptPii(plaintext, key);
 
-        byte[] ciphertext = FromBase64Url(encrypted.Ciphertext);
-        byte[] decrypted = new byte[ciphertext.Length];
+        byte[] decrypted = new byte[encrypted.Ciphertext.Length];
         using var aes = new AesGcm(key, 16);
         aes.Decrypt(
-            FromBase64Url(encrypted.Metadata.Iv!),
-            ciphertext,
-            FromBase64Url(encrypted.Metadata.Tag!),
+            encrypted.Metadata.Iv,
+            encrypted.Ciphertext,
+            encrypted.Metadata.Tag,
             decrypted);
 
         Assert.Equal(plaintext, Encoding.UTF8.GetString(decrypted));
@@ -77,15 +57,14 @@ public class CryptoTests
         byte[] key = NewKey();
         EncryptedPii encrypted = VerifiablCrypto.EncryptPii("P1|Jane||||||", key);
 
-        byte[] ciphertext = FromBase64Url(encrypted.Ciphertext);
-        ciphertext[0] ^= 0xFF;
-        byte[] decrypted = new byte[ciphertext.Length];
+        encrypted.Ciphertext[0] ^= 0xFF;
+        byte[] decrypted = new byte[encrypted.Ciphertext.Length];
         using var aes = new AesGcm(key, 16);
 
         Assert.ThrowsAny<CryptographicException>(() => aes.Decrypt(
-            FromBase64Url(encrypted.Metadata.Iv!),
-            ciphertext,
-            FromBase64Url(encrypted.Metadata.Tag!),
+            encrypted.Metadata.Iv,
+            encrypted.Ciphertext,
+            encrypted.Metadata.Tag,
             decrypted));
     }
 
@@ -97,8 +76,8 @@ public class CryptoTests
         EncryptedPii first = VerifiablCrypto.EncryptPii("P1|Jane||||||", key);
         EncryptedPii second = VerifiablCrypto.EncryptPii("P1|Jane||||||", key);
 
-        Assert.NotEqual(first.Metadata.Iv, second.Metadata.Iv);
-        Assert.NotEqual(first.Ciphertext, second.Ciphertext);
+        Assert.False(first.Metadata.Iv.SequenceEqual(second.Metadata.Iv));
+        Assert.False(first.Ciphertext.SequenceEqual(second.Ciphertext));
     }
 
     [Theory]

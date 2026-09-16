@@ -10,7 +10,8 @@ internal static class Validation
         "^[a-z]{2}\\.[a-z]+\\.v[0-9]+$",
         RegexOptions.CultureInvariant);
 
-    internal const int MaxCiphertextLength = 10_000;
+    // Equivalent to the previous 10,000-character base64url limit.
+    internal const int MaxCiphertextBytes = 7_500;
 
     internal const int MaxExternalIdLength = 255;
 
@@ -31,21 +32,16 @@ internal static class Validation
         return schema;
     }
 
-    internal static string ValidateCiphertext(string? ciphertext, string name)
+    internal static byte[] ValidateCiphertext(byte[]? ciphertext, string name)
     {
         if (ciphertext is null || ciphertext.Length == 0)
         {
             throw new ArgumentException($"{name} must not be empty.", name);
         }
 
-        if (ciphertext.Length > MaxCiphertextLength)
+        if (ciphertext.Length > MaxCiphertextBytes)
         {
             throw new ArgumentException($"{name} exceeds the maximum allowed length.", name);
-        }
-
-        if (!Base64Url.IsBase64Url(ciphertext))
-        {
-            throw new ArgumentException($"{name} must be base64url encoded.", name);
         }
 
         return ciphertext;
@@ -100,17 +96,17 @@ internal static class Validation
             throw new ArgumentException($"{name} is required.", name);
         }
 
-        if (metadata.Iv is null || metadata.Iv.Length != 16 || !Base64Url.IsBase64Url(metadata.Iv))
+        if (metadata.Iv is null || metadata.Iv.Length != 12)
         {
             throw new ArgumentException(
-                $"{name}.Iv must be exactly 16 base64url characters (96-bit IV).",
+                $"{name}.Iv must be exactly 12 bytes (96-bit IV).",
                 name);
         }
 
-        if (metadata.Tag is null || metadata.Tag.Length != 22 || !Base64Url.IsBase64Url(metadata.Tag))
+        if (metadata.Tag is null || metadata.Tag.Length != 16)
         {
             throw new ArgumentException(
-                $"{name}.Tag must be exactly 22 base64url characters (128-bit GCM tag).",
+                $"{name}.Tag must be exactly 16 bytes (128-bit GCM tag).",
                 name);
         }
     }

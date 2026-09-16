@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text;
-using Verifiabl.Internal;
 
 namespace Verifiabl;
 
@@ -10,9 +9,9 @@ namespace Verifiabl;
 /// <remarks>
 /// <para>
 /// Verifiabl decrypts barcode ciphertext with AES-256-GCM using a 96-bit IV and a
-/// 128-bit authentication tag. The IV, tag, and ciphertext are base64url encoded
-/// without padding. <see cref="EncryptPii"/> produces exactly that shape from a
-/// formatted PII string and your provider key.
+/// 128-bit authentication tag. <see cref="EncryptPii"/> returns the IV, tag, and
+/// ciphertext as bytes; the SDK applies the required encoding when it sends an API
+/// request or builds a barcode.
 /// </para>
 /// <para>
 /// Each provider has its own encryption key, so a ciphertext can only be
@@ -96,10 +95,10 @@ public static class VerifiablCrypto
 
         var metadata = new EncryptionMetadata
         {
-            Iv = Base64Url.Encode(iv),
-            Tag = Base64Url.Encode(tag),
+            Iv = iv,
+            Tag = tag,
         };
 
-        return new EncryptedPii(Base64Url.Encode(ciphertext), metadata);
+        return new EncryptedPii(ciphertext, metadata);
     }
 }
