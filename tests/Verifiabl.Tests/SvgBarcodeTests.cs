@@ -11,7 +11,7 @@ public class SvgBarcodeTests
 {
     private const string Reference = "u0FE9WLIS7GYKQnpJPygBw";
 
-    private static string RealisticCiphertext()
+    private static byte[] RealisticCiphertext()
     {
         string pii = Pii.Format(new PiiFields
         {
@@ -29,7 +29,7 @@ public class SvgBarcodeTests
         // failed to decode at this test's synthetic scale.
         byte[] bytes = new byte[Encoding.UTF8.GetByteCount(pii)];
         new Random(20260727).NextBytes(bytes);
-        return Internal.Base64Url.Encode(bytes);
+        return bytes;
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class SvgBarcodeTests
     [Fact]
     public void SpansTheFullBadgeWidthForEveryPayload()
     {
-        foreach (BarcodeSvgResult result in new[] { "AA", RealisticCiphertext() }
+        foreach (BarcodeSvgResult result in new[] { new byte[1], RealisticCiphertext() }
                      .Select(ciphertext => VerifiablBarcode.CreateSvg(
                          new BarcodeParts(Reference, ciphertext))))
         {
@@ -90,7 +90,7 @@ public class SvgBarcodeTests
     public void KeepsFrameGeometryFixedAsPayloadSizeChanges()
     {
         BarcodeSvgResult small = VerifiablBarcode.CreateSvg(
-            new BarcodeParts(Reference, "aaaa"));
+            new BarcodeParts(Reference, new byte[3]));
         BarcodeSvgResult large = VerifiablBarcode.CreateSvg(
             new BarcodeParts(Reference, RealisticCiphertext()));
 
@@ -174,9 +174,9 @@ public class SvgBarcodeTests
     [Fact]
     public void HardErrorsWhenPiiCannotFitTheFixedFrame()
     {
-        // ~2900 characters still encodes as a QR code, but not at a scannable
+        // This ciphertext still encodes as a QR code, but not at a scannable
         // module size inside the fixed frame at width 480.
-        string huge = new('a', 2900);
+        byte[] huge = new byte[2_175];
 
         var exception = Assert.Throws<InvalidOperationException>(
             () => VerifiablBarcode.CreateSvg(new BarcodeParts(Reference, huge)));
@@ -188,7 +188,7 @@ public class SvgBarcodeTests
     public void ThrowsAClearErrorWhenContentExceedsQrCapacityEntirely()
     {
         // Beyond version 40 byte capacity at every error-correction level.
-        string beyondCapacity = new('a', 9000);
+        byte[] beyondCapacity = new byte[6_750];
 
         var exception = Assert.Throws<InvalidOperationException>(
             () => VerifiablBarcode.CreateSvg(new BarcodeParts(Reference, beyondCapacity)));

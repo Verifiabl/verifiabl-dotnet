@@ -19,8 +19,8 @@ public class ServiceCollectionTests
         PayslipNonPii = new PayslipNonPii { PeriodStart = "2026-05-01", PeriodEnd = "2026-05-31" },
         EncryptionMetadata = new EncryptionMetadata
         {
-            Iv = "AAAAAAAAAAAAAAAA",
-            Tag = "AAAAAAAAAAAAAAAAAAAAAA",
+            Iv = new byte[12],
+            Tag = new byte[16],
         },
     };
 

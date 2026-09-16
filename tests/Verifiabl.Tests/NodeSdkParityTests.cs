@@ -13,9 +13,10 @@ public class NodeSdkParityTests
 {
     private const string Reference = "u0FE9WLIS7GYKQnpJPygBw";
 
-    private static string Ciphertext()
+    private static byte[] Ciphertext()
     {
-        return string.Concat(Enumerable.Repeat("Ab3", 80)) + "Zz19-w";
+        return TestBinary.DecodeBase64Url(
+            string.Concat(Enumerable.Repeat("Ab3", 80)) + "Zz19-w");
     }
 
     private static string Fixture(string name)
@@ -45,7 +46,7 @@ public class NodeSdkParityTests
     public void MatchesTheNodeRendererForAShortBadge()
     {
         BarcodeSvgResult result = VerifiablBarcode.CreateSvg(
-            new BarcodeParts(Reference, "AA"));
+            new BarcodeParts(Reference, TestBinary.DecodeBase64Url("AA")));
 
         using JsonDocument meta = JsonDocument.Parse(Fixture("node-svg-meta.json"));
         JsonElement expected = meta.RootElement.GetProperty("short-default-480");
@@ -130,7 +131,9 @@ public class NodeSdkParityTests
         }
 
         Internal.PngBadgeRenderer.CompositedBadge badge = Internal.PngBadgeRenderer.Compose(
-            new BarcodeParts(Reference, shortPayload ? "AA" : Ciphertext()),
+            new BarcodeParts(
+                Reference,
+                shortPayload ? TestBinary.DecodeBase64Url("AA") : Ciphertext()),
             options,
             pixelWidth);
 

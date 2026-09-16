@@ -23,8 +23,8 @@ public class ClientBatchTests
         },
         EncryptionMetadata = new EncryptionMetadata
         {
-            Iv = "AAAAAAAAAAAAAAAA",
-            Tag = "AAAAAAAAAAAAAAAAAAAAAA",
+            Iv = new byte[12],
+            Tag = new byte[16],
         },
     };
 

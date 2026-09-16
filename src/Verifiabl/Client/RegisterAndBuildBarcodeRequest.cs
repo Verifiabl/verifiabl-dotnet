@@ -21,6 +21,6 @@ public sealed class RegisterAndBuildBarcodeRequest
     /// <summary>Decryption metadata from <see cref="VerifiablCrypto.EncryptPii"/>.</summary>
     public required EncryptionMetadata EncryptionMetadata { get; set; }
 
-    /// <summary>Base64url AES-256-GCM ciphertext of the formatted PII plaintext.</summary>
-    public required string EncryptedPii { get; set; }
+    /// <summary>AES-256-GCM ciphertext bytes of the formatted PII plaintext.</summary>
+    public required byte[] EncryptedPii { get; set; }
 }

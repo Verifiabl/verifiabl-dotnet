@@ -5,7 +5,8 @@ namespace Verifiabl.Tests;
 public class PayloadTests
 {
     private const string Reference = "u0FE9WLIS7GYKQnpJPygBw";
-    private const string Ciphertext = "abc123DEF456-w";
+    private const string EncodedCiphertext = "abc123DEF456-w";
+    private static byte[] Ciphertext => TestBinary.DecodeBase64Url(EncodedCiphertext);
 
     [Fact]
     public void BuildsTheV1PayloadForRollback()
@@ -14,30 +15,22 @@ public class PayloadTests
             new BarcodeParts(Reference, Ciphertext),
             BarcodePayloadFormat.V1);
 
-        Assert.Equal($"1|{Reference}|{Ciphertext}", payload);
+        Assert.Equal($"1|{Reference}|{EncodedCiphertext}", payload);
     }
 
     [Fact]
     public void BuildsTheV2XmpPayloadByDefault()
     {
         string payload = VerifiablBarcode.BuildPayload(
-            new BarcodeParts(Reference, "Zm9vYmFy"));
+            new BarcodeParts(Reference, TestBinary.DecodeBase64Url("Zm9vYmFy")));
 
         Assert.Equal($"2|{Reference}|MZXW6YTBOI", payload);
     }
 
     [Fact]
-    public void RejectsNonCanonicalBase64UrlBeforeWritingV2()
-    {
-        Assert.Throws<ArgumentException>(() => VerifiablBarcode.BuildPayload(
-            new BarcodeParts(Reference, "Zh"),
-            BarcodePayloadFormat.V2));
-    }
-
-    [Fact]
     public void BuildsTheOptInV2XmpPayloadFromExactCiphertextBytes()
     {
-        const string ciphertext = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8";
+        byte[] ciphertext = Enumerable.Range(0, 32).Select(value => (byte)value).ToArray();
         string payload = VerifiablBarcode.BuildPayload(
             new BarcodeParts(Reference, ciphertext),
             BarcodePayloadFormat.V2);
@@ -58,29 +51,25 @@ public class PayloadTests
             () => VerifiablBarcode.BuildPayload(new BarcodeParts(reference, Ciphertext)));
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("not base64url!")]
-    [InlineData("has=padding")]
-    [InlineData("abcde")] // length % 4 == 1 can never decode
-    public void RejectsMalformedCiphertext(string ciphertext)
+    [Fact]
+    public void RejectsEmptyCiphertext()
     {
         Assert.Throws<ArgumentException>(
-            () => VerifiablBarcode.BuildPayload(new BarcodeParts(Reference, ciphertext)));
+            () => VerifiablBarcode.BuildPayload(new BarcodeParts(Reference, Array.Empty<byte>())));
     }
 
     [Fact]
     public void RejectsOverlongCiphertext()
     {
         Assert.Throws<ArgumentException>(() => VerifiablBarcode.BuildPayload(
-            new BarcodeParts(Reference, new string('a', 10_001))));
+            new BarcodeParts(Reference, new byte[7_501])));
     }
 
     [Fact]
     public void BuildsTheV2ProductionScanUrlByDefault()
     {
         string url = VerifiablBarcode.BuildScanUrl(
-            new BarcodeParts(Reference, "Zm9vYmFy"));
+            new BarcodeParts(Reference, TestBinary.DecodeBase64Url("Zm9vYmFy")));
 
         Assert.Equal($"https://v.verifiabl.io/v/{Reference}#2.MZXW6YTBOI", url);
     }
@@ -91,7 +80,7 @@ public class PayloadTests
     public void KeepsTheCiphertextOutOfEverythingTheServerReceives()
     {
         var url = new Uri(VerifiablBarcode.BuildScanUrl(
-            new BarcodeParts(Reference, "Zm9vYmFy")));
+            new BarcodeParts(Reference, TestBinary.DecodeBase64Url("Zm9vYmFy"))));
 
         Assert.DoesNotContain("MZXW6YTBOI", url.AbsolutePath);
         Assert.Empty(url.Query);
@@ -102,13 +91,13 @@ public class PayloadTests
     public void BuildsTheExplicitV2ShortHostScanUrl()
     {
         string url = VerifiablBarcode.BuildScanUrl(
-            new BarcodeParts(Reference, "Zm9vYmFy"),
+            new BarcodeParts(Reference, TestBinary.DecodeBase64Url("Zm9vYmFy")),
             new ScanUrlOptions { Format = BarcodePayloadFormat.V2 });
 
         Assert.Equal($"https://v.verifiabl.io/v/{Reference}#2.MZXW6YTBOI", url);
         Assert.Equal(
             VerifiablBarcode.BuildPayload(
-                new BarcodeParts(Reference, "Zm9vYmFy"),
+                new BarcodeParts(Reference, TestBinary.DecodeBase64Url("Zm9vYmFy")),
                 BarcodePayloadFormat.V2).Split('|')[2],
             url.Split(new[] { "#2." }, StringSplitOptions.None)[1]);
     }
@@ -117,7 +106,7 @@ public class PayloadTests
     public void BuildsTheV2SandboxShortHostScanUrl()
     {
         string url = VerifiablBarcode.BuildScanUrl(
-            new BarcodeParts(Reference, "Zm9vYmFy"),
+            new BarcodeParts(Reference, TestBinary.DecodeBase64Url("Zm9vYmFy")),
             new ScanUrlOptions
             {
                 Format = BarcodePayloadFormat.V2,
@@ -139,7 +128,7 @@ public class PayloadTests
             });
 
         Assert.StartsWith("https://verify.sandbox.verifiabl.io/v/", url);
-        Assert.Equal($"#1.{Ciphertext}", new Uri(url).Fragment);
+        Assert.Equal($"#1.{EncodedCiphertext}", new Uri(url).Fragment);
     }
 
     [Fact]

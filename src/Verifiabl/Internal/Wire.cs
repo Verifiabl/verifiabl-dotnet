@@ -51,9 +51,9 @@ internal static class Wire
             request.IssuedAt,
             request.PayslipNonPii,
             request.EncryptionMetadata);
-        body["encrypted_pii"] = Validation.ValidateCiphertext(
+        body["encrypted_pii"] = Base64Url.Encode(Validation.ValidateCiphertext(
             request.EncryptedPii,
-            "request.EncryptedPii");
+            "request.EncryptedPii"));
         return body;
     }
 
@@ -145,8 +145,8 @@ internal static class Wire
         body["payslip_non_pii"] = PayslipNonPiiFields(payslipNonPii, $"{label}.PayslipNonPii");
         body["encryption_metadata"] = new JsonObject
         {
-            ["iv"] = encryptionMetadata!.Iv,
-            ["tag"] = encryptionMetadata.Tag,
+            ["iv"] = Base64Url.Encode(encryptionMetadata!.Iv),
+            ["tag"] = Base64Url.Encode(encryptionMetadata.Tag),
         };
         return body;
     }
