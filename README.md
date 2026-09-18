@@ -151,16 +151,19 @@ string legacyXmpPayload = VerifiablBarcode.BuildPayload(parts, BarcodePayloadFor
 
 ### Development
 
-Install the .NET 8 and .NET 10 SDKs, matching the versions exercised by public CI, then restore,
-build, and test with the standard .NET CLI:
+Install the .NET 8 and .NET 10 SDKs, matching the toolchains and targeting packs exercised by public
+CI, then restore, build, and test with the standard .NET CLI:
 
 ```bash
-dotnet restore
+dotnet restore --locked-mode
 dotnet build --configuration Release --no-restore
 dotnet test --configuration Release --no-build
 ```
 
-Linux and macOS can build all library targets. Windows CI runs the .NET Framework 4.7.2 tests.
+The committed `global.json` keeps builds on the latest installed .NET 10 feature band, while the
+`packages.lock.json` files make restores and CI dependency caches deterministic. After an intentional
+package update, run `dotnet restore --force-evaluate` and commit the resulting lockfile changes. Linux
+and macOS can build all library targets. Windows CI additionally runs the .NET Framework 4.7.2 tests.
 
 
 The compiler enforces the mandatory fields: `Schema`, `IssuedAt`, `PayslipNonPii`, and `EncryptionMetadata` are `required`, so an incomplete request will not build.
@@ -216,6 +219,10 @@ foreach (BatchRecordResult result in batch.Results)
     }
 }
 ```
+
+## Executable example
+
+[`examples/SelfManagedIssuer`](./examples/SelfManagedIssuer/) is a small executable version of the self-managed flow above. It registers one fictional payslip against the sandbox and writes its SVG barcode and matching PDF XMP payload. Repository CI restores the application from the packed NuGet package and compiles it as a package-consumer release test without making a sandbox request.
 
 ## Environments
 

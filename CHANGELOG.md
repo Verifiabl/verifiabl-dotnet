@@ -6,6 +6,17 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.0]
+
+### Removed
+
+- **Breaking:** Removed the obsolete `Pii.AddressMaxBytes` constant. P2 has no
+  address-specific byte limit; `Pii.PayloadMaxBytes` defines the 1024 UTF-8 byte
+  limit for the complete newly written P2 plaintext, including framing and
+  delimiters.
+- **Breaking:** removed `VerifiablAuth.ApiKey`. Issuer API authentication now
+  requires OAuth client credentials so access tokens are refreshed automatically.
+
 ## [0.8.0]
 
 ### Changed

@@ -33,10 +33,6 @@ public static class Pii
     /// <remarks>P2 does not have a per-field limit.</remarks>
     public const int FieldMaxUtf16CodeUnits = 256;
 
-    /// <summary>Former P2 address limit, retained for API compatibility.</summary>
-    /// <remarks>This value is not enforced for P2, which has no address-specific limit.</remarks>
-    public const int AddressMaxBytes = 320;
-
     /// <summary>Maximum UTF-8 size of complete newly written P2 plaintext, including framing.</summary>
     public const int PayloadMaxBytes = 1024;
 

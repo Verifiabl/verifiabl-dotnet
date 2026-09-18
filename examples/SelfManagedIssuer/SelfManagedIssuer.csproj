@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <UseAppHost>false</UseAppHost>
+    <VerifiablIssuerVersion Condition="'$(VerifiablIssuerVersion)' == ''">0.9.0</VerifiablIssuerVersion>
+    <!-- The packed-package check substitutes a newly built package at this same version. -->
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Verifiabl.Issuer" Version="$(VerifiablIssuerVersion)" />
+  </ItemGroup>
+
+</Project>

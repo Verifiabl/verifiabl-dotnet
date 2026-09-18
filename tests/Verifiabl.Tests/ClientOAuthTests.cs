@@ -233,14 +233,17 @@ public class ClientOAuthTests
             () => client.RegisterNonPiiAsync(ValidRequest()));
     }
 
-    [Fact]
-    public async Task AcceptsALowercaseBearerTokenType()
+    [Theory]
+    [InlineData("Bearer")]
+    [InlineData("bearer")]
+    [InlineData("BEARER")]
+    public async Task AcceptsBearerTokenTypeCaseInsensitively(string tokenType)
     {
         var handler = new FakeHttpHandler();
         handler.Responder = (request, _, _) => Task.FromResult(IsTokenRequest(request)
             ? FakeHttpHandler.Json(
                 HttpStatusCode.OK,
-                "{\"access_token\":\"t\",\"token_type\":\"bearer\",\"expires_in\":3600}")
+                $"{{\"access_token\":\"t\",\"token_type\":\"{tokenType}\",\"expires_in\":3600}}")
             : FakeHttpHandler.Json(HttpStatusCode.OK, RegistrationJson));
         VerifiablClient client = Client(handler);
 

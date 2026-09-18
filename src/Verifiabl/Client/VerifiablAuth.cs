@@ -4,11 +4,9 @@ namespace Verifiabl.Client;
 /// How the client authenticates to the Verifiabl API.
 /// </summary>
 /// <remarks>
-/// Deployed environments use OAuth2 client credentials: pass the client ID and
-/// secret issued during onboarding via <see cref="ClientCredentials"/> and the
-/// client fetches, caches, and refreshes access tokens automatically. The static
-/// <see cref="ApiKey"/> form sends a fixed bearer token and exists for local
-/// development against a stack that accepts one.
+/// Pass the OAuth2 client ID and secret issued during onboarding via
+/// <see cref="ClientCredentials"/> and the client fetches, caches, and refreshes
+/// access tokens automatically.
 /// </remarks>
 public abstract class VerifiablAuth
 {
@@ -41,17 +39,6 @@ public abstract class VerifiablAuth
         return new ClientCredentialsAuth(clientId.Trim(), clientSecret.Trim(), tokenUrl);
     }
 
-    /// <summary>A fixed bearer token, for local development only.</summary>
-    public static VerifiablAuth ApiKey(string apiKey)
-    {
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            throw new ArgumentException("apiKey must not be empty.", nameof(apiKey));
-        }
-
-        return new ApiKeyAuth(apiKey.Trim());
-    }
-
     internal sealed class ClientCredentialsAuth : VerifiablAuth
     {
         internal ClientCredentialsAuth(string clientId, string clientSecret, Uri? tokenUrl)
@@ -66,15 +53,5 @@ public abstract class VerifiablAuth
         internal string ClientSecret { get; }
 
         internal Uri? TokenUrl { get; }
-    }
-
-    internal sealed class ApiKeyAuth : VerifiablAuth
-    {
-        internal ApiKeyAuth(string apiKey)
-        {
-            Key = apiKey;
-        }
-
-        internal string Key { get; }
     }
 }

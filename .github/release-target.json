@@ -42,28 +42,32 @@
         ]
       ],
       "packCommands": [
-        [
-          "dotnet",
-          "pack",
-          "src/Verifiabl/Verifiabl.csproj",
-          "--configuration",
-          "Release",
-          "--no-build",
-          "--output",
-          "artifacts",
-          "-p:Version={version}"
-        ],
-        [
-          "dotnet",
-          "pack",
-          "src/Verifiabl.Extensions.DependencyInjection/Verifiabl.Extensions.DependencyInjection.csproj",
-          "--configuration",
-          "Release",
-          "--no-build",
-          "--output",
-          "artifacts",
-          "-p:Version={version}"
-        ]
+        {
+          "run": [
+            "dotnet",
+            "pack",
+            "src/Verifiabl/Verifiabl.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--output",
+            "artifacts",
+            "-p:Version={version}"
+          ]
+        },
+        {
+          "run": [
+            "dotnet",
+            "pack",
+            "src/Verifiabl.Extensions.DependencyInjection/Verifiabl.Extensions.DependencyInjection.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--output",
+            "artifacts",
+            "-p:Version={version}"
+          ]
+        }
       ]
     }
   ]

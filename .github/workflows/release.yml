@@ -25,40 +25,52 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: release-${{ github.event.release.tag_name }}
+
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment: nuget-publish
     permissions:
       contents: read
       id-token: write # OIDC token for NuGet trusted publishing
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.release.tag_name }}
-      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+          persist-credentials: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          dotnet-version: |
-            8.0.x
-            10.0.x
-      # This validator and its target config are generated from the private
-      # monorepo's central release-targets.json manifest.
+          path: ${{ github.workspace }}/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages*.lock.json') }}
+      # The validator and target policy are shipped with this repository.
       - name: Resolve and validate the release target
         env:
           TAG: ${{ github.event.release.tag_name }}
-        run: node .github/scripts/release-tool.mjs validate "$TAG"
-      - run: dotnet restore
+        run: node .github/scripts/release-tool.mjs validate-checkout "$TAG"
+      - run: dotnet restore --locked-mode
+        env:
+          NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
       - run: dotnet build --configuration Release --no-restore -p:Version="$VERSION"
+        env:
+          NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
       # Tests gate every publish, mirroring the CI pipeline.
       - run: dotnet test --configuration Release --no-build
+        env:
+          NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
       # Pack commands and the coupled package set come from the generated target config.
       - run: node .github/scripts/release-tool.mjs pack "$RELEASE_TARGET_ID" "$VERSION"
+        env:
+          NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
       - name: NuGet login (OIDC → temp API key)
-        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
         id: login
         with:
           user: ${{ secrets.NUGET_USER }}
-      - name: Push to NuGet.org
+      # Duplicates fail deliberately: a reused tag or partial rerun must never look successful.
+      - name: Push coupled packages to NuGet.org
         env:
           NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
-        run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json

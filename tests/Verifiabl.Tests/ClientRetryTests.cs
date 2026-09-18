@@ -39,9 +39,10 @@ public class ClientRetryTests
         List<TimeSpan> delays,
         Action<VerifiablClientOptions>? configure = null)
     {
+        handler.AutoRespondToTokenRequests = true;
         var options = new VerifiablClientOptions
         {
-            Auth = VerifiablAuth.ApiKey("static-key"),
+            Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret"),
             HttpClient = new HttpClient(handler),
         };
         configure?.Invoke(options);
@@ -308,7 +309,7 @@ public class ClientRetryTests
     {
         Assert.Throws<ArgumentException>(() => new VerifiablClient(new VerifiablClientOptions
         {
-            Auth = VerifiablAuth.ApiKey("static-key"),
+            Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret"),
             MaxRetries = -1,
         }));
     }

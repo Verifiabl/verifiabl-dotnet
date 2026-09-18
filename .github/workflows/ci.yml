@@ -8,6 +8,13 @@ on:
 permissions:
   contents: read
 
+env:
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     strategy:
@@ -16,45 +23,48 @@ jobs:
         # Windows also runs the net472 test target, which cannot run elsewhere.
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Hosted images carry the required SDK and runtimes; global.json selects .NET 10.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          dotnet-version: |
-            8.0.x
-            10.0.x
-      - run: dotnet restore
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages*.lock.json') }}
+      - run: dotnet restore --locked-mode
       - run: dotnet build --configuration Release --no-restore
       - run: dotnet test --configuration Release --no-build
       # Packing validates the NuGet metadata and package layout on every change.
       - run: dotnet pack --configuration Release --no-build --output artifacts
         if: runner.os == 'Linux'
+      - name: Build the issuer example against the packed package
+        if: runner.os == 'Linux'
+        run: node script/packed-package-check.mjs artifacts
 
   format:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          dotnet-version: 10.0.x
-      - run: dotnet format --verify-no-changes
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages*.lock.json') }}
+      - run: dotnet restore --locked-mode
+      - run: dotnet format --verify-no-changes --no-restore
 
   audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          dotnet-version: |
-            8.0.x
-            10.0.x
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages*.lock.json') }}
       # Dependency scanning (SCA): fail on known vulnerabilities, including
       # transitive dependencies. Restore also enforces this via NuGetAuditMode
       # in Directory.Build.props; this job keeps the gate explicit.
-      - run: dotnet restore
+      - run: dotnet restore --locked-mode
       - name: Check for vulnerable dependencies
-        run: |
-          dotnet list package --vulnerable --include-transitive | tee audit.txt
-          if grep -q "has the following vulnerable packages" audit.txt; then
-            exit 1
-          fi
+        run: node script/audit.mjs

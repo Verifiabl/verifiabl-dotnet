@@ -7,6 +7,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AnalysisLevel>latest</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- Commit the complete transitive graph so CI caches are deterministic. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <!-- Fail restore on known-vulnerable dependencies, including transitive ones. -->
     <NuGetAuditMode>all</NuGetAuditMode>
     <WarningsAsErrors>$(WarningsAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsAsErrors>

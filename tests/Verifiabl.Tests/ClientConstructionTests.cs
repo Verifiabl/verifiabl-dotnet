@@ -16,14 +16,6 @@ public class ClientConstructionTests
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void RequiresANonEmptyApiKey(string apiKey)
-    {
-        Assert.Throws<ArgumentException>(() => VerifiablAuth.ApiKey(apiKey));
-    }
-
-    [Theory]
     [InlineData("", "secret")]
     [InlineData("id", "")]
     [InlineData("  ", "secret")]
@@ -38,7 +30,7 @@ public class ClientConstructionTests
     {
         Assert.Throws<ArgumentException>(() => new VerifiablClient(new VerifiablClientOptions
         {
-            Auth = VerifiablAuth.ApiKey("key"),
+            Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret"),
             IssuerBaseUrl = new Uri("http://register.example.com"),
         }));
     }
@@ -48,7 +40,7 @@ public class ClientConstructionTests
     {
         var client = new VerifiablClient(new VerifiablClientOptions
         {
-            Auth = VerifiablAuth.ApiKey("key"),
+            Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret"),
             IssuerBaseUrl = new Uri("http://localhost:8080"),
         });
 
@@ -62,7 +54,7 @@ public class ClientConstructionTests
     {
         Assert.Throws<ArgumentException>(() => new VerifiablClient(new VerifiablClientOptions
         {
-            Auth = VerifiablAuth.ApiKey("key"),
+            Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret"),
             Timeout = TimeSpan.FromSeconds(seconds),
         }));
     }
