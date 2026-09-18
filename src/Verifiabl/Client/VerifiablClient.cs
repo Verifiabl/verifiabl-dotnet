@@ -88,7 +88,7 @@ public sealed class VerifiablClient : IVerifiablClient
             options.Environment,
             $"{nameof(options)}.{nameof(options.Environment)}");
 
-        Uri? tokenUrlOverride = (_auth as VerifiablAuth.ClientCredentialsAuth)?.TokenUrl;
+        Uri? tokenUrlOverride = ((VerifiablAuth.ClientCredentialsAuth)_auth).TokenUrl;
         _tokenUrl = tokenUrlOverride is null
             ? VerifiablEndpoints.TokenUrlFor(environment)
             : ValidateTokenUrl(tokenUrlOverride);
@@ -114,14 +114,14 @@ public sealed class VerifiablClient : IVerifiablClient
 
         VerifiablAuth auth = options.Auth
             ?? throw new ArgumentException(
-                "Auth is required: pass VerifiablAuth.ClientCredentials(...) or VerifiablAuth.ApiKey(...).",
+                "Auth is required: pass VerifiablAuth.ClientCredentials(...).",
                 nameof(options));
 
         VerifiablEndpoints.Validate(
             options.Environment,
             $"{nameof(options)}.{nameof(options.Environment)}");
 
-        Uri? tokenUrlOverride = (auth as VerifiablAuth.ClientCredentialsAuth)?.TokenUrl;
+        Uri? tokenUrlOverride = ((VerifiablAuth.ClientCredentialsAuth)auth).TokenUrl;
         if (tokenUrlOverride is not null)
         {
             ValidateTokenUrl(tokenUrlOverride);
@@ -309,8 +309,7 @@ public sealed class VerifiablClient : IVerifiablClient
         (HttpResponseMessage response, string bearerToken) =
             await SendAsync(path, json, cancellationToken).ConfigureAwait(false);
 
-        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized
-            && _auth is VerifiablAuth.ClientCredentialsAuth)
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {
             // The cached token may have been revoked or expired early; fetch a
             // fresh one and retry exactly once. Only drop the cache if it still
@@ -368,11 +367,6 @@ public sealed class VerifiablClient : IVerifiablClient
 
     private async Task<string> GetBearerTokenAsync(CancellationToken cancellationToken)
     {
-        if (_auth is VerifiablAuth.ApiKeyAuth apiKey)
-        {
-            return apiKey.Key;
-        }
-
         CachedToken? cached = _tokenCache;
         if (cached is not null && cached.IsReusable())
         {

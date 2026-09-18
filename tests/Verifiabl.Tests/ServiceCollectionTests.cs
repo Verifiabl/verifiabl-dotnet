@@ -29,7 +29,7 @@ public class ServiceCollectionTests
     {
         var services = new ServiceCollection();
         services.AddVerifiablClient(options =>
-            options.Auth = VerifiablAuth.ApiKey("static-key"));
+            options.Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret"));
 
         using ServiceProvider provider = services.BuildServiceProvider();
 
@@ -45,7 +45,7 @@ public class ServiceCollectionTests
     public void ConfiguresOptionsFromOtherRegisteredServices()
     {
         var services = new ServiceCollection();
-        services.AddSingleton(VerifiablAuth.ApiKey("from-di"));
+        services.AddSingleton(VerifiablAuth.ClientCredentials("client-id", "client-secret"));
         services.AddVerifiablClient((provider, options) =>
         {
             options.Auth = provider.GetRequiredService<VerifiablAuth>();
@@ -64,7 +64,7 @@ public class ServiceCollectionTests
 
         services.AddVerifiablClient(options =>
         {
-            options.Auth = VerifiablAuth.ApiKey("static-key");
+            options.Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret");
             options.Timeout = TimeSpan.Zero;
         });
 
@@ -113,7 +113,7 @@ public class ServiceCollectionTests
         services.AddVerifiablClient(options =>
         {
             configureCount++;
-            options.Auth = VerifiablAuth.ApiKey("static-key");
+            options.Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret");
             options.HttpClient = httpClient;
         });
 
@@ -132,6 +132,7 @@ public class ServiceCollectionTests
     {
         var handler = new FakeHttpHandler
         {
+            AutoRespondToTokenRequests = true,
             Responder = (_, _, _) => Task.FromResult(FakeHttpHandler.Json(
                 HttpStatusCode.OK,
                 $"{{\"verifiabl_reference\":\"{Reference}\"}}")),
@@ -140,7 +141,7 @@ public class ServiceCollectionTests
         var services = new ServiceCollection();
         services.AddVerifiablClient(options =>
         {
-            options.Auth = VerifiablAuth.ApiKey("static-key");
+            options.Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret");
             options.HttpClient = httpClient;
         });
 
@@ -157,7 +158,7 @@ public class ServiceCollectionTests
     {
         var services = new ServiceCollection();
         services.AddVerifiablClient(options =>
-            options.Auth = VerifiablAuth.ApiKey("static-key"));
+            options.Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret"));
 
         using ServiceProvider provider = services.BuildServiceProvider();
         using HttpClient client = provider
@@ -180,7 +181,7 @@ public class ServiceCollectionTests
         var services = new ServiceCollection();
         services.AddVerifiablClient(options =>
         {
-            options.Auth = VerifiablAuth.ApiKey("static-key");
+            options.Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret");
             options.IssuerBaseUrl = issuerUri;
             options.HttpClient = httpClient;
         });
@@ -225,7 +226,7 @@ public class ServiceCollectionTests
             "tenant",
             (_, _) => throw new InvalidOperationException("Keyed registration should not be resolved."));
         services.AddVerifiablClient(options =>
-            options.Auth = VerifiablAuth.ApiKey("static-key"));
+            options.Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret"));
 
         using ServiceProvider provider = services.BuildServiceProvider();
 
@@ -238,12 +239,12 @@ public class ServiceCollectionTests
         var services = new ServiceCollection();
         services.AddVerifiablClient(options =>
         {
-            options.Auth = VerifiablAuth.ApiKey("first");
+            options.Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret");
             options.Environment = VerifiablEnvironment.Sandbox;
         });
         services.AddVerifiablClient(options =>
         {
-            options.Auth = VerifiablAuth.ApiKey("second");
+            options.Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret");
             options.Environment = VerifiablEnvironment.Production;
         });
 

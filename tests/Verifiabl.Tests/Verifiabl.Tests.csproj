@@ -4,12 +4,15 @@
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <!-- net472 exercises the .NET Framework build; it can only run on Windows. -->
     <TargetFrameworks Condition="'$(OS)' == 'Windows_NT'">net8.0;net10.0;net472</TargetFrameworks>
+    <!-- Windows adds net472, so it needs a lockfile with a different target set. -->
+    <NuGetLockFilePath Condition="'$(OS)' == 'Windows_NT'">packages.windows.lock.json</NuGetLockFilePath>
     <IsPackable>false</IsPackable>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
     <Reference Include="System.Net.Http" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

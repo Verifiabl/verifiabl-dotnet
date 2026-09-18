@@ -29,6 +29,8 @@ internal sealed class FakeHttpHandler : HttpMessageHandler
 
     internal Func<HttpRequestMessage, string, CancellationToken, Task<HttpResponseMessage>>? Responder { get; set; }
 
+    internal bool AutoRespondToTokenRequests { get; set; }
+
     // Snapshot under the lock: tests issue concurrent requests.
     internal IReadOnlyList<CapturedRequest> Requests
     {
@@ -74,6 +76,12 @@ internal sealed class FakeHttpHandler : HttpMessageHandler
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
+        if (AutoRespondToTokenRequests
+            && request.RequestUri!.AbsolutePath.IndexOf("oauth", StringComparison.Ordinal) >= 0)
+        {
+            return Token("test-token");
+        }
+
         string body = request.Content is null
             ? string.Empty
             : await request.Content.ReadAsStringAsync().ConfigureAwait(false);

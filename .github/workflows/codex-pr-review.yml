@@ -21,6 +21,7 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     outputs:
       final_message: ${{ steps.codex.outputs['final-message'] }}
     steps:
@@ -33,9 +34,10 @@ jobs:
 
       - name: Run Codex review
         id: codex
-        uses: openai/codex-action@86365089eb2b84e0a8fb0717b304f8bdcb13b20e # v1
+        uses: openai/codex-action@86365089eb2b84e0a8fb0717b304f8bdcb13b20e # v1.12
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          allow-bot-users: verifiabl-sdk-release[bot]
           codex-version: 0.153.4
           permission-profile: ":read-only"
           model: gpt-5.6-sol
@@ -81,6 +83,7 @@ jobs:
     if: needs.review.outputs.final_message != ''
     needs: review
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       # GitHub accepts this scope for PR timeline comments. Issues: write was
       # runtime-tested and rejected by the Actions integration with a 403.

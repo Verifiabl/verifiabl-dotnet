@@ -28,11 +28,15 @@ public class ClientBatchTests
         },
     };
 
-    private static VerifiablClient Client(FakeHttpHandler handler) => new(new VerifiablClientOptions
+    private static VerifiablClient Client(FakeHttpHandler handler)
     {
-        Auth = VerifiablAuth.ApiKey("static-key"),
-        HttpClient = new HttpClient(handler),
-    });
+        handler.AutoRespondToTokenRequests = true;
+        return new VerifiablClient(new VerifiablClientOptions
+        {
+            Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret"),
+            HttpClient = new HttpClient(handler),
+        });
+    }
 
     [Fact]
     public async Task PostsTheBatchWireBodyAndMapsTheResponse()

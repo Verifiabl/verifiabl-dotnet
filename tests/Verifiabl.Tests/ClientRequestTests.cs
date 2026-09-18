@@ -45,9 +45,10 @@ public class ClientRequestTests
         FakeHttpHandler handler,
         Action<VerifiablClientOptions>? configure = null)
     {
+        handler.AutoRespondToTokenRequests = true;
         var options = new VerifiablClientOptions
         {
-            Auth = VerifiablAuth.ApiKey("static-key"),
+            Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret"),
             HttpClient = new HttpClient(handler),
         };
         configure?.Invoke(options);
@@ -75,7 +76,7 @@ public class ClientRequestTests
         Assert.Equal(Reference, response.VerifiablReference);
         CapturedRequest sent = Assert.Single(handler.Requests);
         Assert.Equal("https://register.verifiabl.io/v1/registerNonPII", sent.Uri.ToString());
-        Assert.Equal("Bearer static-key", sent.Authorization);
+        Assert.Equal("Bearer test-token", sent.Authorization);
 
         using JsonDocument body = JsonDocument.Parse(sent.Body);
         Assert.Equal("au.payslip.v1", body.RootElement.GetProperty("schema").GetString());
