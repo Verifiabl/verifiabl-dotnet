@@ -27,7 +27,11 @@ items:
   remarks: >-
     Use <xref href="Verifiabl.Client.PayslipNonPii.FromAustralianV2(Verifiabl.Client.AustralianPayslipV2)" data-throw-if-not-resolved="false"></xref> or <xref href="Verifiabl.Client.PayslipNonPii.FromNewZealandV2(Verifiabl.Client.NewZealandPayslipV2)" data-throw-if-not-resolved="false"></xref> for
 
-    v2 payloads. They serialize only generated fields; the API validates values.
+    v2 payloads. They serialize only generated fields, send each amount as an
+
+    exact decimal string, and require an ISO 4217 currency; the API validates
+
+    the other values.
 
     <xref href="Verifiabl.Client.PayslipNonPii.AdditionalData" data-throw-if-not-resolved="false"></xref> is for legacy or future-schema pass-through.
   example: []
@@ -110,7 +114,7 @@ items:
   remarks: >-
     Values may be <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>, <xref href="System.String" data-throw-if-not-resolved="false"></xref>,
 
-    <xref href="System.Boolean" data-throw-if-not-resolved="false"></xref>, <xref href="Verifiabl.Client.PayslipNumber" data-throw-if-not-resolved="false"></xref>, any common numeric type, a nested
+    <xref href="System.Boolean" data-throw-if-not-resolved="false"></xref>, any common numeric type, a nested
 
     <xref href="System.Collections.Generic.IDictionary%602" data-throw-if-not-resolved="false"></xref> of the same, or a sequence of them.
 
@@ -509,13 +513,6 @@ references:
   nameWithType.vb: Boolean
   fullName.vb: Boolean
   name.vb: Boolean
-- uid: Verifiabl.Client.PayslipNumber
-  commentId: T:Verifiabl.Client.PayslipNumber
-  parent: Verifiabl.Client
-  href: Verifiabl.Client.PayslipNumber.html
-  name: PayslipNumber
-  nameWithType: PayslipNumber
-  fullName: Verifiabl.Client.PayslipNumber
 - uid: System.Collections.Generic.IDictionary`2
   commentId: T:System.Collections.Generic.IDictionary`2
   isExternal: true

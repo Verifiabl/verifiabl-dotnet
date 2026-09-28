@@ -26,7 +26,10 @@ items:
   assemblies:
   - Verifiabl
   namespace: Verifiabl.Client
-  summary: Currency codes accepted by the AU2 and NZ2 payslip schemas.
+  summary: >-
+    Currency codes accepted by the AU2 and NZ2 payslip schemas. <xref href="Verifiabl.Client.PayslipCurrencies.All" data-throw-if-not-resolved="false"></xref>
+
+    lists every accepted ISO 4217 code; the named constants are common codes.
   example: []
   syntax:
     content: public static class PayslipCurrencies
@@ -41,6 +44,27 @@ items:
   - System.Object.MemberwiseClone
   - System.Object.ReferenceEquals(System.Object,System.Object)
   - System.Object.ToString
+- uid: Verifiabl.Client.PayslipCurrencies.All
+  commentId: F:Verifiabl.Client.PayslipCurrencies.All
+  id: All
+  parent: Verifiabl.Client.PayslipCurrencies
+  langs:
+  - csharp
+  - vb
+  name: All
+  nameWithType: PayslipCurrencies.All
+  fullName: Verifiabl.Client.PayslipCurrencies.All
+  type: Field
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl.Client
+  summary: Every accepted ISO 4217 currency code, in alphabetical order.
+  example: []
+  syntax:
+    content: public static readonly IReadOnlyList<string> All
+    return:
+      type: System.Collections.Generic.IReadOnlyList{System.String}
+    content.vb: Public Shared ReadOnly All As IReadOnlyList(Of String)
 - uid: Verifiabl.Client.PayslipCurrencies.Aud
   commentId: F:Verifiabl.Client.PayslipCurrencies.Aud
   id: Aud
@@ -251,28 +275,13 @@ items:
     return:
       type: System.String
     content.vb: Public Const Zar As String = "ZAR"
+references:
 - uid: Verifiabl.Client.PayslipCurrencies.All
   commentId: F:Verifiabl.Client.PayslipCurrencies.All
-  id: All
-  parent: Verifiabl.Client.PayslipCurrencies
-  langs:
-  - csharp
-  - vb
+  href: Verifiabl.Client.PayslipCurrencies.html#Verifiabl_Client_PayslipCurrencies_All
   name: All
   nameWithType: PayslipCurrencies.All
   fullName: Verifiabl.Client.PayslipCurrencies.All
-  type: Field
-  assemblies:
-  - Verifiabl
-  namespace: Verifiabl.Client
-  summary: The complete supported currency allow-list.
-  example: []
-  syntax:
-    content: public static readonly IReadOnlyList<string> All
-    return:
-      type: System.Collections.Generic.IReadOnlyList{System.String}
-    content.vb: Public Shared ReadOnly All As IReadOnlyList(Of String)
-references:
 - uid: Verifiabl.Client
   commentId: N:Verifiabl.Client
   href: Verifiabl.html
@@ -532,17 +541,6 @@ references:
   name: System
   nameWithType: System
   fullName: System
-- uid: System.String
-  commentId: T:System.String
-  parent: System
-  isExternal: true
-  href: https://learn.microsoft.com/dotnet/api/system.string
-  name: string
-  nameWithType: string
-  fullName: string
-  nameWithType.vb: String
-  fullName.vb: String
-  name.vb: String
 - uid: System.Collections.Generic.IReadOnlyList{System.String}
   commentId: T:System.Collections.Generic.IReadOnlyList{System.String}
   parent: System.Collections.Generic
@@ -643,3 +641,14 @@ references:
     name: Generic
     isExternal: true
     href: https://learn.microsoft.com/dotnet/api/system.collections.generic
+- uid: System.String
+  commentId: T:System.String
+  parent: System
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.string
+  name: string
+  nameWithType: string
+  fullName: string
+  nameWithType.vb: String
+  fullName.vb: String
+  name.vb: String

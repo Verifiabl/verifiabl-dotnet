@@ -51,14 +51,18 @@ items:
     content: >-
       [JsonPropertyName("amount")]
 
-      public required PayslipNumber Amount { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public required decimal Amount { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Decimal
     content.vb: >-
       <JsonPropertyName("amount")>
 
-      Public Property Amount As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property Amount As Decimal
   overload: Verifiabl.Client.NewZealandPayslipV2LeaveBalancesAnnualAccruedThisPeriod.Amount*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -343,13 +347,17 @@ references:
   name: Amount
   nameWithType: NewZealandPayslipV2LeaveBalancesAnnualAccruedThisPeriod.Amount
   fullName: Verifiabl.Client.NewZealandPayslipV2LeaveBalancesAnnualAccruedThisPeriod.Amount
-- uid: Verifiabl.Client.PayslipNumber
-  commentId: T:Verifiabl.Client.PayslipNumber
-  parent: Verifiabl.Client
-  href: Verifiabl.Client.PayslipNumber.html
-  name: PayslipNumber
-  nameWithType: PayslipNumber
-  fullName: Verifiabl.Client.PayslipNumber
+- uid: System.Decimal
+  commentId: T:System.Decimal
+  parent: System
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.decimal
+  name: decimal
+  nameWithType: decimal
+  fullName: decimal
+  nameWithType.vb: Decimal
+  fullName.vb: Decimal
+  name.vb: Decimal
 - uid: Verifiabl.Client.NewZealandPayslipV2LeaveBalancesAnnualAccruedThisPeriod.Unit*
   commentId: Overload:Verifiabl.Client.NewZealandPayslipV2LeaveBalancesAnnualAccruedThisPeriod.Unit
   href: Verifiabl.Client.NewZealandPayslipV2LeaveBalancesAnnualAccruedThisPeriod.html#Verifiabl_Client_NewZealandPayslipV2LeaveBalancesAnnualAccruedThisPeriod_Unit

@@ -22,6 +22,12 @@ internal static class Wire
 {
     internal const int MaxBatchRecords = 1000;
 
+    private static readonly JsonSerializerOptions TypedV2PayloadOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
+
     internal static JsonObject ToWire(RegisterNonPiiRequest request, string verifiablReference)
     {
         if (request is null)
@@ -216,12 +222,21 @@ internal static class Wire
             {
                 throw new ArgumentException($"{label} typed payload must match its schema and cannot include AdditionalData.", label);
             }
+            string? currency = data.TypedV2Payload switch
+            {
+                AustralianPayslipV2 australian => australian.Currency,
+                NewZealandPayslipV2 newZealand => newZealand.Currency,
+                _ => null,
+            };
+            if (currency is null || !PayslipCurrencies.All.Contains(currency))
+            {
+                throw new ArgumentException(
+                    $"{label}.Currency must be a supported ISO 4217 currency code, for example AUD.",
+                    $"{label}.Currency");
+            }
+
             return JsonSerializer.SerializeToNode(data.TypedV2Payload, data.TypedV2Payload.GetType(),
-                new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                })!.AsObject();
+                TypedV2PayloadOptions)!.AsObject();
         }
         if (schema is PayslipSchemas.AustralianV2 or PayslipSchemas.NewZealandV2)
         {
@@ -277,17 +292,6 @@ internal static class Wire
                 return JsonValue.Create(text);
             case bool flag:
                 return JsonValue.Create(flag);
-            case PayslipNumber number:
-                var numberBody = new JsonObject
-                {
-                    ["value"] = number.Value,
-                };
-                if (number.Display is not null)
-                {
-                    numberBody["display"] = number.Display;
-                }
-
-                return numberBody;
             case sbyte or byte or short or ushort or int or uint or long:
                 return JsonValue.Create(Convert.ToInt64(value, CultureInfo.InvariantCulture));
             case ulong unsigned:
@@ -347,7 +351,7 @@ internal static class Wire
             default:
                 throw new ArgumentException(
                     $"{label} has unsupported type {value.GetType().FullName}. Supported values are " +
-                    "null, string, bool, PayslipNumber, numbers, nested dictionaries, and " +
+                    "null, string, bool, numbers, nested dictionaries, and " +
                     "sequences of those.",
                     label);
         }

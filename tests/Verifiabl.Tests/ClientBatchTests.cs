@@ -246,15 +246,41 @@ public class ClientBatchTests
         {
             PeriodEnd = "invalid",
             PaymentDate = "2026-06-01",
-            Gross = new PayslipNumber("100"),
-            Paygw = new PayslipNumber("20"),
-            Net = new PayslipNumber("80"),
+            Currency = PayslipCurrencies.Aud,
+            Gross = 100m,
+            Paygw = 20m,
+            Net = 80m,
         });
 
         RegisterNonPiiBatchResponse response = await client.RegisterNonPiiBatchAsync([record]);
 
         Assert.Single(handler.Requests);
         Assert.Equal("VALIDATION_FAILED", Assert.Single(response.Results).Code);
+    }
+
+    [Fact]
+    public async Task ReportsAnUnknownV2CurrencyLocallyWithoutSendingTheRecord()
+    {
+        var handler = new FakeHttpHandler();
+        VerifiablClient client = Client(handler);
+        BatchRecord record = ValidRecord(ReferenceA);
+        record.Schema = PayslipSchemas.AustralianV2;
+        record.PayslipNonPii = PayslipNonPii.FromAustralianV2(new AustralianPayslipV2
+        {
+            PeriodEnd = "2026-05-31",
+            PaymentDate = "2026-06-01",
+            Currency = "XYZ",
+            Gross = 100m,
+            Paygw = 20m,
+            Net = 80m,
+        });
+
+        RegisterNonPiiBatchResponse response = await client.RegisterNonPiiBatchAsync([record]);
+
+        Assert.Empty(handler.Requests);
+        BatchRecordResult result = Assert.Single(response.Results);
+        Assert.Equal("VALIDATION_FAILED", result.Code);
+        Assert.Contains("Currency", result.Detail);
     }
 
     [Fact]

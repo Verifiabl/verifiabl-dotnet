@@ -143,9 +143,6 @@ items:
   - uid: Verifiabl.Client.PayslipNonPii
     name: PayslipNonPii
     type: Class
-  - uid: Verifiabl.Client.PayslipNumber
-    name: PayslipNumber
-    type: Class
   - uid: Verifiabl.Client.PayslipSchemas
     name: PayslipSchemas
     type: Class

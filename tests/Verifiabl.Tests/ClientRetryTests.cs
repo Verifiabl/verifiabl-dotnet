@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime.InteropServices;
 using Verifiabl.Client;
 using Xunit;
 
@@ -295,14 +296,23 @@ public class ClientRetryTests
     public async Task SendsUserAgentWithoutTelemetryOnEveryRequest()
     {
         var delays = new List<TimeSpan>();
-        FakeHttpHandler handler = QueuedHandler(RegistrationOk);
+        FakeHttpHandler handler = new()
+        {
+            Responder = (request, _, _) => Task.FromResult(
+                request.RequestUri!.AbsolutePath.Contains("oauth") ? FakeHttpHandler.Token() : RegistrationOk()),
+        };
         VerifiablClient client = Client(handler, delays);
+        handler.AutoRespondToTokenRequests = false; // Capture both token and issuer requests.
 
         await client.RegisterNonPiiAsync(SingleRequest());
 
-        CapturedRequest sent = Assert.Single(handler.Requests);
-        Assert.NotNull(sent.UserAgent);
-        Assert.StartsWith("verifiabl-dotnet/", sent.UserAgent);
+        Assert.All(handler.Requests, sent =>
+        {
+            Assert.NotNull(sent.UserAgent);
+            Assert.Matches(@"^verifiabl-issuer-dotnet/\d+\.\d+\.\d+ \(", sent.UserAgent);
+            Assert.EndsWith($" ({RuntimeInformation.FrameworkDescription})", sent.UserAgent);
+        });
+        Assert.Equal(2, handler.Requests.Count); // OAuth and registration.
     }
 
     [Fact]

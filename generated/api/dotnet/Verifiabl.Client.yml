@@ -29,7 +29,6 @@ items:
   - Verifiabl.Client.NewZealandPayslipV2Ytd
   - Verifiabl.Client.PayslipCurrencies
   - Verifiabl.Client.PayslipNonPii
-  - Verifiabl.Client.PayslipNumber
   - Verifiabl.Client.PayslipSchemas
   - Verifiabl.Client.RegisterAndBuildBarcodeRequest
   - Verifiabl.Client.RegisterAndBuildBarcodeResponse
@@ -192,6 +191,12 @@ references:
   name: NewZealandPayslipV2
   nameWithType: NewZealandPayslipV2
   fullName: Verifiabl.Client.NewZealandPayslipV2
+- uid: Verifiabl.Client.PayslipCurrencies
+  commentId: T:Verifiabl.Client.PayslipCurrencies
+  href: Verifiabl.Client.PayslipCurrencies.html
+  name: PayslipCurrencies
+  nameWithType: PayslipCurrencies
+  fullName: Verifiabl.Client.PayslipCurrencies
 - uid: Verifiabl.Client.IVerifiablClient
   commentId: T:Verifiabl.Client.IVerifiablClient
   parent: Verifiabl.Client
@@ -199,12 +204,6 @@ references:
   name: IVerifiablClient
   nameWithType: IVerifiablClient
   fullName: Verifiabl.Client.IVerifiablClient
-- uid: Verifiabl.Client.PayslipCurrencies
-  commentId: T:Verifiabl.Client.PayslipCurrencies
-  href: Verifiabl.Client.PayslipCurrencies.html
-  name: PayslipCurrencies
-  nameWithType: PayslipCurrencies
-  fullName: Verifiabl.Client.PayslipCurrencies
 - uid: Verifiabl.Client.PayslipNonPii
   commentId: T:Verifiabl.Client.PayslipNonPii
   parent: Verifiabl.Client
@@ -212,13 +211,6 @@ references:
   name: PayslipNonPii
   nameWithType: PayslipNonPii
   fullName: Verifiabl.Client.PayslipNonPii
-- uid: Verifiabl.Client.PayslipNumber
-  commentId: T:Verifiabl.Client.PayslipNumber
-  parent: Verifiabl.Client
-  href: Verifiabl.Client.PayslipNumber.html
-  name: PayslipNumber
-  nameWithType: PayslipNumber
-  fullName: Verifiabl.Client.PayslipNumber
 - uid: Verifiabl.Client.PayslipSchemas
   commentId: T:Verifiabl.Client.PayslipSchemas
   href: Verifiabl.Client.PayslipSchemas.html
