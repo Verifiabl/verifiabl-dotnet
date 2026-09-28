@@ -1,0 +1,216 @@
+### YamlMime:TableOfContent
+items:
+- uid: Verifiabl
+  name: Verifiabl
+  type: Namespace
+  items:
+  - uid: Verifiabl.AustralianAddress
+    name: AustralianAddress
+    type: Class
+  - uid: Verifiabl.AustralianPiiFields
+    name: AustralianPiiFields
+    type: Class
+  - uid: Verifiabl.BarcodeErrorCorrectionLevel
+    name: BarcodeErrorCorrectionLevel
+    type: Enum
+  - uid: Verifiabl.BarcodeParts
+    name: BarcodeParts
+    type: Class
+  - uid: Verifiabl.BarcodePngResult
+    name: BarcodePngResult
+    type: Class
+  - uid: Verifiabl.BarcodeSvgOptions
+    name: BarcodeSvgOptions
+    type: Class
+  - uid: Verifiabl.BarcodeSvgResult
+    name: BarcodeSvgResult
+    type: Class
+  - uid: Verifiabl.EncryptedPii
+    name: EncryptedPii
+    type: Class
+  - uid: Verifiabl.EncryptionMetadata
+    name: EncryptionMetadata
+    type: Class
+  - uid: Verifiabl.NewZealandAddress
+    name: NewZealandAddress
+    type: Class
+  - uid: Verifiabl.NewZealandPiiFields
+    name: NewZealandPiiFields
+    type: Class
+  - uid: Verifiabl.Pii
+    name: Pii
+    type: Class
+  - uid: Verifiabl.PiiFields
+    name: PiiFields
+    type: Class
+  - uid: Verifiabl.ScanUrlOptions
+    name: ScanUrlOptions
+    type: Class
+  - uid: Verifiabl.VerifiablBarcode
+    name: VerifiablBarcode
+    type: Class
+  - uid: Verifiabl.VerifiablCrypto
+    name: VerifiablCrypto
+    type: Class
+  - uid: Verifiabl.VerifiablEndpoints
+    name: VerifiablEndpoints
+    type: Class
+  - uid: Verifiabl.VerifiablEnvironment
+    name: VerifiablEnvironment
+    type: Enum
+  - uid: Verifiabl.VerifiablException
+    name: VerifiablException
+    type: Class
+  - uid: Verifiabl.VerifiablReference
+    name: VerifiablReference
+    type: Class
+- uid: Verifiabl.Client
+  name: Verifiabl.Client
+  type: Namespace
+  items:
+  - uid: Verifiabl.Client.AustralianPayslipV2
+    name: AustralianPayslipV2
+    type: Class
+  - uid: Verifiabl.Client.AustralianPayslipV2DeductionsItem
+    name: AustralianPayslipV2DeductionsItem
+    type: Class
+  - uid: Verifiabl.Client.AustralianPayslipV2EarningsItem
+    name: AustralianPayslipV2EarningsItem
+    type: Class
+  - uid: Verifiabl.Client.AustralianPayslipV2Hourly
+    name: AustralianPayslipV2Hourly
+    type: Class
+  - uid: Verifiabl.Client.AustralianPayslipV2SalarySacrificeItem
+    name: AustralianPayslipV2SalarySacrificeItem
+    type: Class
+  - uid: Verifiabl.Client.AustralianPayslipV2SuperannuationItem
+    name: AustralianPayslipV2SuperannuationItem
+    type: Class
+  - uid: Verifiabl.Client.AustralianPayslipV2Ytd
+    name: AustralianPayslipV2Ytd
+    type: Class
+  - uid: Verifiabl.Client.BarcodeImage
+    name: BarcodeImage
+    type: Class
+  - uid: Verifiabl.Client.BatchRecord
+    name: BatchRecord
+    type: Class
+  - uid: Verifiabl.Client.BatchRecordResult
+    name: BatchRecordResult
+    type: Class
+  - uid: Verifiabl.Client.BatchRecordStatuses
+    name: BatchRecordStatuses
+    type: Class
+  - uid: Verifiabl.Client.IVerifiablClient
+    name: IVerifiablClient
+    type: Interface
+  - uid: Verifiabl.Client.NewZealandPayslipV2
+    name: NewZealandPayslipV2
+    type: Class
+  - uid: Verifiabl.Client.NewZealandPayslipV2DeductionsItem
+    name: NewZealandPayslipV2DeductionsItem
+    type: Class
+  - uid: Verifiabl.Client.NewZealandPayslipV2EarningsItem
+    name: NewZealandPayslipV2EarningsItem
+    type: Class
+  - uid: Verifiabl.Client.NewZealandPayslipV2Hourly
+    name: NewZealandPayslipV2Hourly
+    type: Class
+  - uid: Verifiabl.Client.NewZealandPayslipV2LeaveBalances
+    name: NewZealandPayslipV2LeaveBalances
+    type: Class
+  - uid: Verifiabl.Client.NewZealandPayslipV2LeaveBalancesAlternative
+    name: NewZealandPayslipV2LeaveBalancesAlternative
+    type: Class
+  - uid: Verifiabl.Client.NewZealandPayslipV2LeaveBalancesAnnual
+    name: NewZealandPayslipV2LeaveBalancesAnnual
+    type: Class
+  - uid: Verifiabl.Client.NewZealandPayslipV2LeaveBalancesAnnualAccruedThisPeriod
+    name: NewZealandPayslipV2LeaveBalancesAnnualAccruedThisPeriod
+    type: Class
+  - uid: Verifiabl.Client.NewZealandPayslipV2LeaveBalancesSick
+    name: NewZealandPayslipV2LeaveBalancesSick
+    type: Class
+  - uid: Verifiabl.Client.NewZealandPayslipV2LeaveBalancesSickAccruedThisPeriod
+    name: NewZealandPayslipV2LeaveBalancesSickAccruedThisPeriod
+    type: Class
+  - uid: Verifiabl.Client.NewZealandPayslipV2Ytd
+    name: NewZealandPayslipV2Ytd
+    type: Class
+  - uid: Verifiabl.Client.PayslipCurrencies
+    name: PayslipCurrencies
+    type: Class
+  - uid: Verifiabl.Client.PayslipNonPii
+    name: PayslipNonPii
+    type: Class
+  - uid: Verifiabl.Client.PayslipNumber
+    name: PayslipNumber
+    type: Class
+  - uid: Verifiabl.Client.PayslipSchemas
+    name: PayslipSchemas
+    type: Class
+  - uid: Verifiabl.Client.RegisterAndBuildBarcodeRequest
+    name: RegisterAndBuildBarcodeRequest
+    type: Class
+  - uid: Verifiabl.Client.RegisterAndBuildBarcodeResponse
+    name: RegisterAndBuildBarcodeResponse
+    type: Class
+  - uid: Verifiabl.Client.RegisterNonPiiBatchResponse
+    name: RegisterNonPiiBatchResponse
+    type: Class
+  - uid: Verifiabl.Client.RegisterNonPiiRequest
+    name: RegisterNonPiiRequest
+    type: Class
+  - uid: Verifiabl.Client.RegisterNonPiiResponse
+    name: RegisterNonPiiResponse
+    type: Class
+  - uid: Verifiabl.Client.VerifiablApiException
+    name: VerifiablApiException
+    type: Class
+  - uid: Verifiabl.Client.VerifiablAuth
+    name: VerifiablAuth
+    type: Class
+  - uid: Verifiabl.Client.VerifiablAuthException
+    name: VerifiablAuthException
+    type: Class
+  - uid: Verifiabl.Client.VerifiablClient
+    name: VerifiablClient
+    type: Class
+  - uid: Verifiabl.Client.VerifiablClientOptions
+    name: VerifiablClientOptions
+    type: Class
+  - uid: Verifiabl.Client.VerifiablErrorBody
+    name: VerifiablErrorBody
+    type: Class
+  - uid: Verifiabl.Client.VerifiablErrorCodes
+    name: VerifiablErrorCodes
+    type: Class
+  - uid: Verifiabl.Client.VerifiablErrorEvent
+    name: VerifiablErrorEvent
+    type: Class
+  - uid: Verifiabl.Client.VerifiablFieldError
+    name: VerifiablFieldError
+    type: Class
+  - uid: Verifiabl.Client.VerifiablIvReuseException
+    name: VerifiablIvReuseException
+    type: Class
+  - uid: Verifiabl.Client.VerifiablRequestEvent
+    name: VerifiablRequestEvent
+    type: Class
+  - uid: Verifiabl.Client.VerifiablResponseEvent
+    name: VerifiablResponseEvent
+    type: Class
+  - uid: Verifiabl.Client.VerifiablTimeoutException
+    name: VerifiablTimeoutException
+    type: Class
+  - uid: Verifiabl.Client.VerifiablTransportException
+    name: VerifiablTransportException
+    type: Class
+- uid: Verifiabl.Extensions.DependencyInjection
+  name: Verifiabl.Extensions.DependencyInjection
+  type: Namespace
+  items:
+  - uid: Verifiabl.Extensions.DependencyInjection.VerifiablServiceCollectionExtensions
+    name: VerifiablServiceCollectionExtensions
+    type: Class
+memberLayout: SamePage

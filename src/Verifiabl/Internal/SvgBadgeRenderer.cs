@@ -72,14 +72,13 @@ internal static class SvgBadgeRenderer
 
         var scanOptions = new ScanUrlOptions
         {
-            Format = options.Format,
             Environment = options.Environment,
             ScanBaseUrl = options.ScanBaseUrl,
         };
         string content = VerifiablBarcode.BuildScanUrl(parts, scanOptions);
 
         BarcodeErrorCorrectionLevel[] ladder = ErrorCorrectionLadder(options.MaxErrorCorrection);
-        SelectedQrRendering selected = SelectQrRendering(content, badgeWidth, ladder, options.Format);
+        SelectedQrRendering selected = SelectQrRendering(content, badgeWidth, ladder);
         bool degraded = selected.ErrorCorrectionLevel != ladder[0]
             || selected.ModulePx < IdealModulePx;
 
@@ -159,8 +158,7 @@ internal static class SvgBadgeRenderer
     internal static SelectedQrRendering SelectQrRendering(
         string content,
         double badgeWidth,
-        BarcodeErrorCorrectionLevel[] ladder,
-        BarcodePayloadFormat format)
+        BarcodeErrorCorrectionLevel[] ladder)
     {
         double scale = badgeWidth / FrameViewboxWidth;
         int? densestSize = null;
@@ -170,11 +168,9 @@ internal static class SvgBadgeRenderer
             try
             {
                 // boostEcl is off so the level in the symbol is exactly the ladder
-                // level we report. V2 deliberately fixes the segment boundary:
-                // lowercase URL/reference prefix in byte mode, Base32 in alphanumeric.
-                qr = format == BarcodePayloadFormat.V2
-                    ? EncodeV2Segments(content, ToEcc(level))
-                    : QrCode.EncodeTextAdvanced(content, ToEcc(level), boostEcl: false);
+                // level we report. Fix the segment boundary: lowercase URL/reference
+                // prefix in byte mode, Base32 in alphanumeric.
+                qr = EncodeV2Segments(content, ToEcc(level));
             }
             catch (DataTooLongException)
             {
@@ -208,19 +204,19 @@ internal static class SvgBadgeRenderer
             "try again.");
     }
 
-    private static QrCode EncodeV2Segments(string content, QrCode.Ecc ecc)
+    internal static QrCode EncodeV2Segments(string content, QrCode.Ecc ecc)
     {
         int split = content.IndexOf(
-            VerifiablBarcode.V2ScanUrlFragmentMarker,
+            VerifiablBarcode.ScanUrlFragmentMarker,
             StringComparison.Ordinal);
         if (split < 0)
         {
             throw new ArgumentException(
-                $"V2 QR content must contain the {VerifiablBarcode.V2ScanUrlFragmentMarker} marker.",
+                $"QR content must contain the {VerifiablBarcode.ScanUrlFragmentMarker} marker.",
                 nameof(content));
         }
 
-        split += VerifiablBarcode.V2ScanUrlFragmentMarker.Length;
+        split += VerifiablBarcode.ScanUrlFragmentMarker.Length;
         byte[] prefix = Encoding.UTF8.GetBytes(content.Substring(0, split));
         byte[] ciphertext = Encoding.ASCII.GetBytes(content.Substring(split));
         var segments = new List<DataSegment>

@@ -200,14 +200,12 @@ public class SvgBarcodeTests
     public void SvgModulesMatchTheQrMatrixAndDecodeToTheScanUrl()
     {
         BarcodeSvgResult result = VerifiablBarcode.CreateSvg(
-            new BarcodeParts(Reference, RealisticCiphertext()),
-            new BarcodeSvgOptions { Format = BarcodePayloadFormat.V1 });
+            new BarcodeParts(Reference, RealisticCiphertext()));
 
-        // Rebuild the same QR matrix the renderer used.
-        QrCode qr = QrCode.EncodeTextAdvanced(
+        // Rebuild the same mixed-mode QR matrix the renderer used.
+        QrCode qr = Internal.SvgBadgeRenderer.EncodeV2Segments(
             result.Content,
-            QrCode.Ecc.Medium,
-            boostEcl: false);
+            QrCode.Ecc.Medium);
         int size = qr.Size;
 
         // The data-module rects live in the crispEdges group, in QR-local

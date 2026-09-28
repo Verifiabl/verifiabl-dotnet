@@ -3,7 +3,7 @@ using System.Text;
 namespace Verifiabl;
 
 /// <summary>Canonical RFC 4648 Base32 encoding used by v2 barcode writers.</summary>
-public static class VerifiablBase32
+internal static class VerifiablBase32
 {
     private const string Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 

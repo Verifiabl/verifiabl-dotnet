@@ -1,32 +1,68 @@
 namespace Verifiabl.Client;
 
 /// <summary>
-/// Non-PII payslip data. <see cref="PeriodStart"/> and <see cref="PeriodEnd"/>
-/// are required (YYYY-MM-DD).
+/// Non-PII payslip data. <see cref="PeriodEnd"/> is required (YYYY-MM-DD).
+/// <see cref="PeriodStart"/> is required for v1 schemas and optional for v2.
 /// </summary>
 /// <remarks>
-/// <see cref="AdditionalData"/> fields are passed through to the API verbatim,
-/// under the exact keys you supply: only the period fields are SDK-defined and
-/// translated to the wire names. Provider-specific fields (e.g. line items) use
-/// whatever names your payslip schema specifies, which are typically snake_case
-/// on the wire.
+/// Use <see cref="FromAustralianV2"/> or <see cref="FromNewZealandV2"/> for
+/// v2 payloads. They serialize only generated fields; the API validates values.
+/// <see cref="AdditionalData"/> is for legacy or future-schema pass-through.
 /// </remarks>
 public sealed class PayslipNonPii
 {
-    /// <summary>First day of the pay period, YYYY-MM-DD.</summary>
-    public required string PeriodStart { get; set; }
+    /// <summary>
+    /// First day of the pay period, YYYY-MM-DD. Required for v1 schemas and
+    /// omitted for a v2 payslip that prints only a period end.
+    /// </summary>
+    public string? PeriodStart { get; set; }
 
     /// <summary>Last day of the pay period, YYYY-MM-DD.</summary>
     public required string PeriodEnd { get; set; }
 
     /// <summary>
-    /// Provider-specific payslip fields, sent to the API verbatim.
+    /// Free-form non-PII fields for v1 or future schemas, not supported for known v2 profiles.
     /// </summary>
     /// <remarks>
     /// Values may be <see langword="null"/>, <see cref="string"/>,
-    /// <see cref="bool"/>, any common numeric type, a nested
+    /// <see cref="bool"/>, <see cref="PayslipNumber"/>, any common numeric type, a nested
     /// <see cref="IDictionary{TKey,TValue}"/> of the same, or a sequence of them.
     /// Anything else throws an <see cref="ArgumentException"/> naming the key.
     /// </remarks>
     public IDictionary<string, object?>? AdditionalData { get; set; }
+
+    internal object? TypedV2Payload { get; private init; }
+    internal string? TypedV2Schema { get; private init; }
+
+    /// <summary>Create a typed Australian v2 payload without free-form fields.</summary>
+    public static PayslipNonPii FromAustralianV2(AustralianPayslipV2 payload)
+    {
+        if (payload is null)
+        {
+            throw new ArgumentNullException(nameof(payload));
+        }
+        return new PayslipNonPii
+        {
+            PeriodStart = payload.PeriodStart,
+            PeriodEnd = payload.PeriodEnd,
+            TypedV2Payload = payload,
+            TypedV2Schema = PayslipSchemas.AustralianV2,
+        };
+    }
+
+    /// <summary>Create a typed New Zealand v2 payload without free-form fields.</summary>
+    public static PayslipNonPii FromNewZealandV2(NewZealandPayslipV2 payload)
+    {
+        if (payload is null)
+        {
+            throw new ArgumentNullException(nameof(payload));
+        }
+        return new PayslipNonPii
+        {
+            PeriodStart = payload.PeriodStart,
+            PeriodEnd = payload.PeriodEnd,
+            TypedV2Payload = payload,
+            TypedV2Schema = PayslipSchemas.NewZealandV2,
+        };
+    }
 }

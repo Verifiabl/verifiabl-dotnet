@@ -70,14 +70,10 @@ public class PiiTests
     }
 
     [Fact]
-    public void FormatsAndParsesLegacyP1ForRollback()
+    public void ParsesLegacyP1FromExistingDocuments()
     {
-        var fields = new PiiFields { EmployeeName = "Jane", Address = "not emitted" };
+        PiiFields parsed = Pii.Parse("P1|Jane||||||");
 
-        string plaintext = Pii.FormatV1(fields);
-        PiiFields parsed = Pii.Parse(plaintext);
-
-        Assert.Equal("P1|Jane||||||", plaintext);
         Assert.Equal("Jane", parsed.EmployeeName);
         Assert.Null(parsed.Address);
     }
@@ -126,14 +122,6 @@ public class PiiTests
         AccountName = "Zoë Nguyễn",
         Address = address,
     };
-
-    [Fact]
-    public void OptInV2NamesRemainCompatibilityAliasesForTheDefaultWriter()
-    {
-        var fields = new PiiV2Fields { EmployeeName = "Jane", Address = "12 Example St" };
-
-        Assert.Equal(Pii.Format(fields), Pii.FormatV2(fields));
-    }
 
     [Fact]
     public void V2WritesExactBytesWithAnEmptyFinalAddress()
@@ -320,8 +308,5 @@ public class PiiTests
         Assert.Equal(
             ["employeeName", "position", "department", "employerAbn", "bsb", "accountNumber", "accountName", "address"],
             Pii.FieldOrder);
-        Assert.Equal(
-            ["employeeName", "position", "department", "employerAbn", "bsb", "accountNumber", "accountName"],
-            Pii.V1FieldOrder);
     }
 }

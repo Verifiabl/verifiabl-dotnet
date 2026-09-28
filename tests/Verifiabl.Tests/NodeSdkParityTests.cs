@@ -58,25 +58,6 @@ public class NodeSdkParityTests
     }
 
     [Fact]
-    public void MatchesTheNodeRendererForTheExplicitV1Badge()
-    {
-        BarcodeSvgResult result = VerifiablBarcode.CreateSvg(
-            new BarcodeParts(Reference, Ciphertext()),
-            new BarcodeSvgOptions { Format = BarcodePayloadFormat.V1 });
-
-        using JsonDocument meta = JsonDocument.Parse(Fixture("node-svg-meta.json"));
-        JsonElement expected = meta.RootElement.GetProperty("v1-default-480");
-
-        Assert.Equal(expected.GetProperty("content").GetString(), result.Content);
-        Assert.Equal(expected.GetProperty("width").GetDouble(), result.Width);
-        Assert.Equal(expected.GetProperty("height").GetDouble(), result.Height);
-        Assert.Equal("M", ToNodeLevel(result.ErrorCorrectionLevel));
-        Assert.Equal(expected.GetProperty("modulePx").GetDouble(), result.ModulePx);
-        Assert.Equal(expected.GetProperty("degraded").GetBoolean(), result.Degraded);
-        Assert.Equal(Fixture("node-svg-v1-default-480.svg"), result.Svg);
-    }
-
-    [Fact]
     public void MatchesTheNodeRendererForASandboxQuartileBadge()
     {
         BarcodeSvgResult result = VerifiablBarcode.CreateSvg(
@@ -105,17 +86,15 @@ public class NodeSdkParityTests
     /// scannability proof.
     /// </summary>
     [Theory]
-    [InlineData("png-default-1440", 1440, false, false, null, false)]
-    [InlineData("png-default-720", 720, false, false, null, false)]
-    [InlineData("png-short-default-480", 480, false, false, null, true)]
-    [InlineData("png-sandbox-q-480", 480, true, true, null, false)]
-    [InlineData("png-v1-default-720", 720, false, false, BarcodePayloadFormat.V1, false)]
+    [InlineData("png-default-1440", 1440, false, false, false)]
+    [InlineData("png-default-720", 720, false, false, false)]
+    [InlineData("png-short-default-480", 480, false, false, true)]
+    [InlineData("png-sandbox-q-480", 480, true, true, false)]
     public void PngRasterMatchesTheNodeCompositor(
         string caseName,
         int pixelWidth,
         bool sandbox,
         bool quartile,
-        BarcodePayloadFormat? format,
         bool shortPayload)
     {
         var options = new BarcodeSvgOptions
@@ -125,11 +104,6 @@ public class NodeSdkParityTests
                 ? BarcodeErrorCorrectionLevel.Quartile
                 : BarcodeErrorCorrectionLevel.Medium,
         };
-        if (format.HasValue)
-        {
-            options.Format = format.Value;
-        }
-
         Internal.PngBadgeRenderer.CompositedBadge badge = Internal.PngBadgeRenderer.Compose(
             new BarcodeParts(
                 Reference,

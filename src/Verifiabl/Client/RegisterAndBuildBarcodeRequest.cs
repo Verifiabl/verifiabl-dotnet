@@ -6,7 +6,7 @@ namespace Verifiabl.Client;
 /// </summary>
 public sealed class RegisterAndBuildBarcodeRequest
 {
-    /// <summary>Payslip schema identifier, e.g. "au.payslip.v1".</summary>
+    /// <summary>Non-PII payslip schema identifier, e.g. "au.payslip.v2". This does not select a PII format.</summary>
     public required string Schema { get; set; }
 
     /// <summary>

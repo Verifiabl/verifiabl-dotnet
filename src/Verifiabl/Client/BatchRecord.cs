@@ -17,7 +17,7 @@ public sealed class BatchRecord
     /// </summary>
     public string? ExternalId { get; set; }
 
-    /// <summary>Payslip schema identifier, e.g. "au.payslip.v1".</summary>
+    /// <summary>Non-PII payslip schema identifier, e.g. "au.payslip.v2". This does not select a PII format.</summary>
     public required string Schema { get; set; }
 
     /// <summary>

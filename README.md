@@ -28,7 +28,7 @@ The split is deliberate, so you can see at a glance which half of the SDK touche
 
 | Namespace | Contents | Network |
 | --- | --- | --- |
-| `Verifiabl` | `Pii`, `PiiFields`, `VerifiablCrypto`, `EncryptedPii`, `EncryptionMetadata`, `VerifiablBarcode`, `BarcodeParts`, `BarcodeSvgOptions`, `VerifiablReference`, `VerifiablEnvironment`, `VerifiablEndpoints` | None. Pure functions you can call from anywhere, including a hot PDF-rendering loop. |
+| `Verifiabl` | `Pii`, `PiiFields`, the AU/NZ PII and address models, `VerifiablCrypto`, `EncryptedPii`, `EncryptionMetadata`, `VerifiablBarcode`, `BarcodeParts`, `BarcodeSvgOptions`, `VerifiablReference`, `VerifiablEnvironment`, `VerifiablEndpoints` | None. Pure functions you can call from anywhere, including a hot PDF-rendering loop. |
 | `Verifiabl.Client` | `IVerifiablClient`, `VerifiablClient`, `VerifiablClientOptions`, `VerifiablAuth`, the request/response types, `VerifiablApiException` and friends | Calls the Verifiabl issuer API. |
 | `Verifiabl.Extensions.DependencyInjection` | `AddVerifiablClient` and `VerifiablServiceCollectionExtensions.HttpClientName` from the DI integration package | Registers the networked client in your service collection. |
 
@@ -121,9 +121,92 @@ BarcodeSvgResult badge = VerifiablBarcode.CreateSvg(
     new BarcodeSvgOptions { Environment = VerifiablEnvironment.Sandbox });
 ```
 
-### V2 / P2 format and V1 rollback
+### AU2 and NZ2 payslip profiles
 
-New documents use P2 plaintext and v2 barcode/XMP output by default. P2 is exactly
+For `au.payslip.v2`, format the encrypted PII with `Pii.FormatAustralian` and
+register the matching schema id. The formatter accepts the employer name and
+ABN separately, then writes one employer identity: the ABN when supplied,
+otherwise the name.
+
+```csharp
+string pii = Pii.FormatAustralian(new AustralianPiiFields
+{
+    EmployeeName = "Jane A. Doe",
+    Position = "Senior Developer",
+    Department = "Engineering",
+    EmployerName = "Example Payroll Pty Ltd",
+    EmployerAbn = "12 345 678 901",
+    Bsb = "062-000",
+    AccountNumber = "****5678",
+    AccountName = "Jane A Doe",
+    Address = new AustralianAddress
+    {
+        Lines = ["A204/11-17 Eve Street"],
+        Suburb = "Erskineville",
+        StateOrTerritory = "NSW",
+        Postcode = "2043",
+    },
+});
+EncryptedPii encrypted = VerifiablCrypto.EncryptPii(pii, key);
+
+var nonPii = PayslipNonPii.FromAustralianV2(new AustralianPayslipV2
+{
+    // PeriodStart may be omitted when the payslip prints only a period end.
+    PeriodEnd = "2026-05-31",
+    PaymentDate = "2026-06-04",
+    Currency = PayslipCurrencies.Aud,
+    Gross = new PayslipNumber(8125.00m, "$8,125.00"),
+    Paygw = new PayslipNumber(2030.00m, "$2,030.00"),
+    Net = new PayslipNumber(6095.00m, "$6,095.00"),
+});
+
+RegisterNonPiiResponse registration = await client.RegisterNonPiiAsync(new RegisterNonPiiRequest
+{
+    Schema = PayslipSchemas.AustralianV2,
+    IssuedAt = DateTimeOffset.UtcNow,
+    PayslipNonPii = nonPii,
+    EncryptionMetadata = encrypted.Metadata,
+});
+
+BarcodeSvgResult badge = VerifiablBarcode.CreateSvg(
+    new BarcodeParts(registration.VerifiablReference, encrypted.Ciphertext),
+    new BarcodeSvgOptions { Environment = VerifiablEnvironment.Sandbox });
+```
+
+For `nz.payslip.v2`, use `Pii.FormatNewZealand` with
+`NewZealandPiiFields` and `NewZealandAddress`, then register
+`PayslipSchemas.NewZealandV2`. NZ2 carries the printed employee IRD number,
+employer name, account number and account name. It has no BSB or NZBN field.
+
+Both formatters always write eight positions, including empty trailing
+positions. AU addresses render as address lines followed by
+`suburb state-or-territory postcode`; NZ addresses render as address lines,
+optional suburb, then `city postcode`. Commas separate those rendered lines.
+Country is implicit in AU2 or NZ2. Values preserve provider formatting and use
+the current PII character restrictions. The complete UTF-8 plaintext, including
+the discriminator and delimiters, is limited to 1024 bytes.
+
+`Schema` selects only the non-PII payload contract. Choose the PII formatter
+separately: `Pii.FormatAustralian` (AU2) for Australian records or
+`Pii.FormatNewZealand` (NZ2) for New Zealand records. Today the examples use
+AU2 with `au.payslip.v2` and NZ2 with `nz.payslip.v2`, but those matching `2`
+suffixes are not a version-coupling rule. A future non-PII schema can still use
+the same jurisdictional PII format, or the PII format can evolve without
+renaming the non-PII schema. The verifier checks the PII marker against the
+record's jurisdiction, not the schema version; a jurisdiction mismatch fails
+verification. Legacy v1 verification returns this plaintext without parsing it.
+
+`PayslipNumber` carries the v2 number object. Construct it from a `decimal` when
+the provider performs arithmetic, or from an exact string when its scale must
+be retained byte-for-byte. `display` is optional and should contain the printed
+form only when it differs from `value`.
+
+Currency is optional. When present, use one of the ten `PayslipCurrencies`
+constants: AUD, NZD, USD, GBP, EUR, CAD, SGD, HKD, CHF or ZAR.
+
+### Legacy P2 compatibility format
+
+`Pii.Format(PiiFields)` writes P2 plaintext for existing integrations. P2 is exactly
 `P2|employeeName|position|department|employerAbn|bsb|accountNumber|accountName|address`.
 P2 preserves valid Unicode without normalization. Writers limit the complete plaintext, including
 framing and delimiters, to 1024 UTF-8 bytes. Readers continue to accept oversized P2 plaintext from
@@ -137,17 +220,7 @@ is the matching `2|reference|BASE32` returned by
 Ciphertext, IV, and authentication tags are binary values and the SDK exposes
 all three as `byte[]`. You can persist them directly in binary database columns.
 The SDK performs encoding only at an external boundary: base64url for issuer API
-requests and legacy v1 output, or Base32 for v2 barcode and XMP output.
-
-V1/P1 remain permanently supported for existing documents and emergency writer rollback. Select
-both explicitly so QR and XMP never mix versions:
-
-```csharp
-string legacyPlaintext = Pii.FormatV1(fields);
-var legacyOptions = new BarcodeSvgOptions { Format = BarcodePayloadFormat.V1 };
-BarcodeSvgResult legacyBadge = VerifiablBarcode.CreateSvg(parts, legacyOptions);
-string legacyXmpPayload = VerifiablBarcode.BuildPayload(parts, BarcodePayloadFormat.V1);
-```
+requests and Base32 for v2 barcode and XMP output.
 
 ### Development
 
@@ -165,10 +238,29 @@ The committed `global.json` keeps builds on the latest installed .NET 10 feature
 package update, run `dotnet restore --force-evaluate` and commit the resulting lockfile changes. Linux
 and macOS can build all library targets. Windows CI additionally runs the .NET Framework 4.7.2 tests.
 
+### Generated API reference
+
+The public API reference is generated from the projects and their XML documentation with the pinned
+[DocFX](https://dotnet.github.io/docfx/) local tool. Generate the deterministic managed-reference
+catalogue with:
+
+```bash
+node script/api-reference.mjs
+```
+
+The command restores the pinned tool and locked NuGet dependency graph, then replaces
+`generated/api/dotnet`. The catalogue contains public and protected APIs only; private and internal
+implementation details are excluded by DocFX's default API filter. It is checked in so the customer
+docs can import an exact SDK revision without running .NET or accessing this repository at build time.
+CI runs the non-mutating freshness check:
+
+```bash
+node script/api-reference.mjs --check
+```
 
 The compiler enforces the mandatory fields: `Schema`, `IssuedAt`, `PayslipNonPii`, and `EncryptionMetadata` are `required`, so an incomplete request will not build.
 
-`AdditionalData` is passed to the API verbatim under the exact keys you supply. Values may be strings, booleans, numbers, `null`, nested dictionaries, or sequences of those; anything else throws an `ArgumentException` naming the key. Which keys your schema requires is documented per schema — the `au.payslip.v1` set is shown above.
+For AU/NZ v2, use `PayslipNonPii.FromAustralianV2(new AustralianPayslipV2 { ... })` or `FromNewZealandV2(new NewZealandPayslipV2 { ... })`. These types and nested fields are generated from the Node Zod wire shape; they cannot carry arbitrary extra fields. The API validates dates, values, allowed codes, and cross-field rules. Free-form `AdditionalData` is rejected for these two known profiles; for legacy and future schemas it is passed to the API under the exact keys you supply. Values may be strings, booleans, numbers, `null`, nested dictionaries, or sequences of those; anything else throws an `ArgumentException` naming the key. Which keys your schema requires is documented per schema — the `au.payslip.v1` set is shown above.
 
 `VerifiablBarcode.CreateSvg` produces a standalone SVG that scales to any size without losing quality; embed it directly in your PDF pipeline when it supports vector images. If it needs a raster image, use `VerifiablBarcode.CreatePng`: it composites the badge deterministically with no native dependencies, so the same record produces the byte-identical raster in every Verifiabl SDK, and QR module edges stay crisp (rasterising the SVG with a general renderer blurs them and costs scannability). PNG output comes in fixed pixel widths (480, 720, 960 or 1440; the physical print size is set where you place the image in the PDF). See the [docs](https://docs.verifiabl.io/) for both flows.
 
@@ -222,7 +314,7 @@ foreach (BatchRecordResult result in batch.Results)
 
 ## Executable example
 
-[`examples/SelfManagedIssuer`](./examples/SelfManagedIssuer/) is a small executable version of the self-managed flow above. It registers one fictional payslip against the sandbox and writes its SVG barcode and matching PDF XMP payload. Repository CI restores the application from the packed NuGet package and compiles it as a package-consumer release test without making a sandbox request.
+[`examples/SelfManagedIssuer`](./examples/SelfManagedIssuer/) is an executable self-managed flow for both AU2 and NZ2. It prepares one payslip per jurisdiction, registers the AU2 record individually and both records in a mixed-schema batch in sandbox live mode, and writes SVG barcodes and matching PDF XMP payloads. By default the example builds against the SDK project in this repository. Repository CI also restores it from a locally packed NuGet package and runs it offline as a package-consumer check; see its README for instructions.
 
 ## Environments
 

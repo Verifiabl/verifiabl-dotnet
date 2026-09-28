@@ -6,6 +6,41 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-28
+
+### Added
+
+- Added AU2 and NZ2 encrypted PII writers through `Pii.FormatAustralian` and
+  `Pii.FormatNewZealand`, with jurisdiction-specific field models, structured
+  address inputs, fixed eight-position output, and the shared 1024-byte limit.
+- Added `PayslipNumber` for exact v2 `{ value, display? }` amounts, rates and
+  quantities, including a `decimal` constructor that preserves decimal scale.
+- Added `PayslipSchemas` constants for the four supported AU and NZ schema ids.
+- Added `PayslipCurrencies` constants for the optional ten-code AU2/NZ2
+  currency allow-list.
+
+### Changed
+
+- Generate typed AU/NZ v2 payslip payloads from the Node Zod wire shapes. Use
+  `PayslipNonPii.FromAustralianV2` or `FromNewZealandV2`; free-form `AdditionalData`
+  is not supported for these profiles. The API validates payslip values and
+  batch records; legacy and future schemas retain free-form pass-through.
+- `PayslipNonPii.PeriodStart` is optional for `au.payslip.v2` and
+  `nz.payslip.v2`. It remains required for both frozen v1 schemas.
+
+### Removed
+
+- **Breaking:** removed legacy P1/v1 issuer output. `Pii.FormatV1`,
+  `BarcodePayloadFormat`, barcode format options, and legacy scan-host selection
+  are no longer available; PII and barcode writers now generate only P2/v2.
+  `Pii.Parse` still reads P1 plaintext from existing documents.
+- **Breaking:** removed low-level Base32, PII-profile metadata, and P2
+  compatibility aliases. `VerifiablEndpoints` and `Pii.Parse` remain available
+  for environment configuration, migrations, and integration tests. Use
+  `VerifiablBarcode.BuildPayload`, `CreateSvg`, or `CreatePng` instead of
+  `VerifiablBase32`, and replace `Pii.FormatV2(PiiV2Fields)` with
+  `Pii.Format(PiiFields)`.
+
 ## [0.9.0]
 
 ### Removed

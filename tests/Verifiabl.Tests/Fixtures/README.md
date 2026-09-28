@@ -15,5 +15,4 @@ RGBA parity. Any deliberate change to the compositor, badge frame, fixture polic
 URL must include a coordinated update to the complete generated artifact set. The Node SDK
 independently checks that its committed frame matches a fresh render of its live SVG.
 
-The default cases cover the v2 short-host writer, including its explicit byte/alphanumeric segment
-split. The `v1-default` cases retain compatibility coverage for the explicit rollback writer.
+The cases cover the v2 short-host writer, including its explicit byte/alphanumeric segment split.
