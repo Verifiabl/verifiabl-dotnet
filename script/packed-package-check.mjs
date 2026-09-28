@@ -82,9 +82,9 @@ export function check(packageDirectory = "artifacts") {
         period_end: "2026-08-31",
         payment_date: "2026-09-04",
         currency,
-        gross: { value: gross },
-        [taxField]: { value: tax },
-        net: { value: id === "PAY-1001" ? "6750.00" : "5890.00" },
+        gross,
+        [taxField]: tax,
+        net: id === "PAY-1001" ? "6750.00" : "5890.00",
       });
     }
     const single = manifest("single", "PAY-1001").registrationRequest;

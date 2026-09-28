@@ -1,9 +1,10 @@
-using System.Collections.ObjectModel;
-
 namespace Verifiabl.Client;
 
-/// <summary>Currency codes accepted by the AU2 and NZ2 payslip schemas.</summary>
-public static class PayslipCurrencies
+/// <summary>
+/// Currency codes accepted by the AU2 and NZ2 payslip schemas. <see cref="All"/>
+/// lists every accepted ISO 4217 code; the named constants are common codes.
+/// </summary>
+public static partial class PayslipCurrencies
 {
     /// <summary>Australian dollar.</summary>
     public const string Aud = "AUD";
@@ -34,19 +35,4 @@ public static class PayslipCurrencies
 
     /// <summary>South African rand.</summary>
     public const string Zar = "ZAR";
-
-    /// <summary>The complete supported currency allow-list.</summary>
-    public static readonly IReadOnlyList<string> All = new ReadOnlyCollection<string>(
-    [
-        Aud,
-        Nzd,
-        Usd,
-        Gbp,
-        Eur,
-        Cad,
-        Sgd,
-        Hkd,
-        Chf,
-        Zar,
-    ]);
 }

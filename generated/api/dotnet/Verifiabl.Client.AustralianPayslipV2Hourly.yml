@@ -52,14 +52,18 @@ items:
     content: >-
       [JsonPropertyName("ordinary_rate")]
 
-      public required PayslipNumber OrdinaryRate { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public required decimal OrdinaryRate { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Decimal
     content.vb: >-
       <JsonPropertyName("ordinary_rate")>
 
-      Public Property OrdinaryRate As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property OrdinaryRate As Decimal
   overload: Verifiabl.Client.AustralianPayslipV2Hourly.OrdinaryRate*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -87,14 +91,18 @@ items:
     content: >-
       [JsonPropertyName("hours")]
 
-      public required PayslipNumber Hours { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public required decimal Hours { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Decimal
     content.vb: >-
       <JsonPropertyName("hours")>
 
-      Public Property Hours As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property Hours As Decimal
   overload: Verifiabl.Client.AustralianPayslipV2Hourly.Hours*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -122,14 +130,18 @@ items:
     content: >-
       [JsonPropertyName("amount")]
 
-      public required PayslipNumber Amount { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public required decimal Amount { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Decimal
     content.vb: >-
       <JsonPropertyName("amount")>
 
-      Public Property Amount As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property Amount As Decimal
   overload: Verifiabl.Client.AustralianPayslipV2Hourly.Amount*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -379,13 +391,17 @@ references:
   name: OrdinaryRate
   nameWithType: AustralianPayslipV2Hourly.OrdinaryRate
   fullName: Verifiabl.Client.AustralianPayslipV2Hourly.OrdinaryRate
-- uid: Verifiabl.Client.PayslipNumber
-  commentId: T:Verifiabl.Client.PayslipNumber
-  parent: Verifiabl.Client
-  href: Verifiabl.Client.PayslipNumber.html
-  name: PayslipNumber
-  nameWithType: PayslipNumber
-  fullName: Verifiabl.Client.PayslipNumber
+- uid: System.Decimal
+  commentId: T:System.Decimal
+  parent: System
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.decimal
+  name: decimal
+  nameWithType: decimal
+  fullName: decimal
+  nameWithType.vb: Decimal
+  fullName.vb: Decimal
+  name.vb: Decimal
 - uid: Verifiabl.Client.AustralianPayslipV2Hourly.Hours*
   commentId: Overload:Verifiabl.Client.AustralianPayslipV2Hourly.Hours
   href: Verifiabl.Client.AustralianPayslipV2Hourly.html#Verifiabl_Client_AustralianPayslipV2Hourly_Hours

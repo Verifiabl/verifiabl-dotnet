@@ -49,9 +49,9 @@ internal static class IssuerExample
                 PeriodEnd = "2026-08-31",
                 PaymentDate = "2026-09-04",
                 Currency = PayslipCurrencies.Aud,
-                Gross = new PayslipNumber(9000.00m),
-                Paygw = new PayslipNumber(2250.00m),
-                Net = new PayslipNumber(6750.00m),
+                Gross = 9000.00m,
+                Paygw = 2250.00m,
+                Net = 6750.00m,
             }),
         new(
             "PAY-1002",
@@ -78,9 +78,9 @@ internal static class IssuerExample
                 PeriodEnd = "2026-08-31",
                 PaymentDate = "2026-09-04",
                 Currency = PayslipCurrencies.Nzd,
-                Gross = new PayslipNumber(7600.00m),
-                Paye = new PayslipNumber(1710.00m),
-                Net = new PayslipNumber(5890.00m),
+                Gross = 7600.00m,
+                Paye = 1710.00m,
+                Net = 5890.00m,
             }),
     ];
 

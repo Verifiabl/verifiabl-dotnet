@@ -6,7 +6,9 @@ namespace Verifiabl.Client;
 /// </summary>
 /// <remarks>
 /// Use <see cref="FromAustralianV2"/> or <see cref="FromNewZealandV2"/> for
-/// v2 payloads. They serialize only generated fields; the API validates values.
+/// v2 payloads. They serialize only generated fields, send each amount as an
+/// exact decimal string, and require an ISO 4217 currency; the API validates
+/// the other values.
 /// <see cref="AdditionalData"/> is for legacy or future-schema pass-through.
 /// </remarks>
 public sealed class PayslipNonPii
@@ -25,7 +27,7 @@ public sealed class PayslipNonPii
     /// </summary>
     /// <remarks>
     /// Values may be <see langword="null"/>, <see cref="string"/>,
-    /// <see cref="bool"/>, <see cref="PayslipNumber"/>, any common numeric type, a nested
+    /// <see cref="bool"/>, any common numeric type, a nested
     /// <see cref="IDictionary{TKey,TValue}"/> of the same, or a sequence of them.
     /// Anything else throws an <see cref="ArgumentException"/> naming the key.
     /// </remarks>

@@ -54,14 +54,18 @@ items:
     content: >-
       [JsonPropertyName("taxable")]
 
-      public PayslipNumber? Taxable { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public decimal? Taxable { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Nullable{System.Decimal}
     content.vb: >-
       <JsonPropertyName("taxable")>
 
-      Public Property Taxable As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property Taxable As Decimal?
   overload: Verifiabl.Client.AustralianPayslipV2Ytd.Taxable*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -89,14 +93,18 @@ items:
     content: >-
       [JsonPropertyName("super")]
 
-      public PayslipNumber? Super { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public decimal? Super { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Nullable{System.Decimal}
     content.vb: >-
       <JsonPropertyName("super")>
 
-      Public Property Super As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property Super As Decimal?
   overload: Verifiabl.Client.AustralianPayslipV2Ytd.Super*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -124,14 +132,18 @@ items:
     content: >-
       [JsonPropertyName("non_taxable")]
 
-      public PayslipNumber? NonTaxable { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public decimal? NonTaxable { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Nullable{System.Decimal}
     content.vb: >-
       <JsonPropertyName("non_taxable")>
 
-      Public Property NonTaxable As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property NonTaxable As Decimal?
   overload: Verifiabl.Client.AustralianPayslipV2Ytd.NonTaxable*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -159,14 +171,18 @@ items:
     content: >-
       [JsonPropertyName("post_tax_deductions")]
 
-      public PayslipNumber? PostTaxDeductions { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public decimal? PostTaxDeductions { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Nullable{System.Decimal}
     content.vb: >-
       <JsonPropertyName("post_tax_deductions")>
 
-      Public Property PostTaxDeductions As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property PostTaxDeductions As Decimal?
   overload: Verifiabl.Client.AustralianPayslipV2Ytd.PostTaxDeductions*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -194,14 +210,18 @@ items:
     content: >-
       [JsonPropertyName("reimbursements")]
 
-      public PayslipNumber? Reimbursements { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public decimal? Reimbursements { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Nullable{System.Decimal}
     content.vb: >-
       <JsonPropertyName("reimbursements")>
 
-      Public Property Reimbursements As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property Reimbursements As Decimal?
   overload: Verifiabl.Client.AustralianPayslipV2Ytd.Reimbursements*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -451,13 +471,57 @@ references:
   name: Taxable
   nameWithType: AustralianPayslipV2Ytd.Taxable
   fullName: Verifiabl.Client.AustralianPayslipV2Ytd.Taxable
-- uid: Verifiabl.Client.PayslipNumber
-  commentId: T:Verifiabl.Client.PayslipNumber
-  parent: Verifiabl.Client
-  href: Verifiabl.Client.PayslipNumber.html
-  name: PayslipNumber
-  nameWithType: PayslipNumber
-  fullName: Verifiabl.Client.PayslipNumber
+- uid: System.Nullable{System.Decimal}
+  commentId: T:System.Nullable{System.Decimal}
+  parent: System
+  definition: System.Nullable`1
+  href: https://learn.microsoft.com/dotnet/api/system.decimal
+  name: decimal?
+  nameWithType: decimal?
+  fullName: decimal?
+  nameWithType.vb: Decimal?
+  fullName.vb: Decimal?
+  name.vb: Decimal?
+  spec.csharp:
+  - uid: System.Decimal
+    name: decimal
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.decimal
+  - name: '?'
+  spec.vb:
+  - uid: System.Decimal
+    name: Decimal
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.decimal
+  - name: '?'
+- uid: System.Nullable`1
+  commentId: T:System.Nullable`1
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.nullable-1
+  name: Nullable<T>
+  nameWithType: Nullable<T>
+  fullName: System.Nullable<T>
+  nameWithType.vb: Nullable(Of T)
+  fullName.vb: System.Nullable(Of T)
+  name.vb: Nullable(Of T)
+  spec.csharp:
+  - uid: System.Nullable`1
+    name: Nullable
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.nullable-1
+  - name: <
+  - name: T
+  - name: '>'
+  spec.vb:
+  - uid: System.Nullable`1
+    name: Nullable
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.nullable-1
+  - name: (
+  - name: Of
+  - name: " "
+  - name: T
+  - name: )
 - uid: Verifiabl.Client.AustralianPayslipV2Ytd.Super*
   commentId: Overload:Verifiabl.Client.AustralianPayslipV2Ytd.Super
   href: Verifiabl.Client.AustralianPayslipV2Ytd.html#Verifiabl_Client_AustralianPayslipV2Ytd_Super

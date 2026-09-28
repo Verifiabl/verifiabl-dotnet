@@ -155,9 +155,9 @@ var nonPii = PayslipNonPii.FromAustralianV2(new AustralianPayslipV2
     PeriodEnd = "2026-05-31",
     PaymentDate = "2026-06-04",
     Currency = PayslipCurrencies.Aud,
-    Gross = new PayslipNumber(8125.00m, "$8,125.00"),
-    Paygw = new PayslipNumber(2030.00m, "$2,030.00"),
-    Net = new PayslipNumber(6095.00m, "$6,095.00"),
+    Gross = 8125.00m,
+    Paygw = 2030.00m,
+    Net = 6095.00m,
 });
 
 RegisterNonPiiResponse registration = await client.RegisterNonPiiAsync(new RegisterNonPiiRequest
@@ -196,13 +196,16 @@ renaming the non-PII schema. The verifier checks the PII marker against the
 record's jurisdiction, not the schema version; a jurisdiction mismatch fails
 verification. Legacy v1 verification returns this plaintext without parsing it.
 
-`PayslipNumber` carries the v2 number object. Construct it from a `decimal` when
-the provider performs arithmetic, or from an exact string when its scale must
-be retained byte-for-byte. `display` is optional and should contain the printed
-form only when it differs from `value`.
+Every AU2 and NZ2 amount, rate and quantity is a `decimal`. The SDK sends it
+as a plain decimal JSON string, for example `"1234.56"`, with no rounding and
+with the scale of the `decimal` value: `1.50m` is sent as `"1.50"` and `1.5m`
+as `"1.5"`. Negative values are valid in every field.
 
-Currency is optional. When present, use one of the ten `PayslipCurrencies`
-constants: AUD, NZD, USD, GBP, EUR, CAD, SGD, HKD, CHF or ZAR.
+`Currency` is required. Use a current ISO 4217 currency code; fund codes and
+codes with no minor unit (for example `XAU` or `XXX`) are not accepted, because
+wages are paid in legal tender. The `PayslipCurrencies` constants cover common
+codes, and `PayslipCurrencies.All` lists every accepted code. The SDK rejects
+any other value before it sends the record.
 
 ### Legacy P2 compatibility format
 

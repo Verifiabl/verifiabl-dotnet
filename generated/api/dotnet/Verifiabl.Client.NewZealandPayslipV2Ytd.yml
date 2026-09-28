@@ -56,14 +56,18 @@ items:
     content: >-
       [JsonPropertyName("student_loan")]
 
-      public PayslipNumber? StudentLoan { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public decimal? StudentLoan { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Nullable{System.Decimal}
     content.vb: >-
       <JsonPropertyName("student_loan")>
 
-      Public Property StudentLoan As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property StudentLoan As Decimal?
   overload: Verifiabl.Client.NewZealandPayslipV2Ytd.StudentLoan*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -91,14 +95,18 @@ items:
     content: >-
       [JsonPropertyName("kiwisaver_employee")]
 
-      public PayslipNumber? KiwisaverEmployee { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public decimal? KiwisaverEmployee { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Nullable{System.Decimal}
     content.vb: >-
       <JsonPropertyName("kiwisaver_employee")>
 
-      Public Property KiwisaverEmployee As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property KiwisaverEmployee As Decimal?
   overload: Verifiabl.Client.NewZealandPayslipV2Ytd.KiwisaverEmployee*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -126,14 +134,18 @@ items:
     content: >-
       [JsonPropertyName("kiwisaver_employer")]
 
-      public PayslipNumber? KiwisaverEmployer { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public decimal? KiwisaverEmployer { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Nullable{System.Decimal}
     content.vb: >-
       <JsonPropertyName("kiwisaver_employer")>
 
-      Public Property KiwisaverEmployer As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property KiwisaverEmployer As Decimal?
   overload: Verifiabl.Client.NewZealandPayslipV2Ytd.KiwisaverEmployer*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -161,14 +173,18 @@ items:
     content: >-
       [JsonPropertyName("child_support")]
 
-      public PayslipNumber? ChildSupport { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public decimal? ChildSupport { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Nullable{System.Decimal}
     content.vb: >-
       <JsonPropertyName("child_support")>
 
-      Public Property ChildSupport As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property ChildSupport As Decimal?
   overload: Verifiabl.Client.NewZealandPayslipV2Ytd.ChildSupport*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -196,14 +212,18 @@ items:
     content: >-
       [JsonPropertyName("non_taxable")]
 
-      public PayslipNumber? NonTaxable { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public decimal? NonTaxable { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Nullable{System.Decimal}
     content.vb: >-
       <JsonPropertyName("non_taxable")>
 
-      Public Property NonTaxable As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property NonTaxable As Decimal?
   overload: Verifiabl.Client.NewZealandPayslipV2Ytd.NonTaxable*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -231,14 +251,18 @@ items:
     content: >-
       [JsonPropertyName("post_tax_deductions")]
 
-      public PayslipNumber? PostTaxDeductions { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public decimal? PostTaxDeductions { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Nullable{System.Decimal}
     content.vb: >-
       <JsonPropertyName("post_tax_deductions")>
 
-      Public Property PostTaxDeductions As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property PostTaxDeductions As Decimal?
   overload: Verifiabl.Client.NewZealandPayslipV2Ytd.PostTaxDeductions*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -266,14 +290,18 @@ items:
     content: >-
       [JsonPropertyName("reimbursements")]
 
-      public PayslipNumber? Reimbursements { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public decimal? Reimbursements { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Nullable{System.Decimal}
     content.vb: >-
       <JsonPropertyName("reimbursements")>
 
-      Public Property Reimbursements As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property Reimbursements As Decimal?
   overload: Verifiabl.Client.NewZealandPayslipV2Ytd.Reimbursements*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -523,13 +551,57 @@ references:
   name: StudentLoan
   nameWithType: NewZealandPayslipV2Ytd.StudentLoan
   fullName: Verifiabl.Client.NewZealandPayslipV2Ytd.StudentLoan
-- uid: Verifiabl.Client.PayslipNumber
-  commentId: T:Verifiabl.Client.PayslipNumber
-  parent: Verifiabl.Client
-  href: Verifiabl.Client.PayslipNumber.html
-  name: PayslipNumber
-  nameWithType: PayslipNumber
-  fullName: Verifiabl.Client.PayslipNumber
+- uid: System.Nullable{System.Decimal}
+  commentId: T:System.Nullable{System.Decimal}
+  parent: System
+  definition: System.Nullable`1
+  href: https://learn.microsoft.com/dotnet/api/system.decimal
+  name: decimal?
+  nameWithType: decimal?
+  fullName: decimal?
+  nameWithType.vb: Decimal?
+  fullName.vb: Decimal?
+  name.vb: Decimal?
+  spec.csharp:
+  - uid: System.Decimal
+    name: decimal
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.decimal
+  - name: '?'
+  spec.vb:
+  - uid: System.Decimal
+    name: Decimal
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.decimal
+  - name: '?'
+- uid: System.Nullable`1
+  commentId: T:System.Nullable`1
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.nullable-1
+  name: Nullable<T>
+  nameWithType: Nullable<T>
+  fullName: System.Nullable<T>
+  nameWithType.vb: Nullable(Of T)
+  fullName.vb: System.Nullable(Of T)
+  name.vb: Nullable(Of T)
+  spec.csharp:
+  - uid: System.Nullable`1
+    name: Nullable
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.nullable-1
+  - name: <
+  - name: T
+  - name: '>'
+  spec.vb:
+  - uid: System.Nullable`1
+    name: Nullable
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.nullable-1
+  - name: (
+  - name: Of
+  - name: " "
+  - name: T
+  - name: )
 - uid: Verifiabl.Client.NewZealandPayslipV2Ytd.KiwisaverEmployee*
   commentId: Overload:Verifiabl.Client.NewZealandPayslipV2Ytd.KiwisaverEmployee
   href: Verifiabl.Client.NewZealandPayslipV2Ytd.html#Verifiabl_Client_NewZealandPayslipV2Ytd_KiwisaverEmployee

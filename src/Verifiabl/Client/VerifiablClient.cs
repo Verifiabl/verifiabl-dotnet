@@ -497,7 +497,7 @@ public sealed class VerifiablClient : IVerifiablClient
     {
         Version? version = typeof(VerifiablClient).Assembly.GetName().Version;
         string v = version is null ? "0.0.0" : $"{version.Major}.{version.Minor}.{version.Build}";
-        return $"verifiabl-dotnet/{v} ({RuntimeInformation.FrameworkDescription})";
+        return $"verifiabl-issuer-dotnet/{v} ({RuntimeInformation.FrameworkDescription})";
     }
 
     private static bool IsRetryableStatus(int status, bool idempotent)

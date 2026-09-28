@@ -6,6 +6,25 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-09-28
+
+### Changed
+
+- **Breaking:** generated AU2 and NZ2 amount, rate and quantity properties are
+  now `decimal` (`decimal?` when optional) instead of `PayslipNumber`. The SDK
+  sends each one as a plain decimal JSON string that keeps the value's scale,
+  so `1.50m` is sent as `"1.50"`, and it never rounds. `display` is removed.
+- **Breaking:** `Currency` is required on `AustralianPayslipV2` and
+  `NewZealandPayslipV2`, and the SDK rejects a code outside
+  `PayslipCurrencies.All` before it sends the record. `PayslipCurrencies.All`
+  now lists the 155 current ISO 4217 currency codes, excluding fund codes and
+  codes with no minor unit (for example `XAU`, `XTS`, `XXX`); the named
+  constants are unchanged. v1 schemas are unchanged.
+
+### Removed
+
+- **Breaking:** removed `PayslipNumber`.
+
 ## [0.10.0] - 2026-09-28
 
 ### Added

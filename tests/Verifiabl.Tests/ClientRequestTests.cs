@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
@@ -225,7 +226,7 @@ public class ClientRequestTests
     }
 
     [Fact]
-    public async Task MapsV2PayslipNumbersWithoutLosingScaleOrDisplay()
+    public async Task MapsV2DecimalsToExactStringsWithoutLosingScale()
     {
         FakeHttpHandler handler = RegistrationHandler();
         VerifiablClient client = Client(handler);
@@ -235,13 +236,21 @@ public class ClientRequestTests
         {
             PeriodEnd = "2026-05-31",
             PaymentDate = "2026-06-01",
-            Gross = new PayslipNumber("6000.00", "$6,000.00"),
-            Paygw = new PayslipNumber(1500.00m),
-            Net = new PayslipNumber("4500.00"),
+            Currency = PayslipCurrencies.Aud,
+            Gross = 6000.00m,
+            Paygw = 1500.5m,
+            Net = -0.0001m,
+            YtdGross = 12345678901234567890.123456789m,
+            Hourly = new AustralianPayslipV2Hourly
+            {
+                OrdinaryRate = 47.3684m,
+                Hours = -76.00m,
+                Amount = 0m,
+            },
             Earnings = [new AustralianPayslipV2EarningsItem
             {
                 Type = "ordinary",
-                Amount = new PayslipNumber("6000.00"),
+                Amount = 6000.00m,
             }],
         });
 
@@ -249,13 +258,77 @@ public class ClientRequestTests
 
         using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
         JsonElement nonPii = body.RootElement.GetProperty("payslip_non_pii");
-        Assert.Equal("6000.00", nonPii.GetProperty("gross").GetProperty("value").GetString());
-        Assert.Equal(
-            "$6,000.00",
-            nonPii.GetProperty("gross").GetProperty("display").GetString());
-        Assert.Equal("1500.00", nonPii.GetProperty("paygw").GetProperty("value").GetString());
-        Assert.False(nonPii.GetProperty("paygw").TryGetProperty("display", out _));
-        Assert.Equal("ordinary", nonPii.GetProperty("earnings")[0].GetProperty("type").GetString());
+        Assert.Equal("AUD", nonPii.GetProperty("currency").GetString());
+        Assert.Equal("6000.00", nonPii.GetProperty("gross").GetString());
+        Assert.Equal("1500.5", nonPii.GetProperty("paygw").GetString());
+        Assert.Equal("-0.0001", nonPii.GetProperty("net").GetString());
+        Assert.Equal("12345678901234567890.123456789", nonPii.GetProperty("ytd_gross").GetString());
+        Assert.Equal("47.3684", nonPii.GetProperty("hourly").GetProperty("ordinary_rate").GetString());
+        Assert.Equal("-76.00", nonPii.GetProperty("hourly").GetProperty("hours").GetString());
+        Assert.Equal("0", nonPii.GetProperty("hourly").GetProperty("amount").GetString());
+        Assert.Equal("6000.00", nonPii.GetProperty("earnings")[0].GetProperty("amount").GetString());
+        Assert.False(nonPii.TryGetProperty("ytd_paygw", out _));
+    }
+
+    [Theory]
+    [InlineData("0.0000000000000000000000000001")]
+    [InlineData("-0.00")]
+    [InlineData("79228162514264337593543950335")]
+    [InlineData("-79228162514264337593543950335")]
+    public async Task WritesEveryDecimalInThePlainDecimalGrammar(string text)
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.Schema = PayslipSchemas.AustralianV2;
+        request.PayslipNonPii = PayslipNonPii.FromAustralianV2(new AustralianPayslipV2
+        {
+            PeriodEnd = "2026-05-31",
+            PaymentDate = "2026-06-01",
+            Currency = PayslipCurrencies.Aud,
+            Gross = decimal.Parse(text, CultureInfo.InvariantCulture),
+            Paygw = 0m,
+            Net = 0m,
+        });
+
+        await client.RegisterNonPiiAsync(request);
+
+        using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
+        Assert.Matches(
+            "\\A-?[0-9]+(?:\\.[0-9]+)?\\z",
+            body.RootElement.GetProperty("payslip_non_pii").GetProperty("gross").GetString());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("aud")]
+    [InlineData("XYZ")]
+    [InlineData("XTS")]
+    [InlineData("XXX")]
+    [InlineData("XAU")]
+    [InlineData("CLF")]
+    public async Task RejectsAMissingOrUnsupportedV2Currency(string? currency)
+    {
+        var handler = new FakeHttpHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.Schema = PayslipSchemas.NewZealandV2;
+        request.PayslipNonPii = PayslipNonPii.FromNewZealandV2(new NewZealandPayslipV2
+        {
+            PeriodEnd = "2026-05-31",
+            PaymentDate = "2026-06-01",
+            Currency = currency!,
+            Gross = 100m,
+            Paye = 20m,
+            Net = 80m,
+        });
+
+        ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(
+            () => client.RegisterNonPiiAsync(request));
+
+        Assert.Contains("Currency must be a supported ISO 4217 currency code", exception.Message);
+        Assert.Empty(handler.Requests);
     }
 
     [Fact]
@@ -652,17 +725,19 @@ public class ClientRequestTests
         {
             PeriodEnd = "2026-05-31",
             PaymentDate = "2026-06-01",
-            Gross = new PayslipNumber("100"),
-            Paygw = new PayslipNumber("20"),
-            Net = new PayslipNumber("80"),
+            Currency = PayslipCurrencies.Aud,
+            Gross = 100m,
+            Paygw = 20m,
+            Net = 80m,
         })
         : PayslipNonPii.FromNewZealandV2(new NewZealandPayslipV2
         {
             PeriodEnd = "2026-05-31",
             PaymentDate = "2026-06-01",
-            Gross = new PayslipNumber("100"),
-            Paye = new PayslipNumber("20"),
-            Net = new PayslipNumber("80"),
+            Currency = PayslipCurrencies.Nzd,
+            Gross = 100m,
+            Paye = 20m,
+            Net = 80m,
         });
 
     [Fact]
@@ -695,9 +770,10 @@ public class ClientRequestTests
         {
             PeriodEnd = "invalid",
             PaymentDate = "2026-06-01",
-            Gross = new PayslipNumber("100"),
-            Paygw = new PayslipNumber("20"),
-            Net = new PayslipNumber("80"),
+            Currency = PayslipCurrencies.Aud,
+            Gross = 100m,
+            Paygw = 20m,
+            Net = 80m,
         });
 
         VerifiablApiException exception = await Assert.ThrowsAsync<VerifiablApiException>(

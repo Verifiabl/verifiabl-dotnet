@@ -89,14 +89,18 @@ items:
     content: >-
       [JsonPropertyName("amount")]
 
-      public required PayslipNumber Amount { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public required decimal Amount { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Decimal
     content.vb: >-
       <JsonPropertyName("amount")>
 
-      Public Property Amount As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property Amount As Decimal
   overload: Verifiabl.Client.AustralianPayslipV2SuperannuationItem.Amount*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -124,14 +128,18 @@ items:
     content: >-
       [JsonPropertyName("rate")]
 
-      public PayslipNumber? Rate { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public decimal? Rate { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Nullable{System.Decimal}
     content.vb: >-
       <JsonPropertyName("rate")>
 
-      Public Property Rate As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property Rate As Decimal?
   overload: Verifiabl.Client.AustralianPayslipV2SuperannuationItem.Rate*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -159,14 +167,18 @@ items:
     content: >-
       [JsonPropertyName("ytd_amount")]
 
-      public PayslipNumber? YtdAmount { get; init; }
+      [JsonConverter(typeof(PayslipDecimalConverter))]
+
+      public decimal? YtdAmount { get; init; }
     parameters: []
     return:
-      type: Verifiabl.Client.PayslipNumber
+      type: System.Nullable{System.Decimal}
     content.vb: >-
       <JsonPropertyName("ytd_amount")>
 
-      Public Property YtdAmount As PayslipNumber
+      <JsonConverter(GetType(PayslipDecimalConverter))>
+
+      Public Property YtdAmount As Decimal?
   overload: Verifiabl.Client.AustralianPayslipV2SuperannuationItem.YtdAmount*
   attributes:
   - type: System.Text.Json.Serialization.JsonPropertyNameAttribute
@@ -468,19 +480,74 @@ references:
   name: Amount
   nameWithType: AustralianPayslipV2SuperannuationItem.Amount
   fullName: Verifiabl.Client.AustralianPayslipV2SuperannuationItem.Amount
-- uid: Verifiabl.Client.PayslipNumber
-  commentId: T:Verifiabl.Client.PayslipNumber
-  parent: Verifiabl.Client
-  href: Verifiabl.Client.PayslipNumber.html
-  name: PayslipNumber
-  nameWithType: PayslipNumber
-  fullName: Verifiabl.Client.PayslipNumber
+- uid: System.Decimal
+  commentId: T:System.Decimal
+  parent: System
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.decimal
+  name: decimal
+  nameWithType: decimal
+  fullName: decimal
+  nameWithType.vb: Decimal
+  fullName.vb: Decimal
+  name.vb: Decimal
 - uid: Verifiabl.Client.AustralianPayslipV2SuperannuationItem.Rate*
   commentId: Overload:Verifiabl.Client.AustralianPayslipV2SuperannuationItem.Rate
   href: Verifiabl.Client.AustralianPayslipV2SuperannuationItem.html#Verifiabl_Client_AustralianPayslipV2SuperannuationItem_Rate
   name: Rate
   nameWithType: AustralianPayslipV2SuperannuationItem.Rate
   fullName: Verifiabl.Client.AustralianPayslipV2SuperannuationItem.Rate
+- uid: System.Nullable{System.Decimal}
+  commentId: T:System.Nullable{System.Decimal}
+  parent: System
+  definition: System.Nullable`1
+  href: https://learn.microsoft.com/dotnet/api/system.decimal
+  name: decimal?
+  nameWithType: decimal?
+  fullName: decimal?
+  nameWithType.vb: Decimal?
+  fullName.vb: Decimal?
+  name.vb: Decimal?
+  spec.csharp:
+  - uid: System.Decimal
+    name: decimal
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.decimal
+  - name: '?'
+  spec.vb:
+  - uid: System.Decimal
+    name: Decimal
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.decimal
+  - name: '?'
+- uid: System.Nullable`1
+  commentId: T:System.Nullable`1
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.nullable-1
+  name: Nullable<T>
+  nameWithType: Nullable<T>
+  fullName: System.Nullable<T>
+  nameWithType.vb: Nullable(Of T)
+  fullName.vb: System.Nullable(Of T)
+  name.vb: Nullable(Of T)
+  spec.csharp:
+  - uid: System.Nullable`1
+    name: Nullable
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.nullable-1
+  - name: <
+  - name: T
+  - name: '>'
+  spec.vb:
+  - uid: System.Nullable`1
+    name: Nullable
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.nullable-1
+  - name: (
+  - name: Of
+  - name: " "
+  - name: T
+  - name: )
 - uid: Verifiabl.Client.AustralianPayslipV2SuperannuationItem.YtdAmount*
   commentId: Overload:Verifiabl.Client.AustralianPayslipV2SuperannuationItem.YtdAmount
   href: Verifiabl.Client.AustralianPayslipV2SuperannuationItem.html#Verifiabl_Client_AustralianPayslipV2SuperannuationItem_YtdAmount
