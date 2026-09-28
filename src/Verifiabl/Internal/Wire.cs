@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Verifiabl.Client;
 
 namespace Verifiabl.Internal;
@@ -100,6 +101,57 @@ internal static class Wire
         return new JsonObject { ["records"] = wireRecords };
     }
 
+    internal static (JsonObject Body, IReadOnlyList<int> SentIndices, IReadOnlyDictionary<int, BatchRecordResult> Errors)
+        PrepareBatch(IReadOnlyList<BatchRecord> records)
+    {
+        if (records.Count is < 1 or > MaxBatchRecords)
+        {
+            throw new ArgumentException($"records must contain between 1 and {MaxBatchRecords} records.", nameof(records));
+        }
+
+        var sent = new List<int>();
+        var errors = new Dictionary<int, BatchRecordResult>();
+        var wire = new JsonArray();
+        for (int index = 0; index < records.Count; index++)
+        {
+            BatchRecord record = records[index]
+                ?? throw new ArgumentException($"records[{index}] must not be null.", nameof(records));
+            string label = $"records[{index}]";
+            string reference = VerifiablReference.Validate(record.VerifiablReference, $"{label}.VerifiablReference");
+            string selectedSchema = Validation.ValidateSchema(record.Schema, $"{label}.Schema");
+            if (record.IssuedAt == default)
+            {
+                throw new ArgumentException($"{label}.IssuedAt is required.", nameof(records));
+            }
+            Validation.ValidateEncryptionMetadata(record.EncryptionMetadata, $"{label}.EncryptionMetadata");
+            if (record.ExternalId is not null)
+            {
+                Validation.ValidateExternalId(record.ExternalId, $"{label}.ExternalId");
+            }
+
+            try
+            {
+                JsonObject body = RegistrationFields(label, reference, selectedSchema,
+                    record.IssuedAt, record.PayslipNonPii, record.EncryptionMetadata);
+                if (record.ExternalId is not null)
+                {
+                    body["external_id"] = record.ExternalId;
+                }
+                wire.Add(body);
+                sent.Add(index);
+            }
+            catch (ArgumentException exception)
+            {
+                errors[index] = LocalError(record, exception.Message);
+            }
+        }
+        return (new JsonObject { ["records"] = wire }, sent, errors);
+    }
+
+    private static BatchRecordResult LocalError(BatchRecord record, string detail) =>
+        new(BatchRecordStatuses.Error, record.VerifiablReference, record.ExternalId,
+            "VALIDATION_FAILED", detail);
+
     private static JsonObject RegistrationFields(
         string label,
         string? verifiablReference,
@@ -108,8 +160,7 @@ internal static class Wire
         PayslipNonPii? payslipNonPii,
         EncryptionMetadata? encryptionMetadata)
     {
-        Validation.ValidateSchema(schema, $"{label}.Schema");
-
+        string validatedSchema = Validation.ValidateSchema(schema, $"{label}.Schema");
         // `required DateTimeOffset` stops a forgotten IssuedAt at compile time,
         // but an explicit `default` would otherwise serialize as year 0001.
         if (issuedAt == default)
@@ -136,13 +187,16 @@ internal static class Wire
             body["verifiabl_reference"] = verifiablReference;
         }
 
-        body["schema"] = schema;
+        body["schema"] = validatedSchema;
         // Millisecond-precision UTC, matching JavaScript's Date.toISOString(): the
         // API accepts arbitrary sub-second precision, but this keeps the wire value
         // identical to the Node SDK's.
         body["issued_at"] = issuedAt.ToUniversalTime()
             .ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture);
-        body["payslip_non_pii"] = PayslipNonPiiFields(payslipNonPii, $"{label}.PayslipNonPii");
+        body["payslip_non_pii"] = PayslipNonPiiFields(
+            payslipNonPii,
+            validatedSchema,
+            $"{label}.PayslipNonPii");
         body["encryption_metadata"] = new JsonObject
         {
             ["iv"] = Base64Url.Encode(encryptionMetadata!.Iv),
@@ -151,9 +205,38 @@ internal static class Wire
         return body;
     }
 
-    private static JsonObject PayslipNonPiiFields(PayslipNonPii data, string label)
+    private static JsonObject PayslipNonPiiFields(
+        PayslipNonPii data,
+        string schema,
+        string label)
     {
-        Validation.ValidateIsoDate(data.PeriodStart, $"{label}.PeriodStart");
+        if (data.TypedV2Payload is not null)
+        {
+            if (schema != data.TypedV2Schema || data.AdditionalData is not null)
+            {
+                throw new ArgumentException($"{label} typed payload must match its schema and cannot include AdditionalData.", label);
+            }
+            return JsonSerializer.SerializeToNode(data.TypedV2Payload, data.TypedV2Payload.GetType(),
+                new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                })!.AsObject();
+        }
+        if (schema is PayslipSchemas.AustralianV2 or PayslipSchemas.NewZealandV2)
+        {
+            throw new ArgumentException($"{label} requires PayslipNonPii.FromAustralianV2 or FromNewZealandV2.", label);
+        }
+        if (data.PeriodStart is null)
+        {
+            throw new ArgumentException(
+                $"{label}.PeriodStart is required for {schema}.",
+                $"{label}.PeriodStart");
+        }
+        else
+        {
+            Validation.ValidateIsoDate(data.PeriodStart, $"{label}.PeriodStart");
+        }
         Validation.ValidateIsoDate(data.PeriodEnd, $"{label}.PeriodEnd");
 
         var body = new JsonObject();
@@ -172,7 +255,10 @@ internal static class Wire
             }
         }
 
-        body["period_start"] = data.PeriodStart;
+        if (data.PeriodStart is not null)
+        {
+            body["period_start"] = data.PeriodStart;
+        }
         body["period_end"] = data.PeriodEnd;
         return body;
     }
@@ -191,6 +277,17 @@ internal static class Wire
                 return JsonValue.Create(text);
             case bool flag:
                 return JsonValue.Create(flag);
+            case PayslipNumber number:
+                var numberBody = new JsonObject
+                {
+                    ["value"] = number.Value,
+                };
+                if (number.Display is not null)
+                {
+                    numberBody["display"] = number.Display;
+                }
+
+                return numberBody;
             case sbyte or byte or short or ushort or int or uint or long:
                 return JsonValue.Create(Convert.ToInt64(value, CultureInfo.InvariantCulture));
             case ulong unsigned:
@@ -250,7 +347,8 @@ internal static class Wire
             default:
                 throw new ArgumentException(
                     $"{label} has unsupported type {value.GetType().FullName}. Supported values are " +
-                    "null, string, bool, numbers, nested dictionaries, and sequences of those.",
+                    "null, string, bool, PayslipNumber, numbers, nested dictionaries, and " +
+                    "sequences of those.",
                     label);
         }
     }

@@ -27,10 +27,8 @@ public static class VerifiablBarcode
     /// <summary>XMP property name for the PDF metadata copy of the payload.</summary>
     public const string PdfPayloadXmpProperty = "payload";
 
-    private const string V1PayloadVersion = "1";
-    private const string V2PayloadVersion = "2";
-    internal const string V1ScanUrlFragmentMarker = "#1.";
-    internal const string V2ScanUrlFragmentMarker = "#2.";
+    private const string PayloadVersion = "2";
+    internal const string ScanUrlFragmentMarker = "#2.";
 
     /// <summary>
     /// Build the default v2 barcode payload: <c>2|&lt;verifiablReference&gt;|&lt;Base32 ciphertext&gt;</c>.
@@ -41,13 +39,7 @@ public static class VerifiablBarcode
     /// <see cref="BuildScanUrl"/>, which carries the same reference and
     /// ciphertext as a public scan-redirect URL.
     /// </remarks>
-    public static string BuildPayload(BarcodeParts parts) =>
-        BuildPayload(parts, BarcodePayloadFormat.V2);
-
-    /// <summary>
-    /// Build a barcode payload in the selected format. Select V1 only for rollback.
-    /// </summary>
-    public static string BuildPayload(BarcodeParts parts, BarcodePayloadFormat format)
+    public static string BuildPayload(BarcodeParts parts)
     {
         if (parts is null)
         {
@@ -60,11 +52,7 @@ public static class VerifiablBarcode
         byte[] ciphertext = Validation.ValidateCiphertext(
             parts.EncryptedPii,
             nameof(parts.EncryptedPii));
-        format = ValidateFormat(format, nameof(format));
-
-        return format == BarcodePayloadFormat.V1
-            ? $"{V1PayloadVersion}|{reference}|{Base64Url.Encode(ciphertext)}"
-            : $"{V2PayloadVersion}|{reference}|{VerifiablBase32.Encode(ciphertext)}";
+        return $"{PayloadVersion}|{reference}|{VerifiablBase32.Encode(ciphertext)}";
     }
 
     /// <summary>
@@ -86,13 +74,8 @@ public static class VerifiablBarcode
         VerifiablEnvironment environment = VerifiablEndpoints.Validate(
             options.Environment,
             $"{nameof(options)}.{nameof(options.Environment)}");
-        BarcodePayloadFormat format = ValidateFormat(
-            options.Format,
-            $"{nameof(options)}.{nameof(options.Format)}");
         string baseUrl = options.ScanBaseUrl is null
-            ? format == BarcodePayloadFormat.V2
-                ? VerifiablEndpoints.V2ScanBaseUrlFor(environment)
-                : VerifiablEndpoints.ScanBaseUrlFor(environment)
+            ? VerifiablEndpoints.ScanBaseUrlFor(environment)
             : NormalizeScanBaseUrl(options.ScanBaseUrl);
 
         if (parts is null)
@@ -107,13 +90,8 @@ public static class VerifiablBarcode
             parts.EncryptedPii,
             nameof(parts.EncryptedPii));
 
-        if (format == BarcodePayloadFormat.V1)
-        {
-            return $"{baseUrl}/v/{reference}{V1ScanUrlFragmentMarker}{Base64Url.Encode(ciphertext)}";
-        }
-
         string base32 = VerifiablBase32.Encode(ciphertext);
-        return $"{baseUrl}/v/{reference}{V2ScanUrlFragmentMarker}{base32}";
+        return $"{baseUrl}/v/{reference}{ScanUrlFragmentMarker}{base32}";
     }
 
     /// <summary>
@@ -155,16 +133,6 @@ public static class VerifiablBarcode
         int pixelWidth = 720)
     {
         return PngBadgeRenderer.Render(parts, options ?? new BarcodeSvgOptions(), pixelWidth);
-    }
-
-    internal static BarcodePayloadFormat ValidateFormat(BarcodePayloadFormat format, string paramName)
-    {
-        if (format != BarcodePayloadFormat.V1 && format != BarcodePayloadFormat.V2)
-        {
-            throw new ArgumentOutOfRangeException(paramName, format, "Format must be V1 or V2.");
-        }
-
-        return format;
     }
 
     private static string NormalizeScanBaseUrl(Uri scanBaseUrl)

@@ -1,0 +1,632 @@
+### YamlMime:ManagedReference
+items:
+- uid: Verifiabl.Client.BatchRecord
+  commentId: T:Verifiabl.Client.BatchRecord
+  id: BatchRecord
+  parent: Verifiabl.Client
+  children:
+  - Verifiabl.Client.BatchRecord.EncryptionMetadata
+  - Verifiabl.Client.BatchRecord.ExternalId
+  - Verifiabl.Client.BatchRecord.IssuedAt
+  - Verifiabl.Client.BatchRecord.PayslipNonPii
+  - Verifiabl.Client.BatchRecord.Schema
+  - Verifiabl.Client.BatchRecord.VerifiablReference
+  langs:
+  - csharp
+  - vb
+  name: BatchRecord
+  nameWithType: BatchRecord
+  fullName: Verifiabl.Client.BatchRecord
+  type: Class
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl.Client
+  summary: >-
+    One record in a <xref href="Verifiabl.Client.IVerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable%7bVerifiabl.Client.BatchRecord%7d%2cSystem.Threading.CancellationToken)" data-throw-if-not-resolved="false"></xref> request:
+
+    the same fields as <xref href="Verifiabl.Client.RegisterNonPiiRequest" data-throw-if-not-resolved="false"></xref> plus a provider-generated
+
+    Verifiabl reference from <xref href="Verifiabl.VerifiablReference.Generate" data-throw-if-not-resolved="false"></xref>.
+  example: []
+  syntax:
+    content: public sealed class BatchRecord
+    content.vb: Public NotInheritable Class BatchRecord
+  inheritance:
+  - System.Object
+  inheritedMembers:
+  - System.Object.Equals(System.Object)
+  - System.Object.Equals(System.Object,System.Object)
+  - System.Object.GetHashCode
+  - System.Object.GetType
+  - System.Object.ReferenceEquals(System.Object,System.Object)
+  - System.Object.ToString
+- uid: Verifiabl.Client.BatchRecord.VerifiablReference
+  commentId: P:Verifiabl.Client.BatchRecord.VerifiablReference
+  id: VerifiablReference
+  parent: Verifiabl.Client.BatchRecord
+  langs:
+  - csharp
+  - vb
+  name: VerifiablReference
+  nameWithType: BatchRecord.VerifiablReference
+  fullName: Verifiabl.Client.BatchRecord.VerifiablReference
+  type: Property
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl.Client
+  summary: Provider-generated Verifiabl reference for this record.
+  example: []
+  syntax:
+    content: public required string VerifiablReference { get; set; }
+    parameters: []
+    return:
+      type: System.String
+    content.vb: Public Property VerifiablReference As String
+  overload: Verifiabl.Client.BatchRecord.VerifiablReference*
+- uid: Verifiabl.Client.BatchRecord.ExternalId
+  commentId: P:Verifiabl.Client.BatchRecord.ExternalId
+  id: ExternalId
+  parent: Verifiabl.Client.BatchRecord
+  langs:
+  - csharp
+  - vb
+  name: ExternalId
+  nameWithType: BatchRecord.ExternalId
+  fullName: Verifiabl.Client.BatchRecord.ExternalId
+  type: Property
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl.Client
+  summary: >-
+    Optional caller-supplied correlation id. The API echoes it back on the
+
+    matching result and never stores it, so you can line up results (and
+
+    error logs) with your own payslip records by your own id.
+  example: []
+  syntax:
+    content: public string? ExternalId { get; set; }
+    parameters: []
+    return:
+      type: System.String
+    content.vb: Public Property ExternalId As String
+  overload: Verifiabl.Client.BatchRecord.ExternalId*
+- uid: Verifiabl.Client.BatchRecord.Schema
+  commentId: P:Verifiabl.Client.BatchRecord.Schema
+  id: Schema
+  parent: Verifiabl.Client.BatchRecord
+  langs:
+  - csharp
+  - vb
+  name: Schema
+  nameWithType: BatchRecord.Schema
+  fullName: Verifiabl.Client.BatchRecord.Schema
+  type: Property
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl.Client
+  summary: Non-PII payslip schema identifier, e.g. "au.payslip.v2". This does not select a PII format.
+  example: []
+  syntax:
+    content: public required string Schema { get; set; }
+    parameters: []
+    return:
+      type: System.String
+    content.vb: Public Property Schema As String
+  overload: Verifiabl.Client.BatchRecord.Schema*
+- uid: Verifiabl.Client.BatchRecord.IssuedAt
+  commentId: P:Verifiabl.Client.BatchRecord.IssuedAt
+  id: IssuedAt
+  parent: Verifiabl.Client.BatchRecord
+  langs:
+  - csharp
+  - vb
+  name: IssuedAt
+  nameWithType: BatchRecord.IssuedAt
+  fullName: Verifiabl.Client.BatchRecord.IssuedAt
+  type: Property
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl.Client
+  summary: >-
+    When the payslip was issued. Sent to the API as an ISO 8601 UTC timestamp;
+
+    values with an offset are converted to UTC first.
+  example: []
+  syntax:
+    content: public required DateTimeOffset IssuedAt { get; set; }
+    parameters: []
+    return:
+      type: System.DateTimeOffset
+    content.vb: Public Property IssuedAt As DateTimeOffset
+  overload: Verifiabl.Client.BatchRecord.IssuedAt*
+- uid: Verifiabl.Client.BatchRecord.PayslipNonPii
+  commentId: P:Verifiabl.Client.BatchRecord.PayslipNonPii
+  id: PayslipNonPii
+  parent: Verifiabl.Client.BatchRecord
+  langs:
+  - csharp
+  - vb
+  name: PayslipNonPii
+  nameWithType: BatchRecord.PayslipNonPii
+  fullName: Verifiabl.Client.BatchRecord.PayslipNonPii
+  type: Property
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl.Client
+  summary: Non-PII payslip data.
+  example: []
+  syntax:
+    content: public required PayslipNonPii PayslipNonPii { get; set; }
+    parameters: []
+    return:
+      type: Verifiabl.Client.PayslipNonPii
+    content.vb: Public Property PayslipNonPii As PayslipNonPii
+  overload: Verifiabl.Client.BatchRecord.PayslipNonPii*
+- uid: Verifiabl.Client.BatchRecord.EncryptionMetadata
+  commentId: P:Verifiabl.Client.BatchRecord.EncryptionMetadata
+  id: EncryptionMetadata
+  parent: Verifiabl.Client.BatchRecord
+  langs:
+  - csharp
+  - vb
+  name: EncryptionMetadata
+  nameWithType: BatchRecord.EncryptionMetadata
+  fullName: Verifiabl.Client.BatchRecord.EncryptionMetadata
+  type: Property
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl.Client
+  summary: Decryption metadata from <xref href="Verifiabl.VerifiablCrypto.EncryptPii(System.String%2cSystem.Byte%5b%5d)" data-throw-if-not-resolved="false"></xref>.
+  example: []
+  syntax:
+    content: public required EncryptionMetadata EncryptionMetadata { get; set; }
+    parameters: []
+    return:
+      type: Verifiabl.EncryptionMetadata
+    content.vb: Public Property EncryptionMetadata As EncryptionMetadata
+  overload: Verifiabl.Client.BatchRecord.EncryptionMetadata*
+references:
+- uid: Verifiabl.Client.IVerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable{Verifiabl.Client.BatchRecord},System.Threading.CancellationToken)
+  commentId: M:Verifiabl.Client.IVerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable{Verifiabl.Client.BatchRecord},System.Threading.CancellationToken)
+  parent: Verifiabl.Client.IVerifiablClient
+  isExternal: true
+  href: Verifiabl.Client.IVerifiablClient.html#Verifiabl_Client_IVerifiablClient_RegisterNonPiiBatchAsync_System_Collections_Generic_IEnumerable_Verifiabl_Client_BatchRecord__System_Threading_CancellationToken_
+  name: RegisterNonPiiBatchAsync(IEnumerable<BatchRecord>, CancellationToken)
+  nameWithType: IVerifiablClient.RegisterNonPiiBatchAsync(IEnumerable<BatchRecord>, CancellationToken)
+  fullName: Verifiabl.Client.IVerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable<Verifiabl.Client.BatchRecord>, System.Threading.CancellationToken)
+  nameWithType.vb: IVerifiablClient.RegisterNonPiiBatchAsync(IEnumerable(Of BatchRecord), CancellationToken)
+  fullName.vb: Verifiabl.Client.IVerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable(Of Verifiabl.Client.BatchRecord), System.Threading.CancellationToken)
+  name.vb: RegisterNonPiiBatchAsync(IEnumerable(Of BatchRecord), CancellationToken)
+  spec.csharp:
+  - uid: Verifiabl.Client.IVerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable{Verifiabl.Client.BatchRecord},System.Threading.CancellationToken)
+    name: RegisterNonPiiBatchAsync
+    href: Verifiabl.Client.IVerifiablClient.html#Verifiabl_Client_IVerifiablClient_RegisterNonPiiBatchAsync_System_Collections_Generic_IEnumerable_Verifiabl_Client_BatchRecord__System_Threading_CancellationToken_
+  - name: (
+  - uid: System.Collections.Generic.IEnumerable`1
+    name: IEnumerable
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1
+  - name: <
+  - uid: Verifiabl.Client.BatchRecord
+    name: BatchRecord
+    href: Verifiabl.Client.BatchRecord.html
+  - name: '>'
+  - name: ','
+  - name: " "
+  - uid: System.Threading.CancellationToken
+    name: CancellationToken
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken
+  - name: )
+  spec.vb:
+  - uid: Verifiabl.Client.IVerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable{Verifiabl.Client.BatchRecord},System.Threading.CancellationToken)
+    name: RegisterNonPiiBatchAsync
+    href: Verifiabl.Client.IVerifiablClient.html#Verifiabl_Client_IVerifiablClient_RegisterNonPiiBatchAsync_System_Collections_Generic_IEnumerable_Verifiabl_Client_BatchRecord__System_Threading_CancellationToken_
+  - name: (
+  - uid: System.Collections.Generic.IEnumerable`1
+    name: IEnumerable
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1
+  - name: (
+  - name: Of
+  - name: " "
+  - uid: Verifiabl.Client.BatchRecord
+    name: BatchRecord
+    href: Verifiabl.Client.BatchRecord.html
+  - name: )
+  - name: ','
+  - name: " "
+  - uid: System.Threading.CancellationToken
+    name: CancellationToken
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken
+  - name: )
+- uid: Verifiabl.Client.RegisterNonPiiRequest
+  commentId: T:Verifiabl.Client.RegisterNonPiiRequest
+  parent: Verifiabl.Client
+  href: Verifiabl.Client.RegisterNonPiiRequest.html
+  name: RegisterNonPiiRequest
+  nameWithType: RegisterNonPiiRequest
+  fullName: Verifiabl.Client.RegisterNonPiiRequest
+- uid: Verifiabl.VerifiablReference.Generate
+  commentId: M:Verifiabl.VerifiablReference.Generate
+  href: Verifiabl.VerifiablReference.html#Verifiabl_VerifiablReference_Generate
+  name: Generate()
+  nameWithType: VerifiablReference.Generate()
+  fullName: Verifiabl.VerifiablReference.Generate()
+  spec.csharp:
+  - uid: Verifiabl.VerifiablReference.Generate
+    name: Generate
+    href: Verifiabl.VerifiablReference.html#Verifiabl_VerifiablReference_Generate
+  - name: (
+  - name: )
+  spec.vb:
+  - uid: Verifiabl.VerifiablReference.Generate
+    name: Generate
+    href: Verifiabl.VerifiablReference.html#Verifiabl_VerifiablReference_Generate
+  - name: (
+  - name: )
+- uid: Verifiabl.Client
+  commentId: N:Verifiabl.Client
+  href: Verifiabl.html
+  name: Verifiabl.Client
+  nameWithType: Verifiabl.Client
+  fullName: Verifiabl.Client
+  spec.csharp:
+  - uid: Verifiabl
+    name: Verifiabl
+    href: Verifiabl.html
+  - name: .
+  - uid: Verifiabl.Client
+    name: Client
+    href: Verifiabl.Client.html
+  spec.vb:
+  - uid: Verifiabl
+    name: Verifiabl
+    href: Verifiabl.html
+  - name: .
+  - uid: Verifiabl.Client
+    name: Client
+    href: Verifiabl.Client.html
+- uid: System.Object
+  commentId: T:System.Object
+  parent: System
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object
+  name: object
+  nameWithType: object
+  fullName: object
+  nameWithType.vb: Object
+  fullName.vb: Object
+  name.vb: Object
+- uid: System.Object.Equals(System.Object)
+  commentId: M:System.Object.Equals(System.Object)
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)
+  name: Equals(object)
+  nameWithType: object.Equals(object)
+  fullName: object.Equals(object)
+  nameWithType.vb: Object.Equals(Object)
+  fullName.vb: Object.Equals(Object)
+  name.vb: Equals(Object)
+  spec.csharp:
+  - uid: System.Object.Equals(System.Object)
+    name: Equals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)
+  - name: (
+  - uid: System.Object
+    name: object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+  spec.vb:
+  - uid: System.Object.Equals(System.Object)
+    name: Equals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)
+  - name: (
+  - uid: System.Object
+    name: Object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+- uid: System.Object.Equals(System.Object,System.Object)
+  commentId: M:System.Object.Equals(System.Object,System.Object)
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)
+  name: Equals(object, object)
+  nameWithType: object.Equals(object, object)
+  fullName: object.Equals(object, object)
+  nameWithType.vb: Object.Equals(Object, Object)
+  fullName.vb: Object.Equals(Object, Object)
+  name.vb: Equals(Object, Object)
+  spec.csharp:
+  - uid: System.Object.Equals(System.Object,System.Object)
+    name: Equals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)
+  - name: (
+  - uid: System.Object
+    name: object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: ','
+  - name: " "
+  - uid: System.Object
+    name: object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+  spec.vb:
+  - uid: System.Object.Equals(System.Object,System.Object)
+    name: Equals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)
+  - name: (
+  - uid: System.Object
+    name: Object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: ','
+  - name: " "
+  - uid: System.Object
+    name: Object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+- uid: System.Object.GetHashCode
+  commentId: M:System.Object.GetHashCode
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.gethashcode
+  name: GetHashCode()
+  nameWithType: object.GetHashCode()
+  fullName: object.GetHashCode()
+  nameWithType.vb: Object.GetHashCode()
+  fullName.vb: Object.GetHashCode()
+  spec.csharp:
+  - uid: System.Object.GetHashCode
+    name: GetHashCode
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.gethashcode
+  - name: (
+  - name: )
+  spec.vb:
+  - uid: System.Object.GetHashCode
+    name: GetHashCode
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.gethashcode
+  - name: (
+  - name: )
+- uid: System.Object.GetType
+  commentId: M:System.Object.GetType
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.gettype
+  name: GetType()
+  nameWithType: object.GetType()
+  fullName: object.GetType()
+  nameWithType.vb: Object.GetType()
+  fullName.vb: Object.GetType()
+  spec.csharp:
+  - uid: System.Object.GetType
+    name: GetType
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.gettype
+  - name: (
+  - name: )
+  spec.vb:
+  - uid: System.Object.GetType
+    name: GetType
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.gettype
+  - name: (
+  - name: )
+- uid: System.Object.ReferenceEquals(System.Object,System.Object)
+  commentId: M:System.Object.ReferenceEquals(System.Object,System.Object)
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.referenceequals
+  name: ReferenceEquals(object, object)
+  nameWithType: object.ReferenceEquals(object, object)
+  fullName: object.ReferenceEquals(object, object)
+  nameWithType.vb: Object.ReferenceEquals(Object, Object)
+  fullName.vb: Object.ReferenceEquals(Object, Object)
+  name.vb: ReferenceEquals(Object, Object)
+  spec.csharp:
+  - uid: System.Object.ReferenceEquals(System.Object,System.Object)
+    name: ReferenceEquals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.referenceequals
+  - name: (
+  - uid: System.Object
+    name: object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: ','
+  - name: " "
+  - uid: System.Object
+    name: object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+  spec.vb:
+  - uid: System.Object.ReferenceEquals(System.Object,System.Object)
+    name: ReferenceEquals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.referenceequals
+  - name: (
+  - uid: System.Object
+    name: Object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: ','
+  - name: " "
+  - uid: System.Object
+    name: Object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+- uid: System.Object.ToString
+  commentId: M:System.Object.ToString
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.tostring
+  name: ToString()
+  nameWithType: object.ToString()
+  fullName: object.ToString()
+  nameWithType.vb: Object.ToString()
+  fullName.vb: Object.ToString()
+  spec.csharp:
+  - uid: System.Object.ToString
+    name: ToString
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.tostring
+  - name: (
+  - name: )
+  spec.vb:
+  - uid: System.Object.ToString
+    name: ToString
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.tostring
+  - name: (
+  - name: )
+- uid: Verifiabl.Client.IVerifiablClient
+  commentId: T:Verifiabl.Client.IVerifiablClient
+  parent: Verifiabl.Client
+  href: Verifiabl.Client.IVerifiablClient.html
+  name: IVerifiablClient
+  nameWithType: IVerifiablClient
+  fullName: Verifiabl.Client.IVerifiablClient
+- uid: System
+  commentId: N:System
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system
+  name: System
+  nameWithType: System
+  fullName: System
+- uid: Verifiabl.Client.BatchRecord.VerifiablReference*
+  commentId: Overload:Verifiabl.Client.BatchRecord.VerifiablReference
+  href: Verifiabl.Client.BatchRecord.html#Verifiabl_Client_BatchRecord_VerifiablReference
+  name: VerifiablReference
+  nameWithType: BatchRecord.VerifiablReference
+  fullName: Verifiabl.Client.BatchRecord.VerifiablReference
+- uid: System.String
+  commentId: T:System.String
+  parent: System
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.string
+  name: string
+  nameWithType: string
+  fullName: string
+  nameWithType.vb: String
+  fullName.vb: String
+  name.vb: String
+- uid: Verifiabl.Client.BatchRecord.ExternalId*
+  commentId: Overload:Verifiabl.Client.BatchRecord.ExternalId
+  href: Verifiabl.Client.BatchRecord.html#Verifiabl_Client_BatchRecord_ExternalId
+  name: ExternalId
+  nameWithType: BatchRecord.ExternalId
+  fullName: Verifiabl.Client.BatchRecord.ExternalId
+- uid: Verifiabl.Client.BatchRecord.Schema*
+  commentId: Overload:Verifiabl.Client.BatchRecord.Schema
+  href: Verifiabl.Client.BatchRecord.html#Verifiabl_Client_BatchRecord_Schema
+  name: Schema
+  nameWithType: BatchRecord.Schema
+  fullName: Verifiabl.Client.BatchRecord.Schema
+- uid: Verifiabl.Client.BatchRecord.IssuedAt*
+  commentId: Overload:Verifiabl.Client.BatchRecord.IssuedAt
+  href: Verifiabl.Client.BatchRecord.html#Verifiabl_Client_BatchRecord_IssuedAt
+  name: IssuedAt
+  nameWithType: BatchRecord.IssuedAt
+  fullName: Verifiabl.Client.BatchRecord.IssuedAt
+- uid: System.DateTimeOffset
+  commentId: T:System.DateTimeOffset
+  parent: System
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.datetimeoffset
+  name: DateTimeOffset
+  nameWithType: DateTimeOffset
+  fullName: System.DateTimeOffset
+- uid: Verifiabl.Client.BatchRecord.PayslipNonPii*
+  commentId: Overload:Verifiabl.Client.BatchRecord.PayslipNonPii
+  href: Verifiabl.Client.BatchRecord.html#Verifiabl_Client_BatchRecord_PayslipNonPii
+  name: PayslipNonPii
+  nameWithType: BatchRecord.PayslipNonPii
+  fullName: Verifiabl.Client.BatchRecord.PayslipNonPii
+- uid: Verifiabl.Client.PayslipNonPii
+  commentId: T:Verifiabl.Client.PayslipNonPii
+  parent: Verifiabl.Client
+  href: Verifiabl.Client.PayslipNonPii.html
+  name: PayslipNonPii
+  nameWithType: PayslipNonPii
+  fullName: Verifiabl.Client.PayslipNonPii
+- uid: Verifiabl.VerifiablCrypto.EncryptPii(System.String,System.Byte[])
+  commentId: M:Verifiabl.VerifiablCrypto.EncryptPii(System.String,System.Byte[])
+  isExternal: true
+  href: Verifiabl.VerifiablCrypto.html#Verifiabl_VerifiablCrypto_EncryptPii_System_String_System_Byte___
+  name: EncryptPii(string, byte[])
+  nameWithType: VerifiablCrypto.EncryptPii(string, byte[])
+  fullName: Verifiabl.VerifiablCrypto.EncryptPii(string, byte[])
+  nameWithType.vb: VerifiablCrypto.EncryptPii(String, Byte())
+  fullName.vb: Verifiabl.VerifiablCrypto.EncryptPii(String, Byte())
+  name.vb: EncryptPii(String, Byte())
+  spec.csharp:
+  - uid: Verifiabl.VerifiablCrypto.EncryptPii(System.String,System.Byte[])
+    name: EncryptPii
+    href: Verifiabl.VerifiablCrypto.html#Verifiabl_VerifiablCrypto_EncryptPii_System_String_System_Byte___
+  - name: (
+  - uid: System.String
+    name: string
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.string
+  - name: ','
+  - name: " "
+  - uid: System.Byte
+    name: byte
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.byte
+  - name: '['
+  - name: ']'
+  - name: )
+  spec.vb:
+  - uid: Verifiabl.VerifiablCrypto.EncryptPii(System.String,System.Byte[])
+    name: EncryptPii
+    href: Verifiabl.VerifiablCrypto.html#Verifiabl_VerifiablCrypto_EncryptPii_System_String_System_Byte___
+  - name: (
+  - uid: System.String
+    name: String
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.string
+  - name: ','
+  - name: " "
+  - uid: System.Byte
+    name: Byte
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.byte
+  - name: (
+  - name: )
+  - name: )
+- uid: Verifiabl.Client.BatchRecord.EncryptionMetadata*
+  commentId: Overload:Verifiabl.Client.BatchRecord.EncryptionMetadata
+  href: Verifiabl.Client.BatchRecord.html#Verifiabl_Client_BatchRecord_EncryptionMetadata
+  name: EncryptionMetadata
+  nameWithType: BatchRecord.EncryptionMetadata
+  fullName: Verifiabl.Client.BatchRecord.EncryptionMetadata
+- uid: Verifiabl.EncryptionMetadata
+  commentId: T:Verifiabl.EncryptionMetadata
+  parent: Verifiabl
+  href: Verifiabl.EncryptionMetadata.html
+  name: EncryptionMetadata
+  nameWithType: EncryptionMetadata
+  fullName: Verifiabl.EncryptionMetadata
+- uid: Verifiabl
+  commentId: N:Verifiabl
+  href: Verifiabl.html
+  name: Verifiabl
+  nameWithType: Verifiabl
+  fullName: Verifiabl

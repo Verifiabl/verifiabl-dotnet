@@ -1,0 +1,469 @@
+### YamlMime:ManagedReference
+items:
+- uid: Verifiabl.VerifiablReference
+  commentId: T:Verifiabl.VerifiablReference
+  id: VerifiablReference
+  parent: Verifiabl
+  children:
+  - Verifiabl.VerifiablReference.Generate
+  - Verifiabl.VerifiablReference.IsValid(System.String)
+  - Verifiabl.VerifiablReference.Length
+  langs:
+  - csharp
+  - vb
+  name: VerifiablReference
+  nameWithType: VerifiablReference
+  fullName: Verifiabl.VerifiablReference
+  type: Class
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl
+  summary: >-
+    Helpers for Verifiabl references: the 22-character base64url identifiers
+
+    embedded in every barcode. References are issued by the API and must be
+
+    used verbatim.
+  example: []
+  syntax:
+    content: public static class VerifiablReference
+    content.vb: Public Module VerifiablReference
+  inheritance:
+  - System.Object
+  inheritedMembers:
+  - System.Object.Equals(System.Object)
+  - System.Object.Equals(System.Object,System.Object)
+  - System.Object.GetHashCode
+  - System.Object.GetType
+  - System.Object.MemberwiseClone
+  - System.Object.ReferenceEquals(System.Object,System.Object)
+  - System.Object.ToString
+- uid: Verifiabl.VerifiablReference.Length
+  commentId: F:Verifiabl.VerifiablReference.Length
+  id: Length
+  parent: Verifiabl.VerifiablReference
+  langs:
+  - csharp
+  - vb
+  name: Length
+  nameWithType: VerifiablReference.Length
+  fullName: Verifiabl.VerifiablReference.Length
+  type: Field
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl
+  summary: Exact length of a Verifiabl reference in base64url characters.
+  example: []
+  syntax:
+    content: public const int Length = 22
+    return:
+      type: System.Int32
+    content.vb: Public Const Length As Integer = 22
+- uid: Verifiabl.VerifiablReference.Generate
+  commentId: M:Verifiabl.VerifiablReference.Generate
+  id: Generate
+  parent: Verifiabl.VerifiablReference
+  langs:
+  - csharp
+  - vb
+  name: Generate()
+  nameWithType: VerifiablReference.Generate()
+  fullName: Verifiabl.VerifiablReference.Generate()
+  type: Method
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl
+  summary: >-
+    Generate a fresh Verifiabl reference: 16 cryptographically random bytes
+
+    (128 bits) encoded as 22 base64url characters without padding. Matches the
+
+    server's algorithm, so a provider-generated reference is indistinguishable
+
+    from one issued by the API.
+  remarks: >-
+    Use this for <xref href="Verifiabl.Client.VerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable%7bVerifiabl.Client.BatchRecord%7d%2cSystem.Threading.CancellationToken)" data-throw-if-not-resolved="false"></xref>, where
+
+    providers generate their own references up-front so a whole pay run can be
+
+    submitted in one request. Single-record registration does not need it; the
+
+    API generates a reference for you and returns it.
+  example: []
+  syntax:
+    content: public static string Generate()
+    return:
+      type: System.String
+    content.vb: Public Shared Function Generate() As String
+  overload: Verifiabl.VerifiablReference.Generate*
+- uid: Verifiabl.VerifiablReference.IsValid(System.String)
+  commentId: M:Verifiabl.VerifiablReference.IsValid(System.String)
+  id: IsValid(System.String)
+  parent: Verifiabl.VerifiablReference
+  langs:
+  - csharp
+  - vb
+  name: IsValid(string?)
+  nameWithType: VerifiablReference.IsValid(string?)
+  fullName: Verifiabl.VerifiablReference.IsValid(string?)
+  type: Method
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl
+  summary: True when <code class="paramref">value</code> is a well-formed Verifiabl reference.
+  example: []
+  syntax:
+    content: public static bool IsValid(string? value)
+    parameters:
+    - id: value
+      type: System.String
+    return:
+      type: System.Boolean
+    content.vb: Public Shared Function IsValid(value As String) As Boolean
+  overload: Verifiabl.VerifiablReference.IsValid*
+  nameWithType.vb: VerifiablReference.IsValid(String)
+  fullName.vb: Verifiabl.VerifiablReference.IsValid(String)
+  name.vb: IsValid(String)
+references:
+- uid: Verifiabl
+  commentId: N:Verifiabl
+  href: Verifiabl.html
+  name: Verifiabl
+  nameWithType: Verifiabl
+  fullName: Verifiabl
+- uid: System.Object
+  commentId: T:System.Object
+  parent: System
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object
+  name: object
+  nameWithType: object
+  fullName: object
+  nameWithType.vb: Object
+  fullName.vb: Object
+  name.vb: Object
+- uid: System.Object.Equals(System.Object)
+  commentId: M:System.Object.Equals(System.Object)
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)
+  name: Equals(object)
+  nameWithType: object.Equals(object)
+  fullName: object.Equals(object)
+  nameWithType.vb: Object.Equals(Object)
+  fullName.vb: Object.Equals(Object)
+  name.vb: Equals(Object)
+  spec.csharp:
+  - uid: System.Object.Equals(System.Object)
+    name: Equals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)
+  - name: (
+  - uid: System.Object
+    name: object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+  spec.vb:
+  - uid: System.Object.Equals(System.Object)
+    name: Equals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)
+  - name: (
+  - uid: System.Object
+    name: Object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+- uid: System.Object.Equals(System.Object,System.Object)
+  commentId: M:System.Object.Equals(System.Object,System.Object)
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)
+  name: Equals(object, object)
+  nameWithType: object.Equals(object, object)
+  fullName: object.Equals(object, object)
+  nameWithType.vb: Object.Equals(Object, Object)
+  fullName.vb: Object.Equals(Object, Object)
+  name.vb: Equals(Object, Object)
+  spec.csharp:
+  - uid: System.Object.Equals(System.Object,System.Object)
+    name: Equals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)
+  - name: (
+  - uid: System.Object
+    name: object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: ','
+  - name: " "
+  - uid: System.Object
+    name: object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+  spec.vb:
+  - uid: System.Object.Equals(System.Object,System.Object)
+    name: Equals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)
+  - name: (
+  - uid: System.Object
+    name: Object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: ','
+  - name: " "
+  - uid: System.Object
+    name: Object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+- uid: System.Object.GetHashCode
+  commentId: M:System.Object.GetHashCode
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.gethashcode
+  name: GetHashCode()
+  nameWithType: object.GetHashCode()
+  fullName: object.GetHashCode()
+  nameWithType.vb: Object.GetHashCode()
+  fullName.vb: Object.GetHashCode()
+  spec.csharp:
+  - uid: System.Object.GetHashCode
+    name: GetHashCode
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.gethashcode
+  - name: (
+  - name: )
+  spec.vb:
+  - uid: System.Object.GetHashCode
+    name: GetHashCode
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.gethashcode
+  - name: (
+  - name: )
+- uid: System.Object.GetType
+  commentId: M:System.Object.GetType
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.gettype
+  name: GetType()
+  nameWithType: object.GetType()
+  fullName: object.GetType()
+  nameWithType.vb: Object.GetType()
+  fullName.vb: Object.GetType()
+  spec.csharp:
+  - uid: System.Object.GetType
+    name: GetType
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.gettype
+  - name: (
+  - name: )
+  spec.vb:
+  - uid: System.Object.GetType
+    name: GetType
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.gettype
+  - name: (
+  - name: )
+- uid: System.Object.MemberwiseClone
+  commentId: M:System.Object.MemberwiseClone
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone
+  name: MemberwiseClone()
+  nameWithType: object.MemberwiseClone()
+  fullName: object.MemberwiseClone()
+  nameWithType.vb: Object.MemberwiseClone()
+  fullName.vb: Object.MemberwiseClone()
+  spec.csharp:
+  - uid: System.Object.MemberwiseClone
+    name: MemberwiseClone
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone
+  - name: (
+  - name: )
+  spec.vb:
+  - uid: System.Object.MemberwiseClone
+    name: MemberwiseClone
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone
+  - name: (
+  - name: )
+- uid: System.Object.ReferenceEquals(System.Object,System.Object)
+  commentId: M:System.Object.ReferenceEquals(System.Object,System.Object)
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.referenceequals
+  name: ReferenceEquals(object, object)
+  nameWithType: object.ReferenceEquals(object, object)
+  fullName: object.ReferenceEquals(object, object)
+  nameWithType.vb: Object.ReferenceEquals(Object, Object)
+  fullName.vb: Object.ReferenceEquals(Object, Object)
+  name.vb: ReferenceEquals(Object, Object)
+  spec.csharp:
+  - uid: System.Object.ReferenceEquals(System.Object,System.Object)
+    name: ReferenceEquals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.referenceequals
+  - name: (
+  - uid: System.Object
+    name: object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: ','
+  - name: " "
+  - uid: System.Object
+    name: object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+  spec.vb:
+  - uid: System.Object.ReferenceEquals(System.Object,System.Object)
+    name: ReferenceEquals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.referenceequals
+  - name: (
+  - uid: System.Object
+    name: Object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: ','
+  - name: " "
+  - uid: System.Object
+    name: Object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+- uid: System.Object.ToString
+  commentId: M:System.Object.ToString
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.tostring
+  name: ToString()
+  nameWithType: object.ToString()
+  fullName: object.ToString()
+  nameWithType.vb: Object.ToString()
+  fullName.vb: Object.ToString()
+  spec.csharp:
+  - uid: System.Object.ToString
+    name: ToString
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.tostring
+  - name: (
+  - name: )
+  spec.vb:
+  - uid: System.Object.ToString
+    name: ToString
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.tostring
+  - name: (
+  - name: )
+- uid: System
+  commentId: N:System
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system
+  name: System
+  nameWithType: System
+  fullName: System
+- uid: System.Int32
+  commentId: T:System.Int32
+  parent: System
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.int32
+  name: int
+  nameWithType: int
+  fullName: int
+  nameWithType.vb: Integer
+  fullName.vb: Integer
+  name.vb: Integer
+- uid: Verifiabl.Client.VerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable{Verifiabl.Client.BatchRecord},System.Threading.CancellationToken)
+  commentId: M:Verifiabl.Client.VerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable{Verifiabl.Client.BatchRecord},System.Threading.CancellationToken)
+  isExternal: true
+  href: Verifiabl.Client.VerifiablClient.html#Verifiabl_Client_VerifiablClient_RegisterNonPiiBatchAsync_System_Collections_Generic_IEnumerable_Verifiabl_Client_BatchRecord__System_Threading_CancellationToken_
+  name: RegisterNonPiiBatchAsync(IEnumerable<BatchRecord>, CancellationToken)
+  nameWithType: VerifiablClient.RegisterNonPiiBatchAsync(IEnumerable<BatchRecord>, CancellationToken)
+  fullName: Verifiabl.Client.VerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable<Verifiabl.Client.BatchRecord>, System.Threading.CancellationToken)
+  nameWithType.vb: VerifiablClient.RegisterNonPiiBatchAsync(IEnumerable(Of BatchRecord), CancellationToken)
+  fullName.vb: Verifiabl.Client.VerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable(Of Verifiabl.Client.BatchRecord), System.Threading.CancellationToken)
+  name.vb: RegisterNonPiiBatchAsync(IEnumerable(Of BatchRecord), CancellationToken)
+  spec.csharp:
+  - uid: Verifiabl.Client.VerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable{Verifiabl.Client.BatchRecord},System.Threading.CancellationToken)
+    name: RegisterNonPiiBatchAsync
+    href: Verifiabl.Client.VerifiablClient.html#Verifiabl_Client_VerifiablClient_RegisterNonPiiBatchAsync_System_Collections_Generic_IEnumerable_Verifiabl_Client_BatchRecord__System_Threading_CancellationToken_
+  - name: (
+  - uid: System.Collections.Generic.IEnumerable`1
+    name: IEnumerable
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1
+  - name: <
+  - uid: Verifiabl.Client.BatchRecord
+    name: BatchRecord
+    href: Verifiabl.Client.BatchRecord.html
+  - name: '>'
+  - name: ','
+  - name: " "
+  - uid: System.Threading.CancellationToken
+    name: CancellationToken
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken
+  - name: )
+  spec.vb:
+  - uid: Verifiabl.Client.VerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable{Verifiabl.Client.BatchRecord},System.Threading.CancellationToken)
+    name: RegisterNonPiiBatchAsync
+    href: Verifiabl.Client.VerifiablClient.html#Verifiabl_Client_VerifiablClient_RegisterNonPiiBatchAsync_System_Collections_Generic_IEnumerable_Verifiabl_Client_BatchRecord__System_Threading_CancellationToken_
+  - name: (
+  - uid: System.Collections.Generic.IEnumerable`1
+    name: IEnumerable
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1
+  - name: (
+  - name: Of
+  - name: " "
+  - uid: Verifiabl.Client.BatchRecord
+    name: BatchRecord
+    href: Verifiabl.Client.BatchRecord.html
+  - name: )
+  - name: ','
+  - name: " "
+  - uid: System.Threading.CancellationToken
+    name: CancellationToken
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken
+  - name: )
+- uid: Verifiabl.VerifiablReference.Generate*
+  commentId: Overload:Verifiabl.VerifiablReference.Generate
+  href: Verifiabl.VerifiablReference.html#Verifiabl_VerifiablReference_Generate
+  name: Generate
+  nameWithType: VerifiablReference.Generate
+  fullName: Verifiabl.VerifiablReference.Generate
+- uid: System.String
+  commentId: T:System.String
+  parent: System
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.string
+  name: string
+  nameWithType: string
+  fullName: string
+  nameWithType.vb: String
+  fullName.vb: String
+  name.vb: String
+- uid: Verifiabl.VerifiablReference.IsValid*
+  commentId: Overload:Verifiabl.VerifiablReference.IsValid
+  href: Verifiabl.VerifiablReference.html#Verifiabl_VerifiablReference_IsValid_System_String_
+  name: IsValid
+  nameWithType: VerifiablReference.IsValid
+  fullName: Verifiabl.VerifiablReference.IsValid
+- uid: System.Boolean
+  commentId: T:System.Boolean
+  parent: System
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.boolean
+  name: bool
+  nameWithType: bool
+  fullName: bool
+  nameWithType.vb: Boolean
+  fullName.vb: Boolean
+  name.vb: Boolean

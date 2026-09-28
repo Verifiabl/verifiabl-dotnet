@@ -201,7 +201,8 @@ public class ClientIvReuseTests
         VerifiablClient client = Client(handler);
 
         RegisterNonPiiBatchResponse response = await client.RegisterNonPiiBatchAsync(
-            [BatchRecordItem(ReferenceA), BatchRecordItem(ReferenceB)]);
+            [BatchRecordItem(ReferenceA), BatchRecordItem(ReferenceB),
+             BatchRecordItem(ReferenceA), BatchRecordItem(ReferenceB)]);
 
         Assert.All(response.Results, result => Assert.False(result.IsIvReused));
         Assert.Equal(BatchRecordStatuses.Created, response.Results[0].Status);

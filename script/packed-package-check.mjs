@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import assert from "node:assert/strict";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -53,8 +54,9 @@ export function check(packageDirectory = "artifacts") {
     writeFileSync(config, packageSourceConfig(packages));
     run("restore", project, "--configfile", config, "--packages", join(temporary, "packages"), `--property:VerifiablIssuerVersion=${version}`);
     run("build", project, "--configuration", "Release", "--no-restore", `--property:VerifiablIssuerVersion=${version}`);
+    const output = join(temporary, "output");
     runWithEnvironment(
-      { ...process.env, VERIFIABL_EXAMPLE_OUTPUT_DIR: join(temporary, "output") },
+      { ...process.env, VERIFIABL_EXAMPLE_OUTPUT_DIR: output },
       "run",
       "--project",
       project,
@@ -65,6 +67,29 @@ export function check(packageDirectory = "artifacts") {
       "--",
       "offline",
     );
+    const [runDirectory] = readdirSync(output);
+    assert.ok(runDirectory, "Offline example must produce a run directory");
+    const manifest = (group, id) => JSON.parse(readFileSync(
+      join(output, runDirectory, group, id, "manifest.json"), "utf8"));
+    for (const [id, schema, currency, gross, taxField, tax] of [
+      ["PAY-1001", "au.payslip.v2", "AUD", "9000.00", "paygw", "2250.00"],
+      ["PAY-1002", "nz.payslip.v2", "NZD", "7600.00", "paye", "1710.00"],
+    ]) {
+      const batch = manifest("batch", id);
+      assert.equal(batch.registrationRequest.schema, schema);
+      const fields = batch.registrationRequest.payslipNonPii;
+      assert.deepEqual(fields, {
+        period_end: "2026-08-31",
+        payment_date: "2026-09-04",
+        currency,
+        gross: { value: gross },
+        [taxField]: { value: tax },
+        net: { value: id === "PAY-1001" ? "6750.00" : "5890.00" },
+      });
+    }
+    const single = manifest("single", "PAY-1001").registrationRequest;
+    assert.equal(single.schema, "au.payslip.v2");
+    assert.deepEqual(single.payslipNonPii, manifest("batch", "PAY-1001").registrationRequest.payslipNonPii);
   } finally {
     rmSync(temporary, { recursive: true, force: true });
   }

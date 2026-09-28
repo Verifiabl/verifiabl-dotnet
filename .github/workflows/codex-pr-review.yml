@@ -60,6 +60,7 @@ jobs:
             - Preserve the public .NET API surface, strong naming, and the net472, net8.0, and net10.0 target frameworks.
             - Keep AES-256-GCM encryption, nonce, authentication-tag, key-version, and base64url payload encoding behaviour correct, including the Microsoft.Bcl.Cryptography path on .NET Framework.
             - Never send plaintext employee PII, encryption keys, OAuth secrets, or decrypted payloads to Verifiabl.
+            - V2 non-PII schemas intentionally accept printed strings; integrators must keep employee PII out of them. Do not require enums or PII content checks for those fields.
             - Validate public inputs and preserve stable error codes, request IDs, batch ordering, and partial-failure behaviour.
             - Keep QR payloads, environment URLs, SVG badge output, node-SDK parity fixtures, and scannability backward compatible.
 

@@ -67,7 +67,8 @@ public class ClientRetryTests
     }
 
     private static HttpResponseMessage BatchOk() =>
-        FakeHttpHandler.Json(HttpStatusCode.OK, "{\"results\":[]}");
+        FakeHttpHandler.Json(HttpStatusCode.OK,
+            $"{{\"results\":[{{\"status\":\"created\",\"verifiabl_reference\":\"{Reference}\"}}]}}");
 
     private static HttpResponseMessage RegistrationOk() =>
         FakeHttpHandler.Json(HttpStatusCode.OK, $"{{\"verifiabl_reference\":\"{Reference}\"}}");

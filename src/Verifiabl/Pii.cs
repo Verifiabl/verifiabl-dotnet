@@ -11,33 +11,41 @@ namespace Verifiabl;
 /// being embedded in the barcode and is never sent to the Verifiabl API in
 /// plaintext.
 ///
-/// Current layout (9 segments, "P2" prefix + 8 fields, in this exact order):
+/// <see cref="Format(PiiFields)"/> retains the existing P2 compatibility layout.
+/// <see cref="FormatAustralian(AustralianPiiFields)"/> and
+/// <see cref="FormatNewZealand(NewZealandPiiFields)"/> write the AU2 and NZ2
+/// jurisdiction profiles.
 ///
-///   P2|employeeName|position|department|employerAbn|bsb|accountNumber|accountName|address
-///
-/// P1 remains available through <see cref="FormatV1"/> for rollback and is parsed permanently.
+/// Legacy P1 plaintext remains readable through <see cref="Parse"/> for existing
+/// documents, but cannot be generated.
 /// </remarks>
 public static class Pii
 {
     private const string V1Prefix = "P1|";
     private const string V2Prefix = "P2|";
+    private const string AustralianPrefix = JurisdictionPiiProfiles.AustralianMarker + "|";
+    private const string NewZealandPrefix = JurisdictionPiiProfiles.NewZealandMarker + "|";
     private static readonly Encoding StrictUtf8 = new UTF8Encoding(false, true);
 
     /// <summary>Versioned identifier for the P2 plaintext validation contract.</summary>
-    public const string TextProfileId = "io.verifiabl.p2-pii-text.v1";
+    internal const string TextProfileId = "io.verifiabl.p2-pii-text.v1";
+
+    /// <summary>Versioned identifier for the AU2 plaintext validation contract.</summary>
+    internal const string AustralianTextProfileId = JurisdictionPiiProfiles.AustralianTextProfileId;
+
+    /// <summary>Versioned identifier for the NZ2 plaintext validation contract.</summary>
+    internal const string NewZealandTextProfileId = JurisdictionPiiProfiles.NewZealandTextProfileId;
 
     /// <summary>Unicode version used by the P2 format-character table.</summary>
-    public const string TextProfileUnicodeVersion = PiiTextProfile.UnicodeVersion;
+    internal const string TextProfileUnicodeVersion = PiiTextProfile.UnicodeVersion;
 
-    /// <summary>Legacy P1 field limit, retained for API compatibility.</summary>
-    /// <remarks>P2 does not have a per-field limit.</remarks>
-    public const int FieldMaxUtf16CodeUnits = 256;
+    private const int V1FieldMaxUtf16CodeUnits = 256;
 
-    /// <summary>Maximum UTF-8 size of complete newly written P2 plaintext, including framing.</summary>
-    public const int PayloadMaxBytes = 1024;
+    /// <summary>Maximum UTF-8 size of complete newly written P2, AU2, and NZ2 plaintext, including framing.</summary>
+    internal const int PayloadMaxBytes = 1024;
 
     /// <summary>Current P2 field order. Never reorder.</summary>
-    public static readonly IReadOnlyList<string> FieldOrder = new ReadOnlyCollection<string>(
+    internal static readonly IReadOnlyList<string> FieldOrder = new ReadOnlyCollection<string>(
     [
         "employeeName",
         "position",
@@ -49,8 +57,16 @@ public static class Pii
         "address",
     ]);
 
-    /// <summary>Permanent legacy P1 field order. Never reorder.</summary>
-    public static readonly IReadOnlyList<string> V1FieldOrder = new ReadOnlyCollection<string>(
+    /// <summary>AU2 field order. Never reorder.</summary>
+    internal static readonly IReadOnlyList<string> AustralianFieldOrder = new ReadOnlyCollection<string>(
+        JurisdictionPiiProfiles.AustralianFieldOrder);
+
+    /// <summary>NZ2 field order. Never reorder.</summary>
+    internal static readonly IReadOnlyList<string> NewZealandFieldOrder = new ReadOnlyCollection<string>(
+        JurisdictionPiiProfiles.NewZealandFieldOrder);
+
+    // Permanent legacy P1 field order used only when reading existing documents.
+    private static readonly IReadOnlyList<string> V1FieldOrder = new ReadOnlyCollection<string>(
     [
         "employeeName",
         "position",
@@ -97,34 +113,58 @@ public static class Pii
     }
 
     /// <summary>
-    /// Compatibility alias for the P2 writer that was introduced before P2
-    /// became the default. New code should use <see cref="Format(PiiFields)"/>.
+    /// Format Australian employee PII as the fixed-arity AU2 plaintext paired
+    /// with <c>au.payslip.v2</c>.
     /// </summary>
-    public static string FormatV2(PiiV2Fields fields) => Format(fields);
-
-    /// <summary>
-    /// Format the permanent legacy P1 plaintext for rollback. New documents use
-    /// <see cref="Format(PiiFields)"/>.
-    /// </summary>
-    public static string FormatV1(PiiFields fields)
+    public static string FormatAustralian(AustralianPiiFields fields)
     {
         if (fields is null)
         {
             throw new ArgumentNullException(nameof(fields));
         }
 
-        string[] segments =
-        [
-            ValidateField(fields.EmployeeName, nameof(fields.EmployeeName)),
-            ValidateField(fields.Position, nameof(fields.Position)),
-            ValidateField(fields.Department, nameof(fields.Department)),
-            ValidateField(fields.EmployerAbn, nameof(fields.EmployerAbn)),
-            ValidateField(fields.Bsb, nameof(fields.Bsb)),
-            ValidateField(fields.AccountNumber, nameof(fields.AccountNumber)),
-            ValidateField(fields.AccountName, nameof(fields.AccountName)),
-        ];
+        string employerIdentity = string.IsNullOrEmpty(fields.EmployerAbn)
+            ? ValidateV2Field(fields.EmployerName, nameof(fields.EmployerName))
+            : ValidateV2Field(fields.EmployerAbn, nameof(fields.EmployerAbn));
+        Dictionary<string, string> values = new(StringComparer.Ordinal)
+        {
+            ["employeeName"] = ValidateV2Field(fields.EmployeeName, nameof(fields.EmployeeName)),
+            ["position"] = ValidateV2Field(fields.Position, nameof(fields.Position)),
+            ["department"] = ValidateV2Field(fields.Department, nameof(fields.Department)),
+            ["employerIdentity"] = employerIdentity,
+            ["bsb"] = ValidateV2Field(fields.Bsb, nameof(fields.Bsb)),
+            ["accountNumber"] = ValidateV2Field(fields.AccountNumber, nameof(fields.AccountNumber)),
+            ["accountName"] = ValidateV2Field(fields.AccountName, nameof(fields.AccountName)),
+            ["address"] = FormatAustralianAddress(fields.Address),
+        };
+        return FormatCurrentProfile(AustralianPrefix, AustralianFieldOrder.Select(name => values[name]).ToArray(),
+            JurisdictionPiiProfiles.AustralianMarker, nameof(fields));
+    }
 
-        return V1Prefix + string.Join("|", segments);
+    /// <summary>
+    /// Format New Zealand employee PII as the fixed-arity NZ2 plaintext paired
+    /// with <c>nz.payslip.v2</c>.
+    /// </summary>
+    public static string FormatNewZealand(NewZealandPiiFields fields)
+    {
+        if (fields is null)
+        {
+            throw new ArgumentNullException(nameof(fields));
+        }
+
+        Dictionary<string, string> values = new(StringComparer.Ordinal)
+        {
+            ["employeeName"] = ValidateV2Field(fields.EmployeeName, nameof(fields.EmployeeName)),
+            ["irdNumber"] = ValidateV2Field(fields.IrdNumber, nameof(fields.IrdNumber)),
+            ["position"] = ValidateV2Field(fields.Position, nameof(fields.Position)),
+            ["department"] = ValidateV2Field(fields.Department, nameof(fields.Department)),
+            ["employerName"] = ValidateV2Field(fields.EmployerName, nameof(fields.EmployerName)),
+            ["accountNumber"] = ValidateV2Field(fields.AccountNumber, nameof(fields.AccountNumber)),
+            ["accountName"] = ValidateV2Field(fields.AccountName, nameof(fields.AccountName)),
+            ["address"] = FormatNewZealandAddress(fields.Address),
+        };
+        return FormatCurrentProfile(NewZealandPrefix, NewZealandFieldOrder.Select(name => values[name]).ToArray(),
+            JurisdictionPiiProfiles.NewZealandMarker, nameof(fields));
     }
 
     /// <summary>
@@ -179,10 +219,10 @@ public static class Pii
             return string.Empty;
         }
 
-        if (value.Length > FieldMaxUtf16CodeUnits)
+        if (value.Length > V1FieldMaxUtf16CodeUnits)
         {
             throw new ArgumentException(
-                $"{name} exceeds {FieldMaxUtf16CodeUnits} UTF-16 code units.",
+                $"{name} exceeds {V1FieldMaxUtf16CodeUnits} UTF-16 code units.",
                 name);
         }
 
@@ -237,6 +277,109 @@ public static class Pii
         }
 
         return value;
+    }
+
+    private static string FormatAustralianAddress(AustralianAddress? address)
+    {
+        if (address is null)
+        {
+            return string.Empty;
+        }
+
+        var segments = ValidatedAddressLines(address.Lines, nameof(address.Lines));
+        string localityLine = JoinAddressParts(
+            (address.Suburb, nameof(address.Suburb)),
+            (address.StateOrTerritory, nameof(address.StateOrTerritory)),
+            (address.Postcode, nameof(address.Postcode)));
+        if (localityLine.Length > 0)
+        {
+            segments.Add(localityLine);
+        }
+
+        return string.Join(", ", segments);
+    }
+
+    private static string FormatNewZealandAddress(NewZealandAddress? address)
+    {
+        if (address is null)
+        {
+            return string.Empty;
+        }
+
+        var segments = ValidatedAddressLines(address.Lines, nameof(address.Lines));
+        string? suburb = ValidateAddressPart(address.Suburb, nameof(address.Suburb));
+        if (suburb is not null)
+        {
+            segments.Add(suburb);
+        }
+
+        string cityLine = JoinAddressParts(
+            (address.City, nameof(address.City)),
+            (address.Postcode, nameof(address.Postcode)));
+        if (cityLine.Length > 0)
+        {
+            segments.Add(cityLine);
+        }
+
+        return string.Join(", ", segments);
+    }
+
+    private static List<string> ValidatedAddressLines(
+        IReadOnlyList<string>? lines,
+        string name)
+    {
+        var result = new List<string>();
+        if (lines is null)
+        {
+            return result;
+        }
+
+        for (int index = 0; index < lines.Count; index++)
+        {
+            string? line = ValidateAddressPart(lines[index], $"{name}[{index}]");
+            if (line is not null)
+            {
+                result.Add(line);
+            }
+        }
+
+        return result;
+    }
+
+    private static string JoinAddressParts(params (string? Value, string Name)[] parts)
+    {
+        return string.Join(
+            " ",
+            parts
+                .Select(part => ValidateAddressPart(part.Value, part.Name))
+                .Where(part => part is not null));
+    }
+
+    private static string? ValidateAddressPart(string? value, string name)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return null;
+        }
+
+        return ValidateV2Field(value, name);
+    }
+
+    private static string FormatCurrentProfile(
+        string prefix,
+        IReadOnlyList<string> segments,
+        string discriminator,
+        string parameterName)
+    {
+        string plaintext = prefix + string.Join("|", segments);
+        if (StrictUtf8.GetByteCount(plaintext) > JurisdictionPiiProfiles.PayloadMaxBytes)
+        {
+            throw new ArgumentException(
+                $"{discriminator} plaintext exceeds {JurisdictionPiiProfiles.PayloadMaxBytes} UTF-8 bytes.",
+                parameterName);
+        }
+
+        return plaintext;
     }
 
     private static int ValidateStrictUtf8(string value, string name)

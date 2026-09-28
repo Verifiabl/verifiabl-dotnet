@@ -35,7 +35,6 @@ internal static class PngBadgeRenderer
 
         var scanOptions = new ScanUrlOptions
         {
-            Format = options.Format,
             Environment = options.Environment,
             ScanBaseUrl = options.ScanBaseUrl,
         };
@@ -44,7 +43,7 @@ internal static class PngBadgeRenderer
         BarcodeErrorCorrectionLevel[] ladder =
             SvgBadgeRenderer.ErrorCorrectionLadder(options.MaxErrorCorrection);
         SvgBadgeRenderer.SelectedQrRendering selected =
-            SvgBadgeRenderer.SelectQrRendering(content, pixelWidth, ladder, options.Format);
+            SvgBadgeRenderer.SelectQrRendering(content, pixelWidth, ladder);
         bool degraded = selected.ErrorCorrectionLevel != ladder[0]
             || selected.ModulePx < SvgBadgeRenderer.IdealModulePx;
 

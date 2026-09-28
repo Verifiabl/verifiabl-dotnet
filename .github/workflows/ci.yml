@@ -34,6 +34,9 @@ jobs:
       - run: dotnet restore --locked-mode
       - run: dotnet build --configuration Release --no-restore
       - run: dotnet test --configuration Release --no-build
+      - name: Check generated API reference
+        if: runner.os == 'Linux'
+        run: node script/api-reference.mjs --check
       # Packing validates the NuGet metadata and package layout on every change.
       - run: dotnet pack --configuration Release --no-build --output artifacts
         if: runner.os == 'Linux'

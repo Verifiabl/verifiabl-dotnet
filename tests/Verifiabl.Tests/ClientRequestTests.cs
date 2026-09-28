@@ -66,6 +66,20 @@ public class ClientRequestTests
     }
 
     [Fact]
+    public async Task PassesFutureSchemasThroughToTheApi()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.Schema = "au.payslip.v3";
+
+        await client.RegisterNonPiiAsync(request);
+
+        using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
+        Assert.Equal("au.payslip.v3", body.RootElement.GetProperty("schema").GetString());
+    }
+
+    [Fact]
     public async Task SendsRegistrationToTheProductionIssuerOriginWithBearerAuth()
     {
         FakeHttpHandler handler = RegistrationHandler();
@@ -211,6 +225,40 @@ public class ClientRequestTests
     }
 
     [Fact]
+    public async Task MapsV2PayslipNumbersWithoutLosingScaleOrDisplay()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.Schema = PayslipSchemas.AustralianV2;
+        request.PayslipNonPii = PayslipNonPii.FromAustralianV2(new AustralianPayslipV2
+        {
+            PeriodEnd = "2026-05-31",
+            PaymentDate = "2026-06-01",
+            Gross = new PayslipNumber("6000.00", "$6,000.00"),
+            Paygw = new PayslipNumber(1500.00m),
+            Net = new PayslipNumber("4500.00"),
+            Earnings = [new AustralianPayslipV2EarningsItem
+            {
+                Type = "ordinary",
+                Amount = new PayslipNumber("6000.00"),
+            }],
+        });
+
+        await client.RegisterNonPiiAsync(request);
+
+        using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
+        JsonElement nonPii = body.RootElement.GetProperty("payslip_non_pii");
+        Assert.Equal("6000.00", nonPii.GetProperty("gross").GetProperty("value").GetString());
+        Assert.Equal(
+            "$6,000.00",
+            nonPii.GetProperty("gross").GetProperty("display").GetString());
+        Assert.Equal("1500.00", nonPii.GetProperty("paygw").GetProperty("value").GetString());
+        Assert.False(nonPii.GetProperty("paygw").TryGetProperty("display", out _));
+        Assert.Equal("ordinary", nonPii.GetProperty("earnings")[0].GetProperty("type").GetString());
+    }
+
+    [Fact]
     public async Task MapsAReadOnlyDictionaryNestedValueAsAnObject()
     {
         FakeHttpHandler handler = RegistrationHandler();
@@ -349,6 +397,31 @@ public class ClientRequestTests
             Assert.Single(handler.Requests).Uri.ToString());
         using JsonDocument body = JsonDocument.Parse(handler.Requests[0].Body);
         Assert.Equal("abc12w", body.RootElement.GetProperty("encrypted_pii").GetString());
+    }
+
+    [Fact]
+    public async Task PassesFutureSchemasThroughForBarcodeRegistration()
+    {
+        var handler = new FakeHttpHandler
+        {
+            Responder = (_, _, _) => Task.FromResult(FakeHttpHandler.Json(
+                HttpStatusCode.OK,
+                $"{{\"verifiabl_reference\":\"{Reference}\",\"barcode\":{{\"format\":\"png\",\"data\":\"aGVsbG8=\"}}}}")),
+        };
+        VerifiablClient client = Client(handler);
+        var request = new RegisterAndBuildBarcodeRequest
+        {
+            Schema = "au.payslip.v3",
+            IssuedAt = DateTimeOffset.UtcNow,
+            PayslipNonPii = ValidRequest().PayslipNonPii,
+            EncryptionMetadata = ValidRequest().EncryptionMetadata,
+            EncryptedPii = TestBinary.DecodeBase64Url("abc12w"),
+        };
+
+        await client.RegisterAndBuildBarcodeAsync(request);
+
+        using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
+        Assert.Equal("au.payslip.v3", body.RootElement.GetProperty("schema").GetString());
     }
 
     [Fact]
@@ -571,6 +644,103 @@ public class ClientRequestTests
 
         await Assert.ThrowsAsync<ArgumentException>(() => client.RegisterNonPiiAsync(request));
 
+        Assert.Empty(handler.Requests);
+    }
+
+    private static PayslipNonPii V2Payslip(string schema) => schema == PayslipSchemas.AustralianV2
+        ? PayslipNonPii.FromAustralianV2(new AustralianPayslipV2
+        {
+            PeriodEnd = "2026-05-31",
+            PaymentDate = "2026-06-01",
+            Gross = new PayslipNumber("100"),
+            Paygw = new PayslipNumber("20"),
+            Net = new PayslipNumber("80"),
+        })
+        : PayslipNonPii.FromNewZealandV2(new NewZealandPayslipV2
+        {
+            PeriodEnd = "2026-05-31",
+            PaymentDate = "2026-06-01",
+            Gross = new PayslipNumber("100"),
+            Paye = new PayslipNumber("20"),
+            Net = new PayslipNumber("80"),
+        });
+
+    [Fact]
+    public async Task RejectsTypedV2PayloadWithMismatchedSchemaOrAdditionalData()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.PayslipNonPii = V2Payslip(PayslipSchemas.AustralianV2);
+        request.Schema = PayslipSchemas.NewZealandV2;
+        await Assert.ThrowsAsync<ArgumentException>(() => client.RegisterNonPiiAsync(request));
+        request.Schema = PayslipSchemas.AustralianV2;
+        request.PayslipNonPii.AdditionalData = new Dictionary<string, object?> { ["employee_name"] = "Jane" };
+        await Assert.ThrowsAsync<ArgumentException>(() => client.RegisterNonPiiAsync(request));
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task DefersTypedV2DateValidationToTheApi()
+    {
+        var handler = new FakeHttpHandler
+        {
+            Responder = (_, _, _) => Task.FromResult(FakeHttpHandler.Json(HttpStatusCode.BadRequest,
+                "{\"error\":\"Validation failed\",\"code\":\"VALIDATION_FAILED\"}")),
+        };
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.Schema = PayslipSchemas.AustralianV2;
+        request.PayslipNonPii = PayslipNonPii.FromAustralianV2(new AustralianPayslipV2
+        {
+            PeriodEnd = "invalid",
+            PaymentDate = "2026-06-01",
+            Gross = new PayslipNumber("100"),
+            Paygw = new PayslipNumber("20"),
+            Net = new PayslipNumber("80"),
+        });
+
+        VerifiablApiException exception = await Assert.ThrowsAsync<VerifiablApiException>(
+            () => client.RegisterNonPiiAsync(request));
+        Assert.Equal(VerifiablErrorCodes.ValidationFailed, exception.Code);
+        Assert.Equal("invalid", JsonDocument.Parse(Assert.Single(handler.Requests).Body)
+            .RootElement.GetProperty("payslip_non_pii").GetProperty("period_end").GetString());
+    }
+
+    [Theory]
+    [InlineData(PayslipSchemas.AustralianV2)]
+    [InlineData(PayslipSchemas.NewZealandV2)]
+    public async Task OmitsAnAbsentPeriodStartForV2(string schema)
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.Schema = schema;
+        request.PayslipNonPii = V2Payslip(schema);
+
+        await client.RegisterNonPiiAsync(request);
+
+        using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
+        JsonElement nonPii = body.RootElement.GetProperty("payslip_non_pii");
+        Assert.False(nonPii.TryGetProperty("period_start", out _));
+        Assert.Equal("2026-05-31", nonPii.GetProperty("period_end").GetString());
+    }
+
+    [Theory]
+    [InlineData(PayslipSchemas.AustralianV1)]
+    [InlineData(PayslipSchemas.NewZealandV1)]
+    public async Task RequiresPeriodStartForFrozenV1Schemas(string schema)
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.Schema = schema;
+        request.PayslipNonPii.PeriodStart = null;
+
+        ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(
+            () => client.RegisterNonPiiAsync(request));
+
+        Assert.Contains("PeriodStart", exception.Message);
         Assert.Empty(handler.Requests);
     }
 }

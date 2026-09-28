@@ -4,12 +4,15 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <UseAppHost>false</UseAppHost>
-    <VerifiablIssuerVersion Condition="'$(VerifiablIssuerVersion)' == ''">0.9.0</VerifiablIssuerVersion>
-    <!-- The packed-package check substitutes a newly built package at this same version. -->
+    <!-- Set VerifiablIssuerVersion to test the locally packed package instead of source. -->
     <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(VerifiablIssuerVersion)' == ''">
+    <ProjectReference Include="../../src/Verifiabl/Verifiabl.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(VerifiablIssuerVersion)' != ''">
     <PackageReference Include="Verifiabl.Issuer" Version="$(VerifiablIssuerVersion)" />
   </ItemGroup>
 

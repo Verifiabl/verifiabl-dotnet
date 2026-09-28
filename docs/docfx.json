@@ -1,0 +1,21 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "files": [
+            "src/Verifiabl/Verifiabl.csproj",
+            "src/Verifiabl.Extensions.DependencyInjection/Verifiabl.Extensions.DependencyInjection.csproj"
+          ],
+          "src": ".."
+        }
+      ],
+      "dest": "../generated/api/dotnet",
+      "properties": {
+        "TargetFramework": "net8.0"
+      },
+      "disableGitFeatures": true,
+      "noRestore": true
+    }
+  ]
+}

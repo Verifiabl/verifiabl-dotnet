@@ -74,6 +74,46 @@ public static class VerifiablCrypto
             rng.GetBytes(iv);
         }
 
+        return EncryptPiiCore(plaintext, key, iv);
+    }
+
+    /// <summary>Deterministic test seam for shared cryptographic conformance vectors.</summary>
+    internal static EncryptedPii EncryptPiiWithIv(string plaintext, byte[] key, byte[] iv)
+    {
+        if (plaintext is null)
+        {
+            throw new ArgumentNullException(nameof(plaintext));
+        }
+
+        if (key is null)
+        {
+            throw new ArgumentNullException(nameof(key));
+        }
+
+        if (key.Length != KeyBytes)
+        {
+            throw new ArgumentException(
+                $"Encryption key must be exactly {KeyBytes} bytes (AES-256).",
+                nameof(key));
+        }
+
+        if (iv is null)
+        {
+            throw new ArgumentNullException(nameof(iv));
+        }
+
+        if (iv.Length != IvBytes)
+        {
+            throw new ArgumentException(
+                $"Encryption IV must be exactly {IvBytes} bytes.",
+                nameof(iv));
+        }
+
+        return EncryptPiiCore(plaintext, key, iv);
+    }
+
+    private static EncryptedPii EncryptPiiCore(string plaintext, byte[] key, byte[] iv)
+    {
         byte[] plaintextBytes = Encoding.UTF8.GetBytes(plaintext);
         byte[] ciphertext = new byte[plaintextBytes.Length];
         byte[] tag = new byte[TagBytes];

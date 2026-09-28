@@ -1,0 +1,727 @@
+### YamlMime:ManagedReference
+items:
+- uid: Verifiabl.Client.IVerifiablClient
+  commentId: T:Verifiabl.Client.IVerifiablClient
+  id: IVerifiablClient
+  parent: Verifiabl.Client
+  children:
+  - Verifiabl.Client.IVerifiablClient.RegisterAndBuildBarcodeAsync(Verifiabl.Client.RegisterAndBuildBarcodeRequest,System.Threading.CancellationToken)
+  - Verifiabl.Client.IVerifiablClient.RegisterNonPiiAsync(Verifiabl.Client.RegisterNonPiiRequest,System.Threading.CancellationToken)
+  - Verifiabl.Client.IVerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable{Verifiabl.Client.BatchRecord},System.Threading.CancellationToken)
+  langs:
+  - csharp
+  - vb
+  name: IVerifiablClient
+  nameWithType: IVerifiablClient
+  fullName: Verifiabl.Client.IVerifiablClient
+  type: Interface
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl.Client
+  summary: >-
+    The Verifiabl issuer API. Implemented by <xref href="Verifiabl.Client.VerifiablClient" data-throw-if-not-resolved="false"></xref>; take a
+
+    dependency on this interface so tests can substitute a fake.
+  remarks: >-
+    <p>
+
+    Every failure these methods report derives from <xref href="Verifiabl.VerifiablException" data-throw-if-not-resolved="false"></xref>,
+
+    so one <code>catch (VerifiablException)</code> covers API errors, auth failures,
+
+    timeouts, and transport faults. Invalid arguments still throw
+
+    <xref href="System.ArgumentException" data-throw-if-not-resolved="false"></xref> before anything is sent, and cancelling the
+
+    token you passed still throws <xref href="System.OperationCanceledException" data-throw-if-not-resolved="false"></xref>.
+
+    </p>
+
+    <p>
+
+    Implementations cache OAuth tokens, so register a single instance and reuse it.
+
+    </p>
+  example: []
+  syntax:
+    content: public interface IVerifiablClient
+    content.vb: Public Interface IVerifiablClient
+  derivedClasses:
+  - Verifiabl.Client.VerifiablClient
+- uid: Verifiabl.Client.IVerifiablClient.RegisterNonPiiAsync(Verifiabl.Client.RegisterNonPiiRequest,System.Threading.CancellationToken)
+  commentId: M:Verifiabl.Client.IVerifiablClient.RegisterNonPiiAsync(Verifiabl.Client.RegisterNonPiiRequest,System.Threading.CancellationToken)
+  id: RegisterNonPiiAsync(Verifiabl.Client.RegisterNonPiiRequest,System.Threading.CancellationToken)
+  parent: Verifiabl.Client.IVerifiablClient
+  langs:
+  - csharp
+  - vb
+  name: RegisterNonPiiAsync(RegisterNonPiiRequest, CancellationToken)
+  nameWithType: IVerifiablClient.RegisterNonPiiAsync(RegisterNonPiiRequest, CancellationToken)
+  fullName: Verifiabl.Client.IVerifiablClient.RegisterNonPiiAsync(Verifiabl.Client.RegisterNonPiiRequest, System.Threading.CancellationToken)
+  type: Method
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl.Client
+  summary: >-
+    Register non-PII payslip data and decryption metadata. Returns the
+
+    Verifiabl reference to embed in a locally generated barcode.
+  example: []
+  syntax:
+    content: Task<RegisterNonPiiResponse> RegisterNonPiiAsync(RegisterNonPiiRequest request, CancellationToken cancellationToken = default)
+    parameters:
+    - id: request
+      type: Verifiabl.Client.RegisterNonPiiRequest
+      description: The payslip registration.
+    - id: cancellationToken
+      type: System.Threading.CancellationToken
+      description: Cancels the call.
+    return:
+      type: System.Threading.Tasks.Task{Verifiabl.Client.RegisterNonPiiResponse}
+    content.vb: Function RegisterNonPiiAsync(request As RegisterNonPiiRequest, cancellationToken As CancellationToken = Nothing) As Task(Of RegisterNonPiiResponse)
+  overload: Verifiabl.Client.IVerifiablClient.RegisterNonPiiAsync*
+  exceptions:
+  - type: System.ArgumentException
+    commentId: T:System.ArgumentException
+    description: The request is incomplete or malformed.
+  - type: Verifiabl.Client.VerifiablIvReuseException
+    commentId: T:Verifiabl.Client.VerifiablIvReuseException
+    description: The record's encryption IV is already registered to this issuer.
+  - type: Verifiabl.Client.VerifiablApiException
+    commentId: T:Verifiabl.Client.VerifiablApiException
+    description: The API returned a non-2xx response.
+  - type: Verifiabl.Client.VerifiablAuthException
+    commentId: T:Verifiabl.Client.VerifiablAuthException
+    description: An OAuth token could not be obtained.
+  - type: Verifiabl.Client.VerifiablTimeoutException
+    commentId: T:Verifiabl.Client.VerifiablTimeoutException
+    description: The call exceeded the configured timeout.
+  - type: Verifiabl.Client.VerifiablTransportException
+    commentId: T:Verifiabl.Client.VerifiablTransportException
+    description: A network fault prevented a response, or the response was not usable JSON.
+  - type: System.OperationCanceledException
+    commentId: T:System.OperationCanceledException
+    description: <code class="paramref">cancellationToken</code> was cancelled.
+- uid: Verifiabl.Client.IVerifiablClient.RegisterAndBuildBarcodeAsync(Verifiabl.Client.RegisterAndBuildBarcodeRequest,System.Threading.CancellationToken)
+  commentId: M:Verifiabl.Client.IVerifiablClient.RegisterAndBuildBarcodeAsync(Verifiabl.Client.RegisterAndBuildBarcodeRequest,System.Threading.CancellationToken)
+  id: RegisterAndBuildBarcodeAsync(Verifiabl.Client.RegisterAndBuildBarcodeRequest,System.Threading.CancellationToken)
+  parent: Verifiabl.Client.IVerifiablClient
+  langs:
+  - csharp
+  - vb
+  name: RegisterAndBuildBarcodeAsync(RegisterAndBuildBarcodeRequest, CancellationToken)
+  nameWithType: IVerifiablClient.RegisterAndBuildBarcodeAsync(RegisterAndBuildBarcodeRequest, CancellationToken)
+  fullName: Verifiabl.Client.IVerifiablClient.RegisterAndBuildBarcodeAsync(Verifiabl.Client.RegisterAndBuildBarcodeRequest, System.Threading.CancellationToken)
+  type: Method
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl.Client
+  summary: >-
+    Register non-PII payslip data and have the API build the barcode. Sends the
+
+    encrypted PII alongside the non-PII data.
+  example: []
+  syntax:
+    content: Task<RegisterAndBuildBarcodeResponse> RegisterAndBuildBarcodeAsync(RegisterAndBuildBarcodeRequest request, CancellationToken cancellationToken = default)
+    parameters:
+    - id: request
+      type: Verifiabl.Client.RegisterAndBuildBarcodeRequest
+      description: The payslip registration, including the ciphertext.
+    - id: cancellationToken
+      type: System.Threading.CancellationToken
+      description: Cancels the call.
+    return:
+      type: System.Threading.Tasks.Task{Verifiabl.Client.RegisterAndBuildBarcodeResponse}
+    content.vb: Function RegisterAndBuildBarcodeAsync(request As RegisterAndBuildBarcodeRequest, cancellationToken As CancellationToken = Nothing) As Task(Of RegisterAndBuildBarcodeResponse)
+  overload: Verifiabl.Client.IVerifiablClient.RegisterAndBuildBarcodeAsync*
+  exceptions:
+  - type: System.ArgumentException
+    commentId: T:System.ArgumentException
+    description: The request is incomplete or malformed.
+  - type: Verifiabl.Client.VerifiablIvReuseException
+    commentId: T:Verifiabl.Client.VerifiablIvReuseException
+    description: The record's encryption IV is already registered to this issuer.
+  - type: Verifiabl.Client.VerifiablApiException
+    commentId: T:Verifiabl.Client.VerifiablApiException
+    description: The API returned a non-2xx response.
+  - type: Verifiabl.Client.VerifiablAuthException
+    commentId: T:Verifiabl.Client.VerifiablAuthException
+    description: An OAuth token could not be obtained.
+  - type: Verifiabl.Client.VerifiablTimeoutException
+    commentId: T:Verifiabl.Client.VerifiablTimeoutException
+    description: The call exceeded the configured timeout.
+  - type: Verifiabl.Client.VerifiablTransportException
+    commentId: T:Verifiabl.Client.VerifiablTransportException
+    description: A network fault prevented a response, or the response was not usable JSON.
+  - type: System.OperationCanceledException
+    commentId: T:System.OperationCanceledException
+    description: <code class="paramref">cancellationToken</code> was cancelled.
+- uid: Verifiabl.Client.IVerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable{Verifiabl.Client.BatchRecord},System.Threading.CancellationToken)
+  commentId: M:Verifiabl.Client.IVerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable{Verifiabl.Client.BatchRecord},System.Threading.CancellationToken)
+  id: RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable{Verifiabl.Client.BatchRecord},System.Threading.CancellationToken)
+  parent: Verifiabl.Client.IVerifiablClient
+  langs:
+  - csharp
+  - vb
+  name: RegisterNonPiiBatchAsync(IEnumerable<BatchRecord>, CancellationToken)
+  nameWithType: IVerifiablClient.RegisterNonPiiBatchAsync(IEnumerable<BatchRecord>, CancellationToken)
+  fullName: Verifiabl.Client.IVerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable<Verifiabl.Client.BatchRecord>, System.Threading.CancellationToken)
+  type: Method
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl.Client
+  summary: >-
+    Register a batch of non-PII payslip records in a single request, up to
+
+    <xref href="Verifiabl.Client.VerifiablClient.MaxBatchRecords" data-throw-if-not-resolved="false"></xref> records. Each record carries a
+
+    provider-generated Verifiabl reference (from
+
+    <xref href="Verifiabl.VerifiablReference.Generate" data-throw-if-not-resolved="false"></xref>) and the same fields as
+
+    <xref href="Verifiabl.Client.IVerifiablClient.RegisterNonPiiAsync(Verifiabl.Client.RegisterNonPiiRequest%2cSystem.Threading.CancellationToken)" data-throw-if-not-resolved="false"></xref>. The response contains a per-record
+
+    result index-aligned to the input: one bad record never fails the batch.
+
+    A record whose encryption IV is already registered to this issuer, or is
+
+    repeated within this batch, comes back as an error result matched by
+
+    <xref href="Verifiabl.Client.BatchRecordResult.IsIvReused" data-throw-if-not-resolved="false"></xref>.
+  example: []
+  syntax:
+    content: Task<RegisterNonPiiBatchResponse> RegisterNonPiiBatchAsync(IEnumerable<BatchRecord> records, CancellationToken cancellationToken = default)
+    parameters:
+    - id: records
+      type: System.Collections.Generic.IEnumerable{Verifiabl.Client.BatchRecord}
+      description: The records to register.
+    - id: cancellationToken
+      type: System.Threading.CancellationToken
+      description: Cancels the call.
+    return:
+      type: System.Threading.Tasks.Task{Verifiabl.Client.RegisterNonPiiBatchResponse}
+    content.vb: Function RegisterNonPiiBatchAsync(records As IEnumerable(Of BatchRecord), cancellationToken As CancellationToken = Nothing) As Task(Of RegisterNonPiiBatchResponse)
+  overload: Verifiabl.Client.IVerifiablClient.RegisterNonPiiBatchAsync*
+  exceptions:
+  - type: System.ArgumentNullException
+    commentId: T:System.ArgumentNullException
+    description: <code class="paramref">records</code> is null.
+  - type: System.ArgumentException
+    commentId: T:System.ArgumentException
+    description: The batch is empty, oversized, or a record is malformed.
+  - type: Verifiabl.Client.VerifiablApiException
+    commentId: T:Verifiabl.Client.VerifiablApiException
+    description: The API returned a non-2xx response.
+  - type: Verifiabl.Client.VerifiablAuthException
+    commentId: T:Verifiabl.Client.VerifiablAuthException
+    description: An OAuth token could not be obtained.
+  - type: Verifiabl.Client.VerifiablTimeoutException
+    commentId: T:Verifiabl.Client.VerifiablTimeoutException
+    description: The call exceeded the configured timeout.
+  - type: Verifiabl.Client.VerifiablTransportException
+    commentId: T:Verifiabl.Client.VerifiablTransportException
+    description: A network fault prevented a response, or the response was not usable JSON.
+  - type: System.OperationCanceledException
+    commentId: T:System.OperationCanceledException
+    description: <code class="paramref">cancellationToken</code> was cancelled.
+  nameWithType.vb: IVerifiablClient.RegisterNonPiiBatchAsync(IEnumerable(Of BatchRecord), CancellationToken)
+  fullName.vb: Verifiabl.Client.IVerifiablClient.RegisterNonPiiBatchAsync(System.Collections.Generic.IEnumerable(Of Verifiabl.Client.BatchRecord), System.Threading.CancellationToken)
+  name.vb: RegisterNonPiiBatchAsync(IEnumerable(Of BatchRecord), CancellationToken)
+references:
+- uid: Verifiabl.Client.VerifiablClient
+  commentId: T:Verifiabl.Client.VerifiablClient
+  href: Verifiabl.Client.VerifiablClient.html
+  name: VerifiablClient
+  nameWithType: VerifiablClient
+  fullName: Verifiabl.Client.VerifiablClient
+- uid: Verifiabl.VerifiablException
+  commentId: T:Verifiabl.VerifiablException
+  parent: Verifiabl
+  href: Verifiabl.VerifiablException.html
+  name: VerifiablException
+  nameWithType: VerifiablException
+  fullName: Verifiabl.VerifiablException
+- uid: System.ArgumentException
+  commentId: T:System.ArgumentException
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.argumentexception
+  name: ArgumentException
+  nameWithType: ArgumentException
+  fullName: System.ArgumentException
+- uid: System.OperationCanceledException
+  commentId: T:System.OperationCanceledException
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.operationcanceledexception
+  name: OperationCanceledException
+  nameWithType: OperationCanceledException
+  fullName: System.OperationCanceledException
+- uid: Verifiabl.Client
+  commentId: N:Verifiabl.Client
+  href: Verifiabl.html
+  name: Verifiabl.Client
+  nameWithType: Verifiabl.Client
+  fullName: Verifiabl.Client
+  spec.csharp:
+  - uid: Verifiabl
+    name: Verifiabl
+    href: Verifiabl.html
+  - name: .
+  - uid: Verifiabl.Client
+    name: Client
+    href: Verifiabl.Client.html
+  spec.vb:
+  - uid: Verifiabl
+    name: Verifiabl
+    href: Verifiabl.html
+  - name: .
+  - uid: Verifiabl.Client
+    name: Client
+    href: Verifiabl.Client.html
+- uid: Verifiabl
+  commentId: N:Verifiabl
+  href: Verifiabl.html
+  name: Verifiabl
+  nameWithType: Verifiabl
+  fullName: Verifiabl
+- uid: Verifiabl.Client.VerifiablIvReuseException
+  commentId: T:Verifiabl.Client.VerifiablIvReuseException
+  href: Verifiabl.Client.VerifiablIvReuseException.html
+  name: VerifiablIvReuseException
+  nameWithType: VerifiablIvReuseException
+  fullName: Verifiabl.Client.VerifiablIvReuseException
+- uid: Verifiabl.Client.VerifiablApiException
+  commentId: T:Verifiabl.Client.VerifiablApiException
+  parent: Verifiabl.Client
+  href: Verifiabl.Client.VerifiablApiException.html
+  name: VerifiablApiException
+  nameWithType: VerifiablApiException
+  fullName: Verifiabl.Client.VerifiablApiException
+- uid: Verifiabl.Client.VerifiablAuthException
+  commentId: T:Verifiabl.Client.VerifiablAuthException
+  href: Verifiabl.Client.VerifiablAuthException.html
+  name: VerifiablAuthException
+  nameWithType: VerifiablAuthException
+  fullName: Verifiabl.Client.VerifiablAuthException
+- uid: Verifiabl.Client.VerifiablTimeoutException
+  commentId: T:Verifiabl.Client.VerifiablTimeoutException
+  href: Verifiabl.Client.VerifiablTimeoutException.html
+  name: VerifiablTimeoutException
+  nameWithType: VerifiablTimeoutException
+  fullName: Verifiabl.Client.VerifiablTimeoutException
+- uid: Verifiabl.Client.VerifiablTransportException
+  commentId: T:Verifiabl.Client.VerifiablTransportException
+  href: Verifiabl.Client.VerifiablTransportException.html
+  name: VerifiablTransportException
+  nameWithType: VerifiablTransportException
+  fullName: Verifiabl.Client.VerifiablTransportException
+- uid: Verifiabl.Client.IVerifiablClient.RegisterNonPiiAsync*
+  commentId: Overload:Verifiabl.Client.IVerifiablClient.RegisterNonPiiAsync
+  href: Verifiabl.Client.IVerifiablClient.html#Verifiabl_Client_IVerifiablClient_RegisterNonPiiAsync_Verifiabl_Client_RegisterNonPiiRequest_System_Threading_CancellationToken_
+  name: RegisterNonPiiAsync
+  nameWithType: IVerifiablClient.RegisterNonPiiAsync
+  fullName: Verifiabl.Client.IVerifiablClient.RegisterNonPiiAsync
+- uid: Verifiabl.Client.RegisterNonPiiRequest
+  commentId: T:Verifiabl.Client.RegisterNonPiiRequest
+  parent: Verifiabl.Client
+  href: Verifiabl.Client.RegisterNonPiiRequest.html
+  name: RegisterNonPiiRequest
+  nameWithType: RegisterNonPiiRequest
+  fullName: Verifiabl.Client.RegisterNonPiiRequest
+- uid: System.Threading.CancellationToken
+  commentId: T:System.Threading.CancellationToken
+  parent: System.Threading
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken
+  name: CancellationToken
+  nameWithType: CancellationToken
+  fullName: System.Threading.CancellationToken
+- uid: System.Threading.Tasks.Task{Verifiabl.Client.RegisterNonPiiResponse}
+  commentId: T:System.Threading.Tasks.Task{Verifiabl.Client.RegisterNonPiiResponse}
+  parent: System.Threading.Tasks
+  definition: System.Threading.Tasks.Task`1
+  href: https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1
+  name: Task<RegisterNonPiiResponse>
+  nameWithType: Task<RegisterNonPiiResponse>
+  fullName: System.Threading.Tasks.Task<Verifiabl.Client.RegisterNonPiiResponse>
+  nameWithType.vb: Task(Of RegisterNonPiiResponse)
+  fullName.vb: System.Threading.Tasks.Task(Of Verifiabl.Client.RegisterNonPiiResponse)
+  name.vb: Task(Of RegisterNonPiiResponse)
+  spec.csharp:
+  - uid: System.Threading.Tasks.Task`1
+    name: Task
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1
+  - name: <
+  - uid: Verifiabl.Client.RegisterNonPiiResponse
+    name: RegisterNonPiiResponse
+    href: Verifiabl.Client.RegisterNonPiiResponse.html
+  - name: '>'
+  spec.vb:
+  - uid: System.Threading.Tasks.Task`1
+    name: Task
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1
+  - name: (
+  - name: Of
+  - name: " "
+  - uid: Verifiabl.Client.RegisterNonPiiResponse
+    name: RegisterNonPiiResponse
+    href: Verifiabl.Client.RegisterNonPiiResponse.html
+  - name: )
+- uid: System.Threading
+  commentId: N:System.Threading
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system
+  name: System.Threading
+  nameWithType: System.Threading
+  fullName: System.Threading
+  spec.csharp:
+  - uid: System
+    name: System
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system
+  - name: .
+  - uid: System.Threading
+    name: Threading
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading
+  spec.vb:
+  - uid: System
+    name: System
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system
+  - name: .
+  - uid: System.Threading
+    name: Threading
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading
+- uid: System.Threading.Tasks.Task`1
+  commentId: T:System.Threading.Tasks.Task`1
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1
+  name: Task<TResult>
+  nameWithType: Task<TResult>
+  fullName: System.Threading.Tasks.Task<TResult>
+  nameWithType.vb: Task(Of TResult)
+  fullName.vb: System.Threading.Tasks.Task(Of TResult)
+  name.vb: Task(Of TResult)
+  spec.csharp:
+  - uid: System.Threading.Tasks.Task`1
+    name: Task
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1
+  - name: <
+  - name: TResult
+  - name: '>'
+  spec.vb:
+  - uid: System.Threading.Tasks.Task`1
+    name: Task
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1
+  - name: (
+  - name: Of
+  - name: " "
+  - name: TResult
+  - name: )
+- uid: System.Threading.Tasks
+  commentId: N:System.Threading.Tasks
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system
+  name: System.Threading.Tasks
+  nameWithType: System.Threading.Tasks
+  fullName: System.Threading.Tasks
+  spec.csharp:
+  - uid: System
+    name: System
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system
+  - name: .
+  - uid: System.Threading
+    name: Threading
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading
+  - name: .
+  - uid: System.Threading.Tasks
+    name: Tasks
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.tasks
+  spec.vb:
+  - uid: System
+    name: System
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system
+  - name: .
+  - uid: System.Threading
+    name: Threading
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading
+  - name: .
+  - uid: System.Threading.Tasks
+    name: Tasks
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.tasks
+- uid: Verifiabl.Client.IVerifiablClient.RegisterAndBuildBarcodeAsync*
+  commentId: Overload:Verifiabl.Client.IVerifiablClient.RegisterAndBuildBarcodeAsync
+  href: Verifiabl.Client.IVerifiablClient.html#Verifiabl_Client_IVerifiablClient_RegisterAndBuildBarcodeAsync_Verifiabl_Client_RegisterAndBuildBarcodeRequest_System_Threading_CancellationToken_
+  name: RegisterAndBuildBarcodeAsync
+  nameWithType: IVerifiablClient.RegisterAndBuildBarcodeAsync
+  fullName: Verifiabl.Client.IVerifiablClient.RegisterAndBuildBarcodeAsync
+- uid: Verifiabl.Client.RegisterAndBuildBarcodeRequest
+  commentId: T:Verifiabl.Client.RegisterAndBuildBarcodeRequest
+  parent: Verifiabl.Client
+  href: Verifiabl.Client.RegisterAndBuildBarcodeRequest.html
+  name: RegisterAndBuildBarcodeRequest
+  nameWithType: RegisterAndBuildBarcodeRequest
+  fullName: Verifiabl.Client.RegisterAndBuildBarcodeRequest
+- uid: System.Threading.Tasks.Task{Verifiabl.Client.RegisterAndBuildBarcodeResponse}
+  commentId: T:System.Threading.Tasks.Task{Verifiabl.Client.RegisterAndBuildBarcodeResponse}
+  parent: System.Threading.Tasks
+  definition: System.Threading.Tasks.Task`1
+  href: https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1
+  name: Task<RegisterAndBuildBarcodeResponse>
+  nameWithType: Task<RegisterAndBuildBarcodeResponse>
+  fullName: System.Threading.Tasks.Task<Verifiabl.Client.RegisterAndBuildBarcodeResponse>
+  nameWithType.vb: Task(Of RegisterAndBuildBarcodeResponse)
+  fullName.vb: System.Threading.Tasks.Task(Of Verifiabl.Client.RegisterAndBuildBarcodeResponse)
+  name.vb: Task(Of RegisterAndBuildBarcodeResponse)
+  spec.csharp:
+  - uid: System.Threading.Tasks.Task`1
+    name: Task
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1
+  - name: <
+  - uid: Verifiabl.Client.RegisterAndBuildBarcodeResponse
+    name: RegisterAndBuildBarcodeResponse
+    href: Verifiabl.Client.RegisterAndBuildBarcodeResponse.html
+  - name: '>'
+  spec.vb:
+  - uid: System.Threading.Tasks.Task`1
+    name: Task
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1
+  - name: (
+  - name: Of
+  - name: " "
+  - uid: Verifiabl.Client.RegisterAndBuildBarcodeResponse
+    name: RegisterAndBuildBarcodeResponse
+    href: Verifiabl.Client.RegisterAndBuildBarcodeResponse.html
+  - name: )
+- uid: Verifiabl.Client.VerifiablClient.MaxBatchRecords
+  commentId: F:Verifiabl.Client.VerifiablClient.MaxBatchRecords
+  href: Verifiabl.Client.VerifiablClient.html#Verifiabl_Client_VerifiablClient_MaxBatchRecords
+  name: MaxBatchRecords
+  nameWithType: VerifiablClient.MaxBatchRecords
+  fullName: Verifiabl.Client.VerifiablClient.MaxBatchRecords
+- uid: Verifiabl.VerifiablReference.Generate
+  commentId: M:Verifiabl.VerifiablReference.Generate
+  href: Verifiabl.VerifiablReference.html#Verifiabl_VerifiablReference_Generate
+  name: Generate()
+  nameWithType: VerifiablReference.Generate()
+  fullName: Verifiabl.VerifiablReference.Generate()
+  spec.csharp:
+  - uid: Verifiabl.VerifiablReference.Generate
+    name: Generate
+    href: Verifiabl.VerifiablReference.html#Verifiabl_VerifiablReference_Generate
+  - name: (
+  - name: )
+  spec.vb:
+  - uid: Verifiabl.VerifiablReference.Generate
+    name: Generate
+    href: Verifiabl.VerifiablReference.html#Verifiabl_VerifiablReference_Generate
+  - name: (
+  - name: )
+- uid: Verifiabl.Client.IVerifiablClient.RegisterNonPiiAsync(Verifiabl.Client.RegisterNonPiiRequest,System.Threading.CancellationToken)
+  commentId: M:Verifiabl.Client.IVerifiablClient.RegisterNonPiiAsync(Verifiabl.Client.RegisterNonPiiRequest,System.Threading.CancellationToken)
+  parent: Verifiabl.Client.IVerifiablClient
+  isExternal: true
+  href: Verifiabl.Client.IVerifiablClient.html#Verifiabl_Client_IVerifiablClient_RegisterNonPiiAsync_Verifiabl_Client_RegisterNonPiiRequest_System_Threading_CancellationToken_
+  name: RegisterNonPiiAsync(RegisterNonPiiRequest, CancellationToken)
+  nameWithType: IVerifiablClient.RegisterNonPiiAsync(RegisterNonPiiRequest, CancellationToken)
+  fullName: Verifiabl.Client.IVerifiablClient.RegisterNonPiiAsync(Verifiabl.Client.RegisterNonPiiRequest, System.Threading.CancellationToken)
+  spec.csharp:
+  - uid: Verifiabl.Client.IVerifiablClient.RegisterNonPiiAsync(Verifiabl.Client.RegisterNonPiiRequest,System.Threading.CancellationToken)
+    name: RegisterNonPiiAsync
+    href: Verifiabl.Client.IVerifiablClient.html#Verifiabl_Client_IVerifiablClient_RegisterNonPiiAsync_Verifiabl_Client_RegisterNonPiiRequest_System_Threading_CancellationToken_
+  - name: (
+  - uid: Verifiabl.Client.RegisterNonPiiRequest
+    name: RegisterNonPiiRequest
+    href: Verifiabl.Client.RegisterNonPiiRequest.html
+  - name: ','
+  - name: " "
+  - uid: System.Threading.CancellationToken
+    name: CancellationToken
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken
+  - name: )
+  spec.vb:
+  - uid: Verifiabl.Client.IVerifiablClient.RegisterNonPiiAsync(Verifiabl.Client.RegisterNonPiiRequest,System.Threading.CancellationToken)
+    name: RegisterNonPiiAsync
+    href: Verifiabl.Client.IVerifiablClient.html#Verifiabl_Client_IVerifiablClient_RegisterNonPiiAsync_Verifiabl_Client_RegisterNonPiiRequest_System_Threading_CancellationToken_
+  - name: (
+  - uid: Verifiabl.Client.RegisterNonPiiRequest
+    name: RegisterNonPiiRequest
+    href: Verifiabl.Client.RegisterNonPiiRequest.html
+  - name: ','
+  - name: " "
+  - uid: System.Threading.CancellationToken
+    name: CancellationToken
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken
+  - name: )
+- uid: Verifiabl.Client.BatchRecordResult.IsIvReused
+  commentId: P:Verifiabl.Client.BatchRecordResult.IsIvReused
+  href: Verifiabl.Client.BatchRecordResult.html#Verifiabl_Client_BatchRecordResult_IsIvReused
+  name: IsIvReused
+  nameWithType: BatchRecordResult.IsIvReused
+  fullName: Verifiabl.Client.BatchRecordResult.IsIvReused
+- uid: System.ArgumentNullException
+  commentId: T:System.ArgumentNullException
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.argumentnullexception
+  name: ArgumentNullException
+  nameWithType: ArgumentNullException
+  fullName: System.ArgumentNullException
+- uid: Verifiabl.Client.IVerifiablClient.RegisterNonPiiBatchAsync*
+  commentId: Overload:Verifiabl.Client.IVerifiablClient.RegisterNonPiiBatchAsync
+  href: Verifiabl.Client.IVerifiablClient.html#Verifiabl_Client_IVerifiablClient_RegisterNonPiiBatchAsync_System_Collections_Generic_IEnumerable_Verifiabl_Client_BatchRecord__System_Threading_CancellationToken_
+  name: RegisterNonPiiBatchAsync
+  nameWithType: IVerifiablClient.RegisterNonPiiBatchAsync
+  fullName: Verifiabl.Client.IVerifiablClient.RegisterNonPiiBatchAsync
+- uid: System.Collections.Generic.IEnumerable{Verifiabl.Client.BatchRecord}
+  commentId: T:System.Collections.Generic.IEnumerable{Verifiabl.Client.BatchRecord}
+  parent: System.Collections.Generic
+  definition: System.Collections.Generic.IEnumerable`1
+  href: https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1
+  name: IEnumerable<BatchRecord>
+  nameWithType: IEnumerable<BatchRecord>
+  fullName: System.Collections.Generic.IEnumerable<Verifiabl.Client.BatchRecord>
+  nameWithType.vb: IEnumerable(Of BatchRecord)
+  fullName.vb: System.Collections.Generic.IEnumerable(Of Verifiabl.Client.BatchRecord)
+  name.vb: IEnumerable(Of BatchRecord)
+  spec.csharp:
+  - uid: System.Collections.Generic.IEnumerable`1
+    name: IEnumerable
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1
+  - name: <
+  - uid: Verifiabl.Client.BatchRecord
+    name: BatchRecord
+    href: Verifiabl.Client.BatchRecord.html
+  - name: '>'
+  spec.vb:
+  - uid: System.Collections.Generic.IEnumerable`1
+    name: IEnumerable
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1
+  - name: (
+  - name: Of
+  - name: " "
+  - uid: Verifiabl.Client.BatchRecord
+    name: BatchRecord
+    href: Verifiabl.Client.BatchRecord.html
+  - name: )
+- uid: System.Threading.Tasks.Task{Verifiabl.Client.RegisterNonPiiBatchResponse}
+  commentId: T:System.Threading.Tasks.Task{Verifiabl.Client.RegisterNonPiiBatchResponse}
+  parent: System.Threading.Tasks
+  definition: System.Threading.Tasks.Task`1
+  href: https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1
+  name: Task<RegisterNonPiiBatchResponse>
+  nameWithType: Task<RegisterNonPiiBatchResponse>
+  fullName: System.Threading.Tasks.Task<Verifiabl.Client.RegisterNonPiiBatchResponse>
+  nameWithType.vb: Task(Of RegisterNonPiiBatchResponse)
+  fullName.vb: System.Threading.Tasks.Task(Of Verifiabl.Client.RegisterNonPiiBatchResponse)
+  name.vb: Task(Of RegisterNonPiiBatchResponse)
+  spec.csharp:
+  - uid: System.Threading.Tasks.Task`1
+    name: Task
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1
+  - name: <
+  - uid: Verifiabl.Client.RegisterNonPiiBatchResponse
+    name: RegisterNonPiiBatchResponse
+    href: Verifiabl.Client.RegisterNonPiiBatchResponse.html
+  - name: '>'
+  spec.vb:
+  - uid: System.Threading.Tasks.Task`1
+    name: Task
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1
+  - name: (
+  - name: Of
+  - name: " "
+  - uid: Verifiabl.Client.RegisterNonPiiBatchResponse
+    name: RegisterNonPiiBatchResponse
+    href: Verifiabl.Client.RegisterNonPiiBatchResponse.html
+  - name: )
+- uid: Verifiabl.Client.IVerifiablClient
+  commentId: T:Verifiabl.Client.IVerifiablClient
+  parent: Verifiabl.Client
+  href: Verifiabl.Client.IVerifiablClient.html
+  name: IVerifiablClient
+  nameWithType: IVerifiablClient
+  fullName: Verifiabl.Client.IVerifiablClient
+- uid: System.Collections.Generic.IEnumerable`1
+  commentId: T:System.Collections.Generic.IEnumerable`1
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1
+  name: IEnumerable<T>
+  nameWithType: IEnumerable<T>
+  fullName: System.Collections.Generic.IEnumerable<T>
+  nameWithType.vb: IEnumerable(Of T)
+  fullName.vb: System.Collections.Generic.IEnumerable(Of T)
+  name.vb: IEnumerable(Of T)
+  spec.csharp:
+  - uid: System.Collections.Generic.IEnumerable`1
+    name: IEnumerable
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1
+  - name: <
+  - name: T
+  - name: '>'
+  spec.vb:
+  - uid: System.Collections.Generic.IEnumerable`1
+    name: IEnumerable
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1
+  - name: (
+  - name: Of
+  - name: " "
+  - name: T
+  - name: )
+- uid: System.Collections.Generic
+  commentId: N:System.Collections.Generic
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system
+  name: System.Collections.Generic
+  nameWithType: System.Collections.Generic
+  fullName: System.Collections.Generic
+  spec.csharp:
+  - uid: System
+    name: System
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system
+  - name: .
+  - uid: System.Collections
+    name: Collections
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.collections
+  - name: .
+  - uid: System.Collections.Generic
+    name: Generic
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.collections.generic
+  spec.vb:
+  - uid: System
+    name: System
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system
+  - name: .
+  - uid: System.Collections
+    name: Collections
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.collections
+  - name: .
+  - uid: System.Collections.Generic
+    name: Generic
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.collections.generic

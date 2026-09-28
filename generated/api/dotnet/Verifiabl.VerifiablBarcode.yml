@@ -1,0 +1,834 @@
+### YamlMime:ManagedReference
+items:
+- uid: Verifiabl.VerifiablBarcode
+  commentId: T:Verifiabl.VerifiablBarcode
+  id: VerifiablBarcode
+  parent: Verifiabl
+  children:
+  - Verifiabl.VerifiablBarcode.BuildPayload(Verifiabl.BarcodeParts)
+  - Verifiabl.VerifiablBarcode.BuildScanUrl(Verifiabl.BarcodeParts,Verifiabl.ScanUrlOptions)
+  - Verifiabl.VerifiablBarcode.CreatePng(Verifiabl.BarcodeParts,Verifiabl.BarcodeSvgOptions,System.Int32)
+  - Verifiabl.VerifiablBarcode.CreateSvg(Verifiabl.BarcodeParts,Verifiabl.BarcodeSvgOptions)
+  - Verifiabl.VerifiablBarcode.PdfPayloadXmpNamespace
+  - Verifiabl.VerifiablBarcode.PdfPayloadXmpProperty
+  langs:
+  - csharp
+  - vb
+  name: VerifiablBarcode
+  nameWithType: VerifiablBarcode
+  fullName: Verifiabl.VerifiablBarcode
+  type: Class
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl
+  summary: >-
+    Builds the payload and scan URL embedded in Verifiabl barcodes, and renders
+
+    the branded "Secured by Verifiabl" QR badge as SVG.
+  example: []
+  syntax:
+    content: public static class VerifiablBarcode
+    content.vb: Public Module VerifiablBarcode
+  inheritance:
+  - System.Object
+  inheritedMembers:
+  - System.Object.Equals(System.Object)
+  - System.Object.Equals(System.Object,System.Object)
+  - System.Object.GetHashCode
+  - System.Object.GetType
+  - System.Object.MemberwiseClone
+  - System.Object.ReferenceEquals(System.Object,System.Object)
+  - System.Object.ToString
+- uid: Verifiabl.VerifiablBarcode.PdfPayloadXmpNamespace
+  commentId: F:Verifiabl.VerifiablBarcode.PdfPayloadXmpNamespace
+  id: PdfPayloadXmpNamespace
+  parent: Verifiabl.VerifiablBarcode
+  langs:
+  - csharp
+  - vb
+  name: PdfPayloadXmpNamespace
+  nameWithType: VerifiablBarcode.PdfPayloadXmpNamespace
+  fullName: Verifiabl.VerifiablBarcode.PdfPayloadXmpNamespace
+  type: Field
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl
+  summary: >-
+    XMP namespace for the PDF metadata copy of the barcode payload. The
+
+    namespace is permanent: it is embedded in already-issued PDFs, so it must
+
+    not change.
+  remarks: >-
+    Write the barcode payload (<xref href="Verifiabl.VerifiablBarcode.BuildPayload(Verifiabl.BarcodeParts)" data-throw-if-not-resolved="false"></xref>) into the payslip
+
+    PDF's XMP metadata in addition to the QR code, so a verifier can read the
+
+    payload even when the QR itself cannot be scanned. Both hold the identical
+
+    encrypted <code>2|verifiablReference|&lt;Base32 ciphertext&gt;</code> value by default; never
+
+    write plaintext PII to metadata, which is not encrypted. Write the value
+
+    with any PDF toolchain that can set a custom XMP property; the SDK only
+
+    provides the keys.
+  example: []
+  syntax:
+    content: public const string PdfPayloadXmpNamespace = "https://verifiabl.io/ns/"
+    return:
+      type: System.String
+    content.vb: Public Const PdfPayloadXmpNamespace As String = "https://verifiabl.io/ns/"
+- uid: Verifiabl.VerifiablBarcode.PdfPayloadXmpProperty
+  commentId: F:Verifiabl.VerifiablBarcode.PdfPayloadXmpProperty
+  id: PdfPayloadXmpProperty
+  parent: Verifiabl.VerifiablBarcode
+  langs:
+  - csharp
+  - vb
+  name: PdfPayloadXmpProperty
+  nameWithType: VerifiablBarcode.PdfPayloadXmpProperty
+  fullName: Verifiabl.VerifiablBarcode.PdfPayloadXmpProperty
+  type: Field
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl
+  summary: XMP property name for the PDF metadata copy of the payload.
+  example: []
+  syntax:
+    content: public const string PdfPayloadXmpProperty = "payload"
+    return:
+      type: System.String
+    content.vb: Public Const PdfPayloadXmpProperty As String = "payload"
+- uid: Verifiabl.VerifiablBarcode.BuildPayload(Verifiabl.BarcodeParts)
+  commentId: M:Verifiabl.VerifiablBarcode.BuildPayload(Verifiabl.BarcodeParts)
+  id: BuildPayload(Verifiabl.BarcodeParts)
+  parent: Verifiabl.VerifiablBarcode
+  langs:
+  - csharp
+  - vb
+  name: BuildPayload(BarcodeParts)
+  nameWithType: VerifiablBarcode.BuildPayload(BarcodeParts)
+  fullName: Verifiabl.VerifiablBarcode.BuildPayload(Verifiabl.BarcodeParts)
+  type: Method
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl
+  summary: 'Build the default v2 barcode payload: <code>2|&lt;verifiablReference&gt;|&lt;Base32 ciphertext&gt;</code>.'
+  remarks: >-
+    This is the bare wire format, and the value to write into the PDF's XMP
+
+    metadata. For QR codes intended to be scanned by phones, prefer
+
+    <xref href="Verifiabl.VerifiablBarcode.BuildScanUrl(Verifiabl.BarcodeParts%2cVerifiabl.ScanUrlOptions)" data-throw-if-not-resolved="false"></xref>, which carries the same reference and
+
+    ciphertext as a public scan-redirect URL.
+  example: []
+  syntax:
+    content: public static string BuildPayload(BarcodeParts parts)
+    parameters:
+    - id: parts
+      type: Verifiabl.BarcodeParts
+    return:
+      type: System.String
+    content.vb: Public Shared Function BuildPayload(parts As BarcodeParts) As String
+  overload: Verifiabl.VerifiablBarcode.BuildPayload*
+- uid: Verifiabl.VerifiablBarcode.BuildScanUrl(Verifiabl.BarcodeParts,Verifiabl.ScanUrlOptions)
+  commentId: M:Verifiabl.VerifiablBarcode.BuildScanUrl(Verifiabl.BarcodeParts,Verifiabl.ScanUrlOptions)
+  id: BuildScanUrl(Verifiabl.BarcodeParts,Verifiabl.ScanUrlOptions)
+  parent: Verifiabl.VerifiablBarcode
+  langs:
+  - csharp
+  - vb
+  name: BuildScanUrl(BarcodeParts, ScanUrlOptions?)
+  nameWithType: VerifiablBarcode.BuildScanUrl(BarcodeParts, ScanUrlOptions?)
+  fullName: Verifiabl.VerifiablBarcode.BuildScanUrl(Verifiabl.BarcodeParts, Verifiabl.ScanUrlOptions?)
+  type: Method
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl
+  summary: >-
+    Build the URL encoded into Verifiabl QR codes. The default is:
+
+    <code>https://v.verifiabl.io/v/&lt;verifiablReference&gt;#2.&lt;Base32 ciphertext&gt;</code>.
+
+    The scan URL sends scanners to Verifiabl instead of exposing raw ciphertext
+
+    in a phone camera preview.
+  remarks: >-
+    The ciphertext rides in the fragment, which no client transmits to a
+
+    server, so it cannot reach a request log at Verifiabl or at any
+
+    intermediary. Every character stays inside the URI-safe Base32 or
+
+    base64url alphabets plus <code>.</code>, which keeps scanners treating this as a URL and
+
+    offering tap-to-open rather than showing it as plain text.
+  example: []
+  syntax:
+    content: public static string BuildScanUrl(BarcodeParts parts, ScanUrlOptions? options = null)
+    parameters:
+    - id: parts
+      type: Verifiabl.BarcodeParts
+    - id: options
+      type: Verifiabl.ScanUrlOptions
+    return:
+      type: System.String
+    content.vb: Public Shared Function BuildScanUrl(parts As BarcodeParts, options As ScanUrlOptions = Nothing) As String
+  overload: Verifiabl.VerifiablBarcode.BuildScanUrl*
+  nameWithType.vb: VerifiablBarcode.BuildScanUrl(BarcodeParts, ScanUrlOptions)
+  fullName.vb: Verifiabl.VerifiablBarcode.BuildScanUrl(Verifiabl.BarcodeParts, Verifiabl.ScanUrlOptions)
+  name.vb: BuildScanUrl(BarcodeParts, ScanUrlOptions)
+- uid: Verifiabl.VerifiablBarcode.CreateSvg(Verifiabl.BarcodeParts,Verifiabl.BarcodeSvgOptions)
+  commentId: M:Verifiabl.VerifiablBarcode.CreateSvg(Verifiabl.BarcodeParts,Verifiabl.BarcodeSvgOptions)
+  id: CreateSvg(Verifiabl.BarcodeParts,Verifiabl.BarcodeSvgOptions)
+  parent: Verifiabl.VerifiablBarcode
+  langs:
+  - csharp
+  - vb
+  name: CreateSvg(BarcodeParts, BarcodeSvgOptions?)
+  nameWithType: VerifiablBarcode.CreateSvg(BarcodeParts, BarcodeSvgOptions?)
+  fullName: Verifiabl.VerifiablBarcode.CreateSvg(Verifiabl.BarcodeParts, Verifiabl.BarcodeSvgOptions?)
+  type: Method
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl
+  summary: >-
+    Render the branded Verifiabl barcode as a standalone SVG suitable for
+
+    embedding in a payslip PDF.
+  remarks: >-
+    Takes the Verifiabl reference from <xref href="Verifiabl.Client.VerifiablClient.RegisterNonPiiAsync(Verifiabl.Client.RegisterNonPiiRequest%2cSystem.Threading.CancellationToken)" data-throw-if-not-resolved="false"></xref>
+
+    and the encrypted PII ciphertext from <xref href="Verifiabl.VerifiablCrypto.EncryptPii(System.String%2cSystem.Byte%5b%5d)" data-throw-if-not-resolved="false"></xref>.
+
+    SVG scales to any size without losing quality; if your document pipeline
+
+    needs a raster image, use <xref href="Verifiabl.VerifiablBarcode.CreatePng(Verifiabl.BarcodeParts%2cVerifiabl.BarcodeSvgOptions%2cSystem.Int32)" data-throw-if-not-resolved="false"></xref> rather than rasterising
+
+    the SVG yourself, so module edges stay crisp and scannable.
+  example: []
+  syntax:
+    content: public static BarcodeSvgResult CreateSvg(BarcodeParts parts, BarcodeSvgOptions? options = null)
+    parameters:
+    - id: parts
+      type: Verifiabl.BarcodeParts
+    - id: options
+      type: Verifiabl.BarcodeSvgOptions
+    return:
+      type: Verifiabl.BarcodeSvgResult
+    content.vb: Public Shared Function CreateSvg(parts As BarcodeParts, options As BarcodeSvgOptions = Nothing) As BarcodeSvgResult
+  overload: Verifiabl.VerifiablBarcode.CreateSvg*
+  nameWithType.vb: VerifiablBarcode.CreateSvg(BarcodeParts, BarcodeSvgOptions)
+  fullName.vb: Verifiabl.VerifiablBarcode.CreateSvg(Verifiabl.BarcodeParts, Verifiabl.BarcodeSvgOptions)
+  name.vb: CreateSvg(BarcodeParts, BarcodeSvgOptions)
+- uid: Verifiabl.VerifiablBarcode.CreatePng(Verifiabl.BarcodeParts,Verifiabl.BarcodeSvgOptions,System.Int32)
+  commentId: M:Verifiabl.VerifiablBarcode.CreatePng(Verifiabl.BarcodeParts,Verifiabl.BarcodeSvgOptions,System.Int32)
+  id: CreatePng(Verifiabl.BarcodeParts,Verifiabl.BarcodeSvgOptions,System.Int32)
+  parent: Verifiabl.VerifiablBarcode
+  langs:
+  - csharp
+  - vb
+  name: CreatePng(BarcodeParts, BarcodeSvgOptions?, int)
+  nameWithType: VerifiablBarcode.CreatePng(BarcodeParts, BarcodeSvgOptions?, int)
+  fullName: Verifiabl.VerifiablBarcode.CreatePng(Verifiabl.BarcodeParts, Verifiabl.BarcodeSvgOptions?, int)
+  type: Method
+  assemblies:
+  - Verifiabl
+  namespace: Verifiabl
+  summary: Render the branded Verifiabl barcode as a PNG.
+  remarks: >-
+    The PNG is composited deterministically from a pre-rasterised frame plus
+
+    exact pixel-aligned QR modules - no vector rasteriser and no native
+
+    dependencies - so the same record produces the byte-identical raster in
+
+    every Verifiabl SDK. Because the frame is pre-rasterised, PNG output
+
+    exists only at pixel widths 480, 720, 960 and 1440; the physical print
+
+    size is set where the image is placed in the PDF. If you need a
+
+    different size, prefer <xref href="Verifiabl.VerifiablBarcode.CreateSvg(Verifiabl.BarcodeParts%2cVerifiabl.BarcodeSvgOptions)" data-throw-if-not-resolved="false"></xref>, which scales
+
+    continuously. <xref href="Verifiabl.BarcodeSvgOptions.Width" data-throw-if-not-resolved="false"></xref> is ignored here;
+
+    <code class="paramref">pixelWidth</code> controls the bitmap size.
+  example: []
+  syntax:
+    content: public static BarcodePngResult CreatePng(BarcodeParts parts, BarcodeSvgOptions? options = null, int pixelWidth = 720)
+    parameters:
+    - id: parts
+      type: Verifiabl.BarcodeParts
+      description: The Verifiabl reference and encrypted PII ciphertext.
+    - id: options
+      type: Verifiabl.BarcodeSvgOptions
+      description: Scan URL and error-correction options.
+    - id: pixelWidth
+      type: System.Int32
+      description: 'Output bitmap width in pixels (default: 720).'
+    return:
+      type: Verifiabl.BarcodePngResult
+    content.vb: Public Shared Function CreatePng(parts As BarcodeParts, options As BarcodeSvgOptions = Nothing, pixelWidth As Integer = 720) As BarcodePngResult
+  overload: Verifiabl.VerifiablBarcode.CreatePng*
+  nameWithType.vb: VerifiablBarcode.CreatePng(BarcodeParts, BarcodeSvgOptions, Integer)
+  fullName.vb: Verifiabl.VerifiablBarcode.CreatePng(Verifiabl.BarcodeParts, Verifiabl.BarcodeSvgOptions, Integer)
+  name.vb: CreatePng(BarcodeParts, BarcodeSvgOptions, Integer)
+references:
+- uid: Verifiabl
+  commentId: N:Verifiabl
+  href: Verifiabl.html
+  name: Verifiabl
+  nameWithType: Verifiabl
+  fullName: Verifiabl
+- uid: System.Object
+  commentId: T:System.Object
+  parent: System
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object
+  name: object
+  nameWithType: object
+  fullName: object
+  nameWithType.vb: Object
+  fullName.vb: Object
+  name.vb: Object
+- uid: System.Object.Equals(System.Object)
+  commentId: M:System.Object.Equals(System.Object)
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)
+  name: Equals(object)
+  nameWithType: object.Equals(object)
+  fullName: object.Equals(object)
+  nameWithType.vb: Object.Equals(Object)
+  fullName.vb: Object.Equals(Object)
+  name.vb: Equals(Object)
+  spec.csharp:
+  - uid: System.Object.Equals(System.Object)
+    name: Equals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)
+  - name: (
+  - uid: System.Object
+    name: object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+  spec.vb:
+  - uid: System.Object.Equals(System.Object)
+    name: Equals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)
+  - name: (
+  - uid: System.Object
+    name: Object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+- uid: System.Object.Equals(System.Object,System.Object)
+  commentId: M:System.Object.Equals(System.Object,System.Object)
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)
+  name: Equals(object, object)
+  nameWithType: object.Equals(object, object)
+  fullName: object.Equals(object, object)
+  nameWithType.vb: Object.Equals(Object, Object)
+  fullName.vb: Object.Equals(Object, Object)
+  name.vb: Equals(Object, Object)
+  spec.csharp:
+  - uid: System.Object.Equals(System.Object,System.Object)
+    name: Equals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)
+  - name: (
+  - uid: System.Object
+    name: object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: ','
+  - name: " "
+  - uid: System.Object
+    name: object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+  spec.vb:
+  - uid: System.Object.Equals(System.Object,System.Object)
+    name: Equals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)
+  - name: (
+  - uid: System.Object
+    name: Object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: ','
+  - name: " "
+  - uid: System.Object
+    name: Object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+- uid: System.Object.GetHashCode
+  commentId: M:System.Object.GetHashCode
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.gethashcode
+  name: GetHashCode()
+  nameWithType: object.GetHashCode()
+  fullName: object.GetHashCode()
+  nameWithType.vb: Object.GetHashCode()
+  fullName.vb: Object.GetHashCode()
+  spec.csharp:
+  - uid: System.Object.GetHashCode
+    name: GetHashCode
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.gethashcode
+  - name: (
+  - name: )
+  spec.vb:
+  - uid: System.Object.GetHashCode
+    name: GetHashCode
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.gethashcode
+  - name: (
+  - name: )
+- uid: System.Object.GetType
+  commentId: M:System.Object.GetType
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.gettype
+  name: GetType()
+  nameWithType: object.GetType()
+  fullName: object.GetType()
+  nameWithType.vb: Object.GetType()
+  fullName.vb: Object.GetType()
+  spec.csharp:
+  - uid: System.Object.GetType
+    name: GetType
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.gettype
+  - name: (
+  - name: )
+  spec.vb:
+  - uid: System.Object.GetType
+    name: GetType
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.gettype
+  - name: (
+  - name: )
+- uid: System.Object.MemberwiseClone
+  commentId: M:System.Object.MemberwiseClone
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone
+  name: MemberwiseClone()
+  nameWithType: object.MemberwiseClone()
+  fullName: object.MemberwiseClone()
+  nameWithType.vb: Object.MemberwiseClone()
+  fullName.vb: Object.MemberwiseClone()
+  spec.csharp:
+  - uid: System.Object.MemberwiseClone
+    name: MemberwiseClone
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone
+  - name: (
+  - name: )
+  spec.vb:
+  - uid: System.Object.MemberwiseClone
+    name: MemberwiseClone
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone
+  - name: (
+  - name: )
+- uid: System.Object.ReferenceEquals(System.Object,System.Object)
+  commentId: M:System.Object.ReferenceEquals(System.Object,System.Object)
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.referenceequals
+  name: ReferenceEquals(object, object)
+  nameWithType: object.ReferenceEquals(object, object)
+  fullName: object.ReferenceEquals(object, object)
+  nameWithType.vb: Object.ReferenceEquals(Object, Object)
+  fullName.vb: Object.ReferenceEquals(Object, Object)
+  name.vb: ReferenceEquals(Object, Object)
+  spec.csharp:
+  - uid: System.Object.ReferenceEquals(System.Object,System.Object)
+    name: ReferenceEquals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.referenceequals
+  - name: (
+  - uid: System.Object
+    name: object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: ','
+  - name: " "
+  - uid: System.Object
+    name: object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+  spec.vb:
+  - uid: System.Object.ReferenceEquals(System.Object,System.Object)
+    name: ReferenceEquals
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.referenceequals
+  - name: (
+  - uid: System.Object
+    name: Object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: ','
+  - name: " "
+  - uid: System.Object
+    name: Object
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object
+  - name: )
+- uid: System.Object.ToString
+  commentId: M:System.Object.ToString
+  parent: System.Object
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.object.tostring
+  name: ToString()
+  nameWithType: object.ToString()
+  fullName: object.ToString()
+  nameWithType.vb: Object.ToString()
+  fullName.vb: Object.ToString()
+  spec.csharp:
+  - uid: System.Object.ToString
+    name: ToString
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.tostring
+  - name: (
+  - name: )
+  spec.vb:
+  - uid: System.Object.ToString
+    name: ToString
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.object.tostring
+  - name: (
+  - name: )
+- uid: System
+  commentId: N:System
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system
+  name: System
+  nameWithType: System
+  fullName: System
+- uid: Verifiabl.VerifiablBarcode.BuildPayload(Verifiabl.BarcodeParts)
+  commentId: M:Verifiabl.VerifiablBarcode.BuildPayload(Verifiabl.BarcodeParts)
+  href: Verifiabl.VerifiablBarcode.html#Verifiabl_VerifiablBarcode_BuildPayload_Verifiabl_BarcodeParts_
+  name: BuildPayload(BarcodeParts)
+  nameWithType: VerifiablBarcode.BuildPayload(BarcodeParts)
+  fullName: Verifiabl.VerifiablBarcode.BuildPayload(Verifiabl.BarcodeParts)
+  spec.csharp:
+  - uid: Verifiabl.VerifiablBarcode.BuildPayload(Verifiabl.BarcodeParts)
+    name: BuildPayload
+    href: Verifiabl.VerifiablBarcode.html#Verifiabl_VerifiablBarcode_BuildPayload_Verifiabl_BarcodeParts_
+  - name: (
+  - uid: Verifiabl.BarcodeParts
+    name: BarcodeParts
+    href: Verifiabl.BarcodeParts.html
+  - name: )
+  spec.vb:
+  - uid: Verifiabl.VerifiablBarcode.BuildPayload(Verifiabl.BarcodeParts)
+    name: BuildPayload
+    href: Verifiabl.VerifiablBarcode.html#Verifiabl_VerifiablBarcode_BuildPayload_Verifiabl_BarcodeParts_
+  - name: (
+  - uid: Verifiabl.BarcodeParts
+    name: BarcodeParts
+    href: Verifiabl.BarcodeParts.html
+  - name: )
+- uid: System.String
+  commentId: T:System.String
+  parent: System
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.string
+  name: string
+  nameWithType: string
+  fullName: string
+  nameWithType.vb: String
+  fullName.vb: String
+  name.vb: String
+- uid: Verifiabl.VerifiablBarcode.BuildScanUrl(Verifiabl.BarcodeParts,Verifiabl.ScanUrlOptions)
+  commentId: M:Verifiabl.VerifiablBarcode.BuildScanUrl(Verifiabl.BarcodeParts,Verifiabl.ScanUrlOptions)
+  href: Verifiabl.VerifiablBarcode.html#Verifiabl_VerifiablBarcode_BuildScanUrl_Verifiabl_BarcodeParts_Verifiabl_ScanUrlOptions_
+  name: BuildScanUrl(BarcodeParts, ScanUrlOptions)
+  nameWithType: VerifiablBarcode.BuildScanUrl(BarcodeParts, ScanUrlOptions)
+  fullName: Verifiabl.VerifiablBarcode.BuildScanUrl(Verifiabl.BarcodeParts, Verifiabl.ScanUrlOptions)
+  spec.csharp:
+  - uid: Verifiabl.VerifiablBarcode.BuildScanUrl(Verifiabl.BarcodeParts,Verifiabl.ScanUrlOptions)
+    name: BuildScanUrl
+    href: Verifiabl.VerifiablBarcode.html#Verifiabl_VerifiablBarcode_BuildScanUrl_Verifiabl_BarcodeParts_Verifiabl_ScanUrlOptions_
+  - name: (
+  - uid: Verifiabl.BarcodeParts
+    name: BarcodeParts
+    href: Verifiabl.BarcodeParts.html
+  - name: ','
+  - name: " "
+  - uid: Verifiabl.ScanUrlOptions
+    name: ScanUrlOptions
+    href: Verifiabl.ScanUrlOptions.html
+  - name: )
+  spec.vb:
+  - uid: Verifiabl.VerifiablBarcode.BuildScanUrl(Verifiabl.BarcodeParts,Verifiabl.ScanUrlOptions)
+    name: BuildScanUrl
+    href: Verifiabl.VerifiablBarcode.html#Verifiabl_VerifiablBarcode_BuildScanUrl_Verifiabl_BarcodeParts_Verifiabl_ScanUrlOptions_
+  - name: (
+  - uid: Verifiabl.BarcodeParts
+    name: BarcodeParts
+    href: Verifiabl.BarcodeParts.html
+  - name: ','
+  - name: " "
+  - uid: Verifiabl.ScanUrlOptions
+    name: ScanUrlOptions
+    href: Verifiabl.ScanUrlOptions.html
+  - name: )
+- uid: Verifiabl.VerifiablBarcode.BuildPayload*
+  commentId: Overload:Verifiabl.VerifiablBarcode.BuildPayload
+  href: Verifiabl.VerifiablBarcode.html#Verifiabl_VerifiablBarcode_BuildPayload_Verifiabl_BarcodeParts_
+  name: BuildPayload
+  nameWithType: VerifiablBarcode.BuildPayload
+  fullName: Verifiabl.VerifiablBarcode.BuildPayload
+- uid: Verifiabl.BarcodeParts
+  commentId: T:Verifiabl.BarcodeParts
+  parent: Verifiabl
+  href: Verifiabl.BarcodeParts.html
+  name: BarcodeParts
+  nameWithType: BarcodeParts
+  fullName: Verifiabl.BarcodeParts
+- uid: Verifiabl.VerifiablBarcode.BuildScanUrl*
+  commentId: Overload:Verifiabl.VerifiablBarcode.BuildScanUrl
+  href: Verifiabl.VerifiablBarcode.html#Verifiabl_VerifiablBarcode_BuildScanUrl_Verifiabl_BarcodeParts_Verifiabl_ScanUrlOptions_
+  name: BuildScanUrl
+  nameWithType: VerifiablBarcode.BuildScanUrl
+  fullName: Verifiabl.VerifiablBarcode.BuildScanUrl
+- uid: Verifiabl.ScanUrlOptions
+  commentId: T:Verifiabl.ScanUrlOptions
+  parent: Verifiabl
+  href: Verifiabl.ScanUrlOptions.html
+  name: ScanUrlOptions
+  nameWithType: ScanUrlOptions
+  fullName: Verifiabl.ScanUrlOptions
+- uid: Verifiabl.Client.VerifiablClient.RegisterNonPiiAsync(Verifiabl.Client.RegisterNonPiiRequest,System.Threading.CancellationToken)
+  commentId: M:Verifiabl.Client.VerifiablClient.RegisterNonPiiAsync(Verifiabl.Client.RegisterNonPiiRequest,System.Threading.CancellationToken)
+  isExternal: true
+  href: Verifiabl.Client.VerifiablClient.html#Verifiabl_Client_VerifiablClient_RegisterNonPiiAsync_Verifiabl_Client_RegisterNonPiiRequest_System_Threading_CancellationToken_
+  name: RegisterNonPiiAsync(RegisterNonPiiRequest, CancellationToken)
+  nameWithType: VerifiablClient.RegisterNonPiiAsync(RegisterNonPiiRequest, CancellationToken)
+  fullName: Verifiabl.Client.VerifiablClient.RegisterNonPiiAsync(Verifiabl.Client.RegisterNonPiiRequest, System.Threading.CancellationToken)
+  spec.csharp:
+  - uid: Verifiabl.Client.VerifiablClient.RegisterNonPiiAsync(Verifiabl.Client.RegisterNonPiiRequest,System.Threading.CancellationToken)
+    name: RegisterNonPiiAsync
+    href: Verifiabl.Client.VerifiablClient.html#Verifiabl_Client_VerifiablClient_RegisterNonPiiAsync_Verifiabl_Client_RegisterNonPiiRequest_System_Threading_CancellationToken_
+  - name: (
+  - uid: Verifiabl.Client.RegisterNonPiiRequest
+    name: RegisterNonPiiRequest
+    href: Verifiabl.Client.RegisterNonPiiRequest.html
+  - name: ','
+  - name: " "
+  - uid: System.Threading.CancellationToken
+    name: CancellationToken
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken
+  - name: )
+  spec.vb:
+  - uid: Verifiabl.Client.VerifiablClient.RegisterNonPiiAsync(Verifiabl.Client.RegisterNonPiiRequest,System.Threading.CancellationToken)
+    name: RegisterNonPiiAsync
+    href: Verifiabl.Client.VerifiablClient.html#Verifiabl_Client_VerifiablClient_RegisterNonPiiAsync_Verifiabl_Client_RegisterNonPiiRequest_System_Threading_CancellationToken_
+  - name: (
+  - uid: Verifiabl.Client.RegisterNonPiiRequest
+    name: RegisterNonPiiRequest
+    href: Verifiabl.Client.RegisterNonPiiRequest.html
+  - name: ','
+  - name: " "
+  - uid: System.Threading.CancellationToken
+    name: CancellationToken
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken
+  - name: )
+- uid: Verifiabl.VerifiablCrypto.EncryptPii(System.String,System.Byte[])
+  commentId: M:Verifiabl.VerifiablCrypto.EncryptPii(System.String,System.Byte[])
+  isExternal: true
+  href: Verifiabl.VerifiablCrypto.html#Verifiabl_VerifiablCrypto_EncryptPii_System_String_System_Byte___
+  name: EncryptPii(string, byte[])
+  nameWithType: VerifiablCrypto.EncryptPii(string, byte[])
+  fullName: Verifiabl.VerifiablCrypto.EncryptPii(string, byte[])
+  nameWithType.vb: VerifiablCrypto.EncryptPii(String, Byte())
+  fullName.vb: Verifiabl.VerifiablCrypto.EncryptPii(String, Byte())
+  name.vb: EncryptPii(String, Byte())
+  spec.csharp:
+  - uid: Verifiabl.VerifiablCrypto.EncryptPii(System.String,System.Byte[])
+    name: EncryptPii
+    href: Verifiabl.VerifiablCrypto.html#Verifiabl_VerifiablCrypto_EncryptPii_System_String_System_Byte___
+  - name: (
+  - uid: System.String
+    name: string
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.string
+  - name: ','
+  - name: " "
+  - uid: System.Byte
+    name: byte
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.byte
+  - name: '['
+  - name: ']'
+  - name: )
+  spec.vb:
+  - uid: Verifiabl.VerifiablCrypto.EncryptPii(System.String,System.Byte[])
+    name: EncryptPii
+    href: Verifiabl.VerifiablCrypto.html#Verifiabl_VerifiablCrypto_EncryptPii_System_String_System_Byte___
+  - name: (
+  - uid: System.String
+    name: String
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.string
+  - name: ','
+  - name: " "
+  - uid: System.Byte
+    name: Byte
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.byte
+  - name: (
+  - name: )
+  - name: )
+- uid: Verifiabl.VerifiablBarcode.CreatePng(Verifiabl.BarcodeParts,Verifiabl.BarcodeSvgOptions,System.Int32)
+  commentId: M:Verifiabl.VerifiablBarcode.CreatePng(Verifiabl.BarcodeParts,Verifiabl.BarcodeSvgOptions,System.Int32)
+  isExternal: true
+  href: Verifiabl.VerifiablBarcode.html#Verifiabl_VerifiablBarcode_CreatePng_Verifiabl_BarcodeParts_Verifiabl_BarcodeSvgOptions_System_Int32_
+  name: CreatePng(BarcodeParts, BarcodeSvgOptions, int)
+  nameWithType: VerifiablBarcode.CreatePng(BarcodeParts, BarcodeSvgOptions, int)
+  fullName: Verifiabl.VerifiablBarcode.CreatePng(Verifiabl.BarcodeParts, Verifiabl.BarcodeSvgOptions, int)
+  nameWithType.vb: VerifiablBarcode.CreatePng(BarcodeParts, BarcodeSvgOptions, Integer)
+  fullName.vb: Verifiabl.VerifiablBarcode.CreatePng(Verifiabl.BarcodeParts, Verifiabl.BarcodeSvgOptions, Integer)
+  name.vb: CreatePng(BarcodeParts, BarcodeSvgOptions, Integer)
+  spec.csharp:
+  - uid: Verifiabl.VerifiablBarcode.CreatePng(Verifiabl.BarcodeParts,Verifiabl.BarcodeSvgOptions,System.Int32)
+    name: CreatePng
+    href: Verifiabl.VerifiablBarcode.html#Verifiabl_VerifiablBarcode_CreatePng_Verifiabl_BarcodeParts_Verifiabl_BarcodeSvgOptions_System_Int32_
+  - name: (
+  - uid: Verifiabl.BarcodeParts
+    name: BarcodeParts
+    href: Verifiabl.BarcodeParts.html
+  - name: ','
+  - name: " "
+  - uid: Verifiabl.BarcodeSvgOptions
+    name: BarcodeSvgOptions
+    href: Verifiabl.BarcodeSvgOptions.html
+  - name: ','
+  - name: " "
+  - uid: System.Int32
+    name: int
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.int32
+  - name: )
+  spec.vb:
+  - uid: Verifiabl.VerifiablBarcode.CreatePng(Verifiabl.BarcodeParts,Verifiabl.BarcodeSvgOptions,System.Int32)
+    name: CreatePng
+    href: Verifiabl.VerifiablBarcode.html#Verifiabl_VerifiablBarcode_CreatePng_Verifiabl_BarcodeParts_Verifiabl_BarcodeSvgOptions_System_Int32_
+  - name: (
+  - uid: Verifiabl.BarcodeParts
+    name: BarcodeParts
+    href: Verifiabl.BarcodeParts.html
+  - name: ','
+  - name: " "
+  - uid: Verifiabl.BarcodeSvgOptions
+    name: BarcodeSvgOptions
+    href: Verifiabl.BarcodeSvgOptions.html
+  - name: ','
+  - name: " "
+  - uid: System.Int32
+    name: Integer
+    isExternal: true
+    href: https://learn.microsoft.com/dotnet/api/system.int32
+  - name: )
+- uid: Verifiabl.VerifiablBarcode.CreateSvg*
+  commentId: Overload:Verifiabl.VerifiablBarcode.CreateSvg
+  href: Verifiabl.VerifiablBarcode.html#Verifiabl_VerifiablBarcode_CreateSvg_Verifiabl_BarcodeParts_Verifiabl_BarcodeSvgOptions_
+  name: CreateSvg
+  nameWithType: VerifiablBarcode.CreateSvg
+  fullName: Verifiabl.VerifiablBarcode.CreateSvg
+- uid: Verifiabl.BarcodeSvgOptions
+  commentId: T:Verifiabl.BarcodeSvgOptions
+  parent: Verifiabl
+  href: Verifiabl.BarcodeSvgOptions.html
+  name: BarcodeSvgOptions
+  nameWithType: BarcodeSvgOptions
+  fullName: Verifiabl.BarcodeSvgOptions
+- uid: Verifiabl.BarcodeSvgResult
+  commentId: T:Verifiabl.BarcodeSvgResult
+  parent: Verifiabl
+  href: Verifiabl.BarcodeSvgResult.html
+  name: BarcodeSvgResult
+  nameWithType: BarcodeSvgResult
+  fullName: Verifiabl.BarcodeSvgResult
+- uid: Verifiabl.VerifiablBarcode.CreateSvg(Verifiabl.BarcodeParts,Verifiabl.BarcodeSvgOptions)
+  commentId: M:Verifiabl.VerifiablBarcode.CreateSvg(Verifiabl.BarcodeParts,Verifiabl.BarcodeSvgOptions)
+  href: Verifiabl.VerifiablBarcode.html#Verifiabl_VerifiablBarcode_CreateSvg_Verifiabl_BarcodeParts_Verifiabl_BarcodeSvgOptions_
+  name: CreateSvg(BarcodeParts, BarcodeSvgOptions)
+  nameWithType: VerifiablBarcode.CreateSvg(BarcodeParts, BarcodeSvgOptions)
+  fullName: Verifiabl.VerifiablBarcode.CreateSvg(Verifiabl.BarcodeParts, Verifiabl.BarcodeSvgOptions)
+  spec.csharp:
+  - uid: Verifiabl.VerifiablBarcode.CreateSvg(Verifiabl.BarcodeParts,Verifiabl.BarcodeSvgOptions)
+    name: CreateSvg
+    href: Verifiabl.VerifiablBarcode.html#Verifiabl_VerifiablBarcode_CreateSvg_Verifiabl_BarcodeParts_Verifiabl_BarcodeSvgOptions_
+  - name: (
+  - uid: Verifiabl.BarcodeParts
+    name: BarcodeParts
+    href: Verifiabl.BarcodeParts.html
+  - name: ','
+  - name: " "
+  - uid: Verifiabl.BarcodeSvgOptions
+    name: BarcodeSvgOptions
+    href: Verifiabl.BarcodeSvgOptions.html
+  - name: )
+  spec.vb:
+  - uid: Verifiabl.VerifiablBarcode.CreateSvg(Verifiabl.BarcodeParts,Verifiabl.BarcodeSvgOptions)
+    name: CreateSvg
+    href: Verifiabl.VerifiablBarcode.html#Verifiabl_VerifiablBarcode_CreateSvg_Verifiabl_BarcodeParts_Verifiabl_BarcodeSvgOptions_
+  - name: (
+  - uid: Verifiabl.BarcodeParts
+    name: BarcodeParts
+    href: Verifiabl.BarcodeParts.html
+  - name: ','
+  - name: " "
+  - uid: Verifiabl.BarcodeSvgOptions
+    name: BarcodeSvgOptions
+    href: Verifiabl.BarcodeSvgOptions.html
+  - name: )
+- uid: Verifiabl.BarcodeSvgOptions.Width
+  commentId: P:Verifiabl.BarcodeSvgOptions.Width
+  href: Verifiabl.BarcodeSvgOptions.html#Verifiabl_BarcodeSvgOptions_Width
+  name: Width
+  nameWithType: BarcodeSvgOptions.Width
+  fullName: Verifiabl.BarcodeSvgOptions.Width
+- uid: Verifiabl.VerifiablBarcode.CreatePng*
+  commentId: Overload:Verifiabl.VerifiablBarcode.CreatePng
+  href: Verifiabl.VerifiablBarcode.html#Verifiabl_VerifiablBarcode_CreatePng_Verifiabl_BarcodeParts_Verifiabl_BarcodeSvgOptions_System_Int32_
+  name: CreatePng
+  nameWithType: VerifiablBarcode.CreatePng
+  fullName: Verifiabl.VerifiablBarcode.CreatePng
+- uid: System.Int32
+  commentId: T:System.Int32
+  parent: System
+  isExternal: true
+  href: https://learn.microsoft.com/dotnet/api/system.int32
+  name: int
+  nameWithType: int
+  fullName: int
+  nameWithType.vb: Integer
+  fullName.vb: Integer
+  name.vb: Integer
+- uid: Verifiabl.BarcodePngResult
+  commentId: T:Verifiabl.BarcodePngResult
+  parent: Verifiabl
+  href: Verifiabl.BarcodePngResult.html
+  name: BarcodePngResult
+  nameWithType: BarcodePngResult
+  fullName: Verifiabl.BarcodePngResult

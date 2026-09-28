@@ -201,16 +201,42 @@ public sealed class VerifiablClient : IVerifiablClient
             throw new ArgumentNullException(nameof(records));
         }
 
-        JsonObject body = Wire.ToWire(records.ToList());
-        // Batch records carry provider-generated references, which the API treats
-        // as idempotency keys: re-sending returns "duplicate" for stored rows and
-        // writes only the missing ones. So a transient failure is safe to retry.
-        return PostAsync(
-            "/v1/registerNonPIIBatch",
-            body,
-            Wire.BatchFromWire,
-            idempotent: true,
-            cancellationToken);
+        List<BatchRecord> input = records.ToList();
+        var prepared = Wire.PrepareBatch(input);
+        var results = new BatchRecordResult[input.Count];
+        foreach (KeyValuePair<int, BatchRecordResult> error in prepared.Errors)
+        {
+            results[error.Key] = error.Value;
+        }
+        if (prepared.SentIndices.Count == 0)
+        {
+            return Task.FromResult(new RegisterNonPiiBatchResponse(results));
+        }
+
+        // References make retries safe. Invalid payslips are omitted locally;
+        // results still retain the input order and external correlation ids.
+        return MergeBatchResponseAsync(prepared.Body, prepared.SentIndices, results, cancellationToken);
+    }
+
+    private async Task<RegisterNonPiiBatchResponse> MergeBatchResponseAsync(
+        JsonObject body,
+        IReadOnlyList<int> sentIndices,
+        BatchRecordResult[] results,
+        CancellationToken cancellationToken)
+    {
+        RegisterNonPiiBatchResponse response = await PostAsync(
+            "/v1/registerNonPIIBatch", body, Wire.BatchFromWire,
+            idempotent: true, cancellationToken).ConfigureAwait(false);
+        if (response.Results.Count != sentIndices.Count)
+        {
+            throw new VerifiablTransportException(
+                $"Batch response contained {response.Results.Count} results for {sentIndices.Count} sent records.");
+        }
+        for (int index = 0; index < sentIndices.Count; index++)
+        {
+            results[sentIndices[index]] = response.Results[index];
+        }
+        return new RegisterNonPiiBatchResponse(results);
     }
 
     private async Task<T> PostAsync<T>(

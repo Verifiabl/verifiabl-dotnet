@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Verifiabl;
 using Verifiabl.Client;
 
@@ -7,54 +8,80 @@ return await IssuerExample.RunAsync(args);
 
 internal static class IssuerExample
 {
-    private const string Schema = "au.payslip.v1";
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
     };
 
+    private static readonly JsonSerializerOptions WireJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
+
     private static readonly IReadOnlyList<ExamplePayslip> Payslips =
     [
         new(
             "PAY-1001",
-            new PiiFields
+            PayslipSchemas.AustralianV2,
+            () => Pii.FormatAustralian(new AustralianPiiFields
             {
                 EmployeeName = "Jane A. Doe",
                 Position = "Senior Developer",
                 Department = "Engineering",
-                EmployerAbn = "12345678901",
+                EmployerName = "Example Payroll Pty Ltd",
+                EmployerAbn = "12 345 678 901",
                 Bsb = "062-000",
-                AccountNumber = "12345678",
+                AccountNumber = "****5678",
                 AccountName = "Jane A Doe",
-                Address = "12 Example St, Sydney NSW 2000",
-            },
-            PayslipData(
-                grossCents: 900_000,
-                paygwCents: 225_000,
-                netCents: 675_000,
-                ytdGrossCents: 5_400_000,
-                ytdPaygwCents: 1_350_000)),
+                Address = new AustralianAddress
+                {
+                    Lines = ["12 Example St"],
+                    Suburb = "Sydney",
+                    StateOrTerritory = "NSW",
+                    Postcode = "2000",
+                },
+            }),
+            new AustralianPayslipV2
+            {
+                // v2 allows a payslip that prints only the period end.
+                PeriodEnd = "2026-08-31",
+                PaymentDate = "2026-09-04",
+                Currency = PayslipCurrencies.Aud,
+                Gross = new PayslipNumber(9000.00m),
+                Paygw = new PayslipNumber(2250.00m),
+                Net = new PayslipNumber(6750.00m),
+            }),
         new(
             "PAY-1002",
-            new PiiFields
+            PayslipSchemas.NewZealandV2,
+            () => Pii.FormatNewZealand(new NewZealandPiiFields
             {
                 EmployeeName = "Zoë Nguyễn",
+                IrdNumber = "***-***-***",
                 Position = "Product Designer",
                 Department = "Product",
-                EmployerAbn = "12345678901",
-                Bsb = "062-000",
-                AccountNumber = "87654321",
+                EmployerName = "Example Payroll NZ Ltd",
+                AccountNumber = "**-****-*******-**",
                 AccountName = "Zoë Nguyễn",
-                Address = "44 Harbour Rd, Melbourne VIC 3000",
-            },
-            PayslipData(
-                grossCents: 760_000,
-                paygwCents: 171_000,
-                netCents: 589_000,
-                ytdGrossCents: 4_560_000,
-                ytdPaygwCents: 1_026_000)),
+                Address = new NewZealandAddress
+                {
+                    Lines = ["44 Harbour Rd"],
+                    Suburb = "Parnell",
+                    City = "Auckland",
+                    Postcode = "1052",
+                },
+            }),
+            new NewZealandPayslipV2
+            {
+                PeriodEnd = "2026-08-31",
+                PaymentDate = "2026-09-04",
+                Currency = PayslipCurrencies.Nzd,
+                Gross = new PayslipNumber(7600.00m),
+                Paye = new PayslipNumber(1710.00m),
+                Net = new PayslipNumber(5890.00m),
+            }),
     ];
 
     public static async Task<int> RunAsync(string[] args)
@@ -79,20 +106,30 @@ internal static class IssuerExample
                 EncryptedPii encrypted = single.Encrypted;
                 DateTimeOffset issuedAt = single.IssuedAt;
                 // snippet:start:dotnet.self-managed.prepare-batch
-                List<PreparedPayslip> batch = payslips.Select(payslip =>
+                var batch = payslips.Select(payslip =>
                 {
-                    string plaintext = Pii.Format(payslip.Pii);
+                    string plaintext = payslip.FormatPii();
                     EncryptedPii encrypted = VerifiablCrypto.EncryptPii(plaintext, key);
 
                     string reference = VerifiablReference.Generate();
                     DateTimeOffset recordIssuedAt = DateTimeOffset.UtcNow;
 
                     // Persist these values with the payslip before registration.
-                    return new PreparedPayslip(payslip, reference, recordIssuedAt, encrypted);
+                    return (
+                        Payslip: payslip,
+                        VerifiablReference: reference,
+                        IssuedAt: recordIssuedAt,
+                        Encrypted: encrypted);
                 }).ToList();
                 // snippet:end:dotnet.self-managed.prepare-batch
                 IReadOnlyList<BatchOutcome> outcomes;
-                IReadOnlyList<PreparedPayslip> batchToWrite = batch;
+                IReadOnlyList<PreparedPayslip> batchToWrite = batch
+                    .Select(record => new PreparedPayslip(
+                        record.Payslip,
+                        record.VerifiablReference,
+                        record.IssuedAt,
+                        record.Encrypted))
+                    .ToList();
 
                 // Persist each fixed registration request and encrypted barcode payload
                 // before network access so an ambiguous failure can be retried with the
@@ -101,7 +138,7 @@ internal static class IssuerExample
                     ? "sandbox-registration-pending"
                     : "offline-only-unregistered";
                 await WriteArtifactsAsync(outputRoot, "single", single, initialRegistration);
-                foreach (PreparedPayslip record in batch)
+                foreach (PreparedPayslip record in batchToWrite)
                 {
                     await WriteArtifactsAsync(outputRoot, "batch", record, initialRegistration);
                 }
@@ -117,7 +154,7 @@ internal static class IssuerExample
                     await client.RegisterNonPiiAsync(new RegisterNonPiiRequest
                     {
                         VerifiablReference = verifiablReference,
-                        Schema = "au.payslip.v1",
+                        Schema = payslip.Schema,
                         IssuedAt = issuedAt,
                         PayslipNonPii = payslip.NonPii,
                         EncryptionMetadata = encrypted.Metadata,
@@ -130,28 +167,44 @@ internal static class IssuerExample
                         {
                             VerifiablReference = record.VerifiablReference,
                             ExternalId = record.Payslip.ExternalId,
-                            Schema = "au.payslip.v1",
+                            Schema = record.Payslip.Schema,
                             IssuedAt = record.IssuedAt,
                             PayslipNonPii = record.Payslip.NonPii,
                             EncryptionMetadata = record.Encrypted.Metadata,
                         }));
 
-                    List<BatchOutcome> registeredOutcomes = batchResult.Results
+                    var registeredOutcomes = batchResult.Results
+                        .Select(result => new
+                        {
+                            ExternalId = result.ExternalId ?? "unknown",
+                            result.VerifiablReference,
+                            result.Status,
+                            result.Code,
+                            result.Detail,
+                        })
+                        .ToList();
+                    // snippet:end:dotnet.self-managed.register-batch
+                    outcomes = registeredOutcomes
                         .Select(result => new BatchOutcome(
-                            result.ExternalId ?? "unknown",
+                            result.ExternalId,
                             result.VerifiablReference,
                             result.Status,
                             result.Code,
                             result.Detail))
                         .ToList();
-                    // snippet:end:dotnet.self-managed.register-batch
-                    outcomes = registeredOutcomes;
-                    batchToWrite = batch.Where((_, index) =>
-                    {
-                        string? status = batchResult.Results.ElementAtOrDefault(index)?.Status;
-                        return status == BatchRecordStatuses.Created
-                            || status == BatchRecordStatuses.Duplicate;
-                    }).ToList();
+                    batchToWrite = batch
+                        .Where((_, index) =>
+                        {
+                            string? status = batchResult.Results.ElementAtOrDefault(index)?.Status;
+                            return status == BatchRecordStatuses.Created
+                                || status == BatchRecordStatuses.Duplicate;
+                        })
+                        .Select(record => new PreparedPayslip(
+                            record.Payslip,
+                            record.VerifiablReference,
+                            record.IssuedAt,
+                            record.Encrypted))
+                        .ToList();
                 }
                 else
                 {
@@ -216,34 +269,10 @@ internal static class IssuerExample
         return 1;
     }
 
-    private static PayslipNonPii PayslipData(
-        long grossCents,
-        long paygwCents,
-        long netCents,
-        long ytdGrossCents,
-        long ytdPaygwCents)
-    {
-        return new PayslipNonPii
-        {
-            PeriodStart = "2026-08-01",
-            PeriodEnd = "2026-08-31",
-            AdditionalData = new Dictionary<string, object?>
-            {
-                ["payment_date"] = "2026-09-04",
-                ["currency"] = "AUD",
-                ["gross_cents"] = grossCents,
-                ["paygw_cents"] = paygwCents,
-                ["net_cents"] = netCents,
-                ["ytd_gross_cents"] = ytdGrossCents,
-                ["ytd_paygw_cents"] = ytdPaygwCents,
-            },
-        };
-    }
-
     private static PreparedPayslip Prepare(ExamplePayslip payslip, byte[] key)
     {
         // snippet:start:dotnet.self-managed.format-and-encrypt
-        string plaintext = Pii.Format(payslip.Pii);
+        string plaintext = payslip.FormatPii();
         EncryptedPii encrypted = VerifiablCrypto.EncryptPii(plaintext, key);
         // snippet:end:dotnet.self-managed.format-and-encrypt
 
@@ -305,9 +334,14 @@ internal static class IssuerExample
                     Kind = group,
                     ExternalId = group == "batch" ? prepared.Payslip.ExternalId : null,
                     prepared.VerifiablReference,
-                    Schema,
+                    Schema = prepared.Payslip.Schema,
                     prepared.IssuedAt,
-                    PayslipNonPii = prepared.Payslip.NonPii,
+                    // Persist the actual wire fields, not the SDK's typed wrapper:
+                    // its internal payload is not serialized as public properties.
+                    PayslipNonPii = JsonSerializer.SerializeToElement(
+                        prepared.Payslip.Payload,
+                        prepared.Payslip.Payload.GetType(),
+                        WireJsonOptions),
                     EncryptionMetadataEncoding = "base64",
                     EncryptionMetadata = new
                     {
@@ -411,8 +445,17 @@ internal static class IssuerExample
 
     private sealed record ExamplePayslip(
         string ExternalId,
-        PiiFields Pii,
-        PayslipNonPii NonPii);
+        string Schema,
+        Func<string> FormatPii,
+        object Payload)
+    {
+        public PayslipNonPii NonPii => Payload switch
+        {
+            AustralianPayslipV2 au => PayslipNonPii.FromAustralianV2(au),
+            NewZealandPayslipV2 nz => PayslipNonPii.FromNewZealandV2(nz),
+            _ => throw new InvalidOperationException("Unsupported example payslip payload"),
+        };
+    }
 
     private sealed class PreparedPayslip(
         ExamplePayslip payslip,
