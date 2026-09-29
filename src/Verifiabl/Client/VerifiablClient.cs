@@ -1,4 +1,7 @@
 using System.Diagnostics;
+#if NET472
+using System.Net;
+#endif
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
@@ -43,6 +46,8 @@ public sealed class VerifiablClient : IVerifiablClient
 
     /// <summary>Maximum time before expiry that an OAuth token is treated as stale.</summary>
     private static readonly TimeSpan MaxTokenRefreshBuffer = TimeSpan.FromSeconds(60);
+
+    internal static readonly TimeSpan PooledConnectionLifetime = TimeSpan.FromMinutes(2);
 
     private static readonly Lazy<HttpClient> SharedHttpClient = new(CreateSharedHttpClient);
 
@@ -95,11 +100,19 @@ public sealed class VerifiablClient : IVerifiablClient
 
         _issuerBaseUrl = options.IssuerBaseUrl is null
             ? VerifiablEndpoints.IssuerBaseUrlFor(environment)
-            : ValidateIssuerBaseUrl(options.IssuerBaseUrl);
+            : ValidateIssuerBaseUrl(options.IssuerBaseUrl, $"{nameof(options)}.{nameof(options.IssuerBaseUrl)}");
 
         _timeout = options.Timeout;
         _maxRetries = options.MaxRetries;
         _httpClient = options.HttpClient ?? SharedHttpClient.Value;
+#if NET472
+        if (options.HttpClient is null)
+        {
+            // The shared transport also serves caller-specified development origins.
+            ConfigureConnectionLease(new Uri(_issuerBaseUrl));
+            ConfigureConnectionLease(new Uri(_tokenUrl));
+        }
+#endif
         _onRequest = options.OnRequest;
         _onResponse = options.OnResponse;
         _onError = options.OnError;
@@ -129,7 +142,7 @@ public sealed class VerifiablClient : IVerifiablClient
 
         if (options.IssuerBaseUrl is not null)
         {
-            ValidateIssuerBaseUrl(options.IssuerBaseUrl);
+            ValidateIssuerBaseUrl(options.IssuerBaseUrl, $"{nameof(options)}.{nameof(options.IssuerBaseUrl)}");
         }
 
         if (options.Timeout <= TimeSpan.Zero)
@@ -285,7 +298,7 @@ public sealed class VerifiablClient : IVerifiablClient
 
                 using (response)
                 {
-                    string text = await ReadBodyAsync(response).ConfigureAwait(false);
+                    string text = await ReadBodyAsync(response, deadline.Token).ConfigureAwait(false);
 
                     if (!response.IsSuccessStatusCode)
                     {
@@ -460,7 +473,7 @@ public sealed class VerifiablClient : IVerifiablClient
                     (int)response.StatusCode);
             }
 
-            string text = await ReadBodyAsync(response).ConfigureAwait(false);
+            string text = await ReadBodyAsync(response, cancellationToken).ConfigureAwait(false);
             JsonDocument document;
             try
             {
@@ -491,7 +504,9 @@ public sealed class VerifiablClient : IVerifiablClient
 
     private const double RetryBaseDelaySeconds = 0.5;
     private const double RetryMaxDelaySeconds = 8.0;
+#if !NET6_0_OR_GREATER
     private static readonly Random JitterRandom = new();
+#endif
 
     private static string BuildUserAgent()
     {
@@ -548,11 +563,15 @@ public sealed class VerifiablClient : IVerifiablClient
         double capped = Math.Min(
             RetryMaxDelaySeconds,
             RetryBaseDelaySeconds * Math.Pow(2, attempt - 1));
+#if NET6_0_OR_GREATER
+        double jitter = Random.Shared.NextDouble();
+#else
         double jitter;
         lock (JitterRandom)
         {
             jitter = JitterRandom.NextDouble();
         }
+#endif
 
         return TimeSpan.FromSeconds(capped / 2 + (capped / 2 * jitter));
     }
@@ -561,9 +580,16 @@ public sealed class VerifiablClient : IVerifiablClient
     {
 #if NET8_0_OR_GREATER
         // Recycle pooled connections so long-lived processes pick up DNS changes.
-        var handler = new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) };
+        var handler = new SocketsHttpHandler { PooledConnectionLifetime = PooledConnectionLifetime };
         var client = new HttpClient(handler);
 #else
+        // .NET Framework pools connections through ServicePointManager instead.
+        // Cover both built-in environments; per-client overrides are handled in
+        // the constructor when this shared transport is selected.
+        ConfigureConnectionLease(new Uri(VerifiablEndpoints.ProductionIssuerBaseUrl));
+        ConfigureConnectionLease(new Uri(VerifiablEndpoints.SandboxIssuerBaseUrl));
+        ConfigureConnectionLease(new Uri(VerifiablEndpoints.ProductionTokenUrl));
+        ConfigureConnectionLease(new Uri(VerifiablEndpoints.SandboxTokenUrl));
         var client = new HttpClient();
 #endif
         // The SDK applies its own per-call deadline.
@@ -571,14 +597,31 @@ public sealed class VerifiablClient : IVerifiablClient
         return client;
     }
 
-    private static async Task<string> ReadBodyAsync(HttpResponseMessage response)
+#if NET472
+    private static void ConfigureConnectionLease(Uri uri)
+    {
+        ServicePointManager.FindServicePoint(uri).ConnectionLeaseTimeout =
+            (int)PooledConnectionLifetime.TotalMilliseconds;
+    }
+#endif
+
+    private static async Task<string> ReadBodyAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
     {
         if (response.Content is null)
         {
             return string.Empty;
         }
 
+#if NET5_0_OR_GREATER
+        return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+#else
+        // HttpClient's default ResponseContentRead buffers the body under the
+        // send token. .NET Framework has no cancellable ReadAsStringAsync overload.
+        cancellationToken.ThrowIfCancellationRequested();
         return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+#endif
     }
 
     private static JsonDocument ParseJsonBody(string text, int status)
@@ -644,7 +687,7 @@ public sealed class VerifiablClient : IVerifiablClient
         }
     }
 
-    private static string ValidateIssuerBaseUrl(Uri url)
+    private static string ValidateIssuerBaseUrl(Uri url, string paramName)
     {
         if (!url.IsAbsoluteUri
             || !(url.Scheme == Uri.UriSchemeHttps
@@ -652,7 +695,7 @@ public sealed class VerifiablClient : IVerifiablClient
         {
             throw new ArgumentException(
                 "IssuerBaseUrl must use https, or http for localhost.",
-                nameof(VerifiablClientOptions.IssuerBaseUrl));
+                paramName);
         }
 
         return url.GetLeftPart(UriPartial.Authority);

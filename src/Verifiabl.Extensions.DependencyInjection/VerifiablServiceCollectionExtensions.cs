@@ -20,10 +20,6 @@ public static class VerifiablServiceCollectionExtensions
     /// </summary>
     public const string HttpClientName = "Verifiabl";
 
-#if NET472
-    private static readonly TimeSpan NetFrameworkConnectionLease = TimeSpan.FromMinutes(2);
-#endif
-
     /// <summary>
     /// Register <see cref="IVerifiablClient"/> as a singleton.
     /// </summary>
@@ -103,7 +99,7 @@ public static class VerifiablServiceCollectionExtensions
             .ConfigureHttpClient(client => client.Timeout = Timeout.InfiniteTimeSpan)
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {
-                PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+                PooledConnectionLifetime = VerifiablClient.PooledConnectionLifetime,
             })
             .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
 #else
@@ -191,7 +187,7 @@ public static class VerifiablServiceCollectionExtensions
     private static void ConfigureNetFrameworkConnectionLease(Uri baseUri)
     {
         ServicePoint servicePoint = ServicePointManager.FindServicePoint(baseUri);
-        servicePoint.ConnectionLeaseTimeout = (int)NetFrameworkConnectionLease.TotalMilliseconds;
+        servicePoint.ConnectionLeaseTimeout = (int)VerifiablClient.PooledConnectionLifetime.TotalMilliseconds;
     }
 
     private static Uri ResolveIssuerBaseUri(VerifiablClientOptions options)

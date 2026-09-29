@@ -27,9 +27,13 @@ public sealed class PayslipNonPii
     /// </summary>
     /// <remarks>
     /// Values may be <see langword="null"/>, <see cref="string"/>,
-    /// <see cref="bool"/>, any common numeric type, a nested
-    /// <see cref="IDictionary{TKey,TValue}"/> of the same, or a sequence of them.
-    /// Anything else throws an <see cref="ArgumentException"/> naming the key.
+    /// <see cref="bool"/>, numeric primitives (<see cref="sbyte"/>,
+    /// <see cref="byte"/>, <see cref="short"/>, <see cref="ushort"/>,
+    /// <see cref="int"/>, <see cref="uint"/>, <see cref="long"/>,
+    /// <see cref="ulong"/>, <see cref="float"/>, <see cref="double"/>,
+    /// <see cref="decimal"/>), nested string-keyed dictionaries, or sequences
+    /// of these values. Other types (including dates and custom objects) throw
+    /// an <see cref="ArgumentException"/> naming the offending key.
     /// </remarks>
     public IDictionary<string, object?>? AdditionalData { get; set; }
 

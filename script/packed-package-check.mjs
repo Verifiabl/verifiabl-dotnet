@@ -76,6 +76,11 @@ export function check(packageDirectory = "artifacts") {
       ["PAY-1002", "nz.payslip.v2", "NZD", "7600.00", "paye", "1710.00"],
     ]) {
       const batch = manifest("batch", id);
+      assert.equal(batch.verifiablReference, batch.registrationRequest.verifiablReference);
+      assert.equal(readFileSync(
+        join(output, runDirectory, "batch", id, "xmp-payload.txt"), "utf8",
+      ).startsWith(`2|${batch.verifiablReference}|`), true);
+      assert.ok(!JSON.stringify(batch).includes(id === "PAY-1001" ? "Jane A. Doe" : "Zoë Nguyễn"));
       assert.equal(batch.registrationRequest.schema, schema);
       const fields = batch.registrationRequest.payslipNonPii;
       assert.deepEqual(fields, {
@@ -90,6 +95,7 @@ export function check(packageDirectory = "artifacts") {
     const single = manifest("single", "PAY-1001").registrationRequest;
     assert.equal(single.schema, "au.payslip.v2");
     assert.deepEqual(single.payslipNonPii, manifest("batch", "PAY-1001").registrationRequest.payslipNonPii);
+    assert.notEqual(single.encryptionMetadata.iv, manifest("batch", "PAY-1001").registrationRequest.encryptionMetadata.iv);
   } finally {
     rmSync(temporary, { recursive: true, force: true });
   }

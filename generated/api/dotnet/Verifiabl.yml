@@ -17,7 +17,9 @@ items:
   - Verifiabl.NewZealandPiiFields
   - Verifiabl.Pii
   - Verifiabl.PiiFields
+  - Verifiabl.PreparedV2Payslip
   - Verifiabl.ScanUrlOptions
+  - Verifiabl.V2Issuance
   - Verifiabl.VerifiablBarcode
   - Verifiabl.VerifiablCrypto
   - Verifiabl.VerifiablEndpoints
@@ -131,6 +133,19 @@ references:
   name: ScanUrlOptions
   nameWithType: ScanUrlOptions
   fullName: Verifiabl.ScanUrlOptions
+- uid: Verifiabl.PreparedV2Payslip
+  commentId: T:Verifiabl.PreparedV2Payslip
+  parent: Verifiabl
+  href: Verifiabl.PreparedV2Payslip.html
+  name: PreparedV2Payslip
+  nameWithType: PreparedV2Payslip
+  fullName: Verifiabl.PreparedV2Payslip
+- uid: Verifiabl.V2Issuance
+  commentId: T:Verifiabl.V2Issuance
+  href: Verifiabl.V2Issuance.html
+  name: V2Issuance
+  nameWithType: V2Issuance
+  fullName: Verifiabl.V2Issuance
 - uid: Verifiabl.VerifiablBarcode
   commentId: T:Verifiabl.VerifiablBarcode
   href: Verifiabl.VerifiablBarcode.html

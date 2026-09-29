@@ -43,8 +43,14 @@ items:
   - uid: Verifiabl.PiiFields
     name: PiiFields
     type: Class
+  - uid: Verifiabl.PreparedV2Payslip
+    name: PreparedV2Payslip
+    type: Class
   - uid: Verifiabl.ScanUrlOptions
     name: ScanUrlOptions
+    type: Class
+  - uid: Verifiabl.V2Issuance
+    name: V2Issuance
     type: Class
   - uid: Verifiabl.VerifiablBarcode
     name: VerifiablBarcode

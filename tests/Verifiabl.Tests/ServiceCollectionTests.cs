@@ -154,6 +154,12 @@ public class ServiceCollectionTests
     }
 
     [Fact]
+    public void ConnectionLifetimeIsTwoMinutes()
+    {
+        Assert.Equal(TimeSpan.FromMinutes(2), VerifiablClient.PooledConnectionLifetime);
+    }
+
+    [Fact]
     public void RegistersTheNamedFactoryClientTheSdkSendsOn()
     {
         var services = new ServiceCollection();
@@ -170,6 +176,27 @@ public class ServiceCollectionTests
     }
 
 #if NET472
+    [Fact]
+    public void SharedClientConfiguresNetFrameworkConnectionLeaseForCustomOrigins()
+    {
+        var issuerUri = new Uri("http://localhost:41804");
+        var tokenUri = new Uri("http://localhost:41805/oauth/token");
+        ServicePoint issuerServicePoint = ServicePointManager.FindServicePoint(issuerUri);
+        ServicePoint tokenServicePoint = ServicePointManager.FindServicePoint(tokenUri);
+        issuerServicePoint.ConnectionLeaseTimeout = -1;
+        tokenServicePoint.ConnectionLeaseTimeout = -1;
+
+        _ = new VerifiablClient(new VerifiablClientOptions
+        {
+            Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret", tokenUri),
+            IssuerBaseUrl = issuerUri,
+        });
+
+        int expectedLease = (int)VerifiablClient.PooledConnectionLifetime.TotalMilliseconds;
+        Assert.Equal(expectedLease, issuerServicePoint.ConnectionLeaseTimeout);
+        Assert.Equal(expectedLease, tokenServicePoint.ConnectionLeaseTimeout);
+    }
+
     [Fact]
     public void CallerSuppliedHttpClientDoesNotConfigureNetFrameworkConnectionLease()
     {

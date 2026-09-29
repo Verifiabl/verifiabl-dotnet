@@ -147,6 +147,34 @@ public class JurisdictionPiiTests
     }
 
     [Fact]
+    public void AllPiiFormattersNameInvalidFieldsWithoutEchoingValues()
+    {
+        const string value = "Synthetic|Value";
+        (string Field, Action Format)[] cases =
+        [
+            ("EmployeeName", () => Pii.Format(new PiiFields { EmployeeName = value })),
+            ("EmployeeName", () => Pii.FormatAustralian(new AustralianPiiFields { EmployeeName = value })),
+            ("EmployeeName", () => Pii.FormatNewZealand(new NewZealandPiiFields { EmployeeName = value })),
+            ("Lines[1]", () => Pii.FormatAustralian(new AustralianPiiFields { Address = new AustralianAddress { Lines = ["Valid line", value] } })),
+            ("Lines[1]", () => Pii.FormatNewZealand(new NewZealandPiiFields { Address = new NewZealandAddress { Lines = ["Valid line", value] } })),
+            ("Suburb", () => Pii.FormatAustralian(new AustralianPiiFields { Address = new AustralianAddress { Suburb = value } })),
+            ("Suburb", () => Pii.FormatNewZealand(new NewZealandPiiFields { Address = new NewZealandAddress { Suburb = value } })),
+            ("StateOrTerritory", () => Pii.FormatAustralian(new AustralianPiiFields { Address = new AustralianAddress { StateOrTerritory = value } })),
+            ("City", () => Pii.FormatNewZealand(new NewZealandPiiFields { Address = new NewZealandAddress { City = value } })),
+            ("Postcode", () => Pii.FormatAustralian(new AustralianPiiFields { Address = new AustralianAddress { Postcode = value } })),
+            ("Postcode", () => Pii.FormatNewZealand(new NewZealandPiiFields { Address = new NewZealandAddress { Postcode = value } })),
+        ];
+
+        foreach (var (field, format) in cases)
+        {
+            ArgumentException error = Assert.Throws<ArgumentException>(format);
+            Assert.Equal(field, error.ParamName);
+            Assert.Contains(field, error.Message);
+            Assert.DoesNotContain(value, error.Message);
+        }
+    }
+
+    [Fact]
     public void EnforcesTheCompleteProfileByteLimit()
     {
         string boundaryValue = new('a', 1013);

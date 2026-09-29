@@ -28,7 +28,7 @@ The split is deliberate, so you can see at a glance which half of the SDK touche
 
 | Namespace | Contents | Network |
 | --- | --- | --- |
-| `Verifiabl` | `Pii`, `PiiFields`, the AU/NZ PII and address models, `VerifiablCrypto`, `EncryptedPii`, `EncryptionMetadata`, `VerifiablBarcode`, `BarcodeParts`, `BarcodeSvgOptions`, `VerifiablReference`, `VerifiablEnvironment`, `VerifiablEndpoints` | None. Pure functions you can call from anywhere, including a hot PDF-rendering loop. |
+| `Verifiabl` | `V2Issuance`, `PreparedV2Payslip`, AU/NZ PII and address models, `Pii`, `VerifiablCrypto`, `VerifiablBarcode`, `BarcodeParts`, `VerifiablReference` and rendering options | None. Preparation and rendering run locally. |
 | `Verifiabl.Client` | `IVerifiablClient`, `VerifiablClient`, `VerifiablClientOptions`, `VerifiablAuth`, the request/response types, `VerifiablApiException` and friends | Calls the Verifiabl issuer API. |
 | `Verifiabl.Extensions.DependencyInjection` | `AddVerifiablClient` and `VerifiablServiceCollectionExtensions.HttpClientName` from the DI integration package | Registers the networked client in your service collection. |
 
@@ -67,7 +67,7 @@ var client = new VerifiablClient(new VerifiablClientOptions
 
 ## Getting started
 
-This is the self-managed flow: register the payslip, encrypt the personal details locally, and generate the QR code yourself. You need three values from onboarding: your OAuth client ID and secret, and your encryption key.
+For new AU/NZ v2 integrations, prepare the payslip once, register its non-PII fields, then build the barcode locally. You need your OAuth client ID, client secret, and encryption key from onboarding. Use the same prepared result for the request and barcode.
 
 ```csharp
 using Verifiabl;
@@ -77,105 +77,60 @@ using Verifiabl.Client;
 byte[] key = Convert.FromBase64String(
     Environment.GetEnvironmentVariable("VERIFIABL_ENCRYPTION_KEY_BASE64")!);
 
-// 1. Format and encrypt the employee's details locally.
-string pii = Pii.Format(new PiiFields
-{
-    EmployeeName = "Jane A. Doe",
-    Position = "Senior Developer",
-    Department = "Engineering",
-    EmployerAbn = "12345678901",
-    Bsb = "062-000",
-    AccountNumber = "12345678",
-    AccountName = "Jane A Doe",
-    Address = "12 Example St, Sydney NSW 2000",
-});
-EncryptedPii encrypted = VerifiablCrypto.EncryptPii(pii, key);
-
-// 2. Register the non-PII data. Verifiabl returns a Verifiabl reference.
-RegisterNonPiiResponse registration = await client.RegisterNonPiiAsync(new RegisterNonPiiRequest
-{
-    Schema = "au.payslip.v1",
-    IssuedAt = DateTimeOffset.UtcNow,
-    PayslipNonPii = new PayslipNonPii
+// 1. Select AU2 and au.payslip.v2, validate non-PII fields, and encrypt locally.
+PreparedV2Payslip prepared = V2Issuance.PrepareAustralian(
+    pii: new AustralianPiiFields
     {
-        PeriodStart = "2026-05-01",
-        PeriodEnd = "2026-05-31",
-        // au.payslip.v1 requires these; keys and value types are set by the schema.
-        AdditionalData = new Dictionary<string, object?>
-        {
-            ["payment_date"] = "2026-06-04",
-            ["currency"] = "AUD",
-            ["gross_cents"] = 812_500,
-            ["paygw_cents"] = 203_000,
-            ["net_cents"] = 609_500,
-            ["ytd_gross_cents"] = 8_937_500,
-            ["ytd_paygw_cents"] = 2_233_000,
-        },
+        EmployeeName = "Jane A. Doe", EmployerName = "Example Payroll Pty Ltd",
+        EmployerAbn = "12 345 678 901",
     },
-    EncryptionMetadata = encrypted.Metadata,
-});
+    payslip: new AustralianPayslipV2
+    {
+        PeriodEnd = "2026-05-31", PaymentDate = "2026-06-04", Currency = "AUD",
+        Gross = 9000.00m, Paygw = 2250.00m, Net = 6750.00m,
+    },
+    issuedAt: DateTimeOffset.UtcNow, key: key);
 
-// 3. Render the QR code and embed the SVG in your payslip PDF.
+// 2. Persist the registration and ciphertext together before sending.
+// Registration has the reference, IV and tag, but not the ciphertext.
+RegisterNonPiiRequest savedRegistration = prepared.Registration;
+byte[] savedCiphertext = prepared.BarcodeParts(prepared.VerifiablReference).EncryptedPii;
+// Persist savedRegistration and savedCiphertext atomically as binary data.
+// After a restart, resend savedRegistration unchanged and render from savedCiphertext.
+RegisterNonPiiResponse registration = await client.RegisterNonPiiAsync(savedRegistration);
+
+// 3. Render from the saved ciphertext and the returned reference.
 BarcodeSvgResult badge = VerifiablBarcode.CreateSvg(
-    new BarcodeParts(registration.VerifiablReference, encrypted.Ciphertext),
+    new BarcodeParts(registration.VerifiablReference, savedCiphertext),
     new BarcodeSvgOptions { Environment = VerifiablEnvironment.Sandbox });
 ```
 
 ### AU2 and NZ2 payslip profiles
 
-For `au.payslip.v2`, format the encrypted PII with `Pii.FormatAustralian` and
-register the matching schema id. The formatter accepts the employer name and
-ABN separately, then writes one employer identity: the ABN when supplied,
-otherwise the name.
+Use `V2Issuance.PrepareAustralian` as shown above or `V2Issuance.PrepareNewZealand`
+for NZ. Each selects the matching schema and PII formatter internally. The AU2
+formatter accepts employer name and ABN separately, then writes the ABN when
+present or falls back to the name. For an API-rendered PNG, send
+`prepared.ApiManagedRegistration` to `RegisterAndBuildBarcodeAsync` instead of
+calling `RegisterNonPiiAsync`. Choose one flow per payslip. The API-managed
+request omits the prepared self-managed reference; it cannot safely replay an
+ambiguous failure.
 
 ```csharp
-string pii = Pii.FormatAustralian(new AustralianPiiFields
-{
-    EmployeeName = "Jane A. Doe",
-    Position = "Senior Developer",
-    Department = "Engineering",
-    EmployerName = "Example Payroll Pty Ltd",
-    EmployerAbn = "12 345 678 901",
-    Bsb = "062-000",
-    AccountNumber = "****5678",
-    AccountName = "Jane A Doe",
-    Address = new AustralianAddress
+PreparedV2Payslip nzPrepared = V2Issuance.PrepareNewZealand(
+    pii: new NewZealandPiiFields { EmployeeName = "Zoë Nguyễn", IrdNumber = "***-***-***" },
+    payslip: new NewZealandPayslipV2
     {
-        Lines = ["A204/11-17 Eve Street"],
-        Suburb = "Erskineville",
-        StateOrTerritory = "NSW",
-        Postcode = "2043",
+        PeriodEnd = "2026-05-31", PaymentDate = "2026-06-04", Currency = "NZD",
+        Gross = 7600.00m, Paye = 1710.00m, Net = 5890.00m,
     },
-});
-EncryptedPii encrypted = VerifiablCrypto.EncryptPii(pii, key);
-
-var nonPii = PayslipNonPii.FromAustralianV2(new AustralianPayslipV2
-{
-    // PeriodStart may be omitted when the payslip prints only a period end.
-    PeriodEnd = "2026-05-31",
-    PaymentDate = "2026-06-04",
-    Currency = PayslipCurrencies.Aud,
-    Gross = 8125.00m,
-    Paygw = 2030.00m,
-    Net = 6095.00m,
-});
-
-RegisterNonPiiResponse registration = await client.RegisterNonPiiAsync(new RegisterNonPiiRequest
-{
-    Schema = PayslipSchemas.AustralianV2,
-    IssuedAt = DateTimeOffset.UtcNow,
-    PayslipNonPii = nonPii,
-    EncryptionMetadata = encrypted.Metadata,
-});
-
-BarcodeSvgResult badge = VerifiablBarcode.CreateSvg(
-    new BarcodeParts(registration.VerifiablReference, encrypted.Ciphertext),
-    new BarcodeSvgOptions { Environment = VerifiablEnvironment.Sandbox });
+    issuedAt: DateTimeOffset.UtcNow, key: key);
+// Alternative API-managed flow: the API returns a PNG and its own reference.
+RegisterAndBuildBarcodeResponse nzResult =
+    await client.RegisterAndBuildBarcodeAsync(nzPrepared.ApiManagedRegistration);
 ```
 
-For `nz.payslip.v2`, use `Pii.FormatNewZealand` with
-`NewZealandPiiFields` and `NewZealandAddress`, then register
-`PayslipSchemas.NewZealandV2`. NZ2 carries the printed employee IRD number,
+NZ2 carries the printed employee IRD number,
 employer name, account number and account name. It has no BSB or NZBN field.
 
 Both formatters always write eight positions, including empty trailing
@@ -186,15 +141,13 @@ Country is implicit in AU2 or NZ2. Values preserve provider formatting and use
 the current PII character restrictions. The complete UTF-8 plaintext, including
 the discriminator and delimiters, is limited to 1024 bytes.
 
-`Schema` selects only the non-PII payload contract. Choose the PII formatter
-separately: `Pii.FormatAustralian` (AU2) for Australian records or
-`Pii.FormatNewZealand` (NZ2) for New Zealand records. Today the examples use
-AU2 with `au.payslip.v2` and NZ2 with `nz.payslip.v2`, but those matching `2`
-suffixes are not a version-coupling rule. A future non-PII schema can still use
-the same jurisdictional PII format, or the PII format can evolve without
-renaming the non-PII schema. The verifier checks the PII marker against the
-record's jurisdiction, not the schema version; a jurisdiction mismatch fails
-verification. Legacy v1 verification returns this plaintext without parsing it.
+The preparation helpers pair the AU2/NZ2 PII format with the matching v2
+non-PII schema. Their input does not accept a schema, formatted plaintext, or
+ciphertext. They do not check whether input values describe a real payslip or
+whether printed non-PII strings contain personal information. Keep employee
+PII out of non-PII fields. Advanced integrations can still select the schema
+and formatter separately with the low-level APIs. The PII format and non-PII
+schema versions are independent; legacy v1 verification remains supported.
 
 Every AU2 and NZ2 amount, rate and quantity is a `decimal`. The SDK sends it
 as a plain decimal JSON string, for example `"1234.56"`, with no rounding and
@@ -263,7 +216,7 @@ node script/api-reference.mjs --check
 
 The compiler enforces the mandatory fields: `Schema`, `IssuedAt`, `PayslipNonPii`, and `EncryptionMetadata` are `required`, so an incomplete request will not build.
 
-For AU/NZ v2, use `PayslipNonPii.FromAustralianV2(new AustralianPayslipV2 { ... })` or `FromNewZealandV2(new NewZealandPayslipV2 { ... })`. These types and nested fields are generated from the Node Zod wire shape; they cannot carry arbitrary extra fields. The API validates dates, values, allowed codes, and cross-field rules. Free-form `AdditionalData` is rejected for these two known profiles; for legacy and future schemas it is passed to the API under the exact keys you supply. Values may be strings, booleans, numbers, `null`, nested dictionaries, or sequences of those; anything else throws an `ArgumentException` naming the key. Which keys your schema requires is documented per schema — the `au.payslip.v1` set is shown above.
+For low-level AU/NZ v2 registrations, use `PayslipNonPii.FromAustralianV2(new AustralianPayslipV2 { ... })` or `FromNewZealandV2(new NewZealandPayslipV2 { ... })`. The recommended `V2Issuance` helpers do this for you. These types and nested fields are generated from the Node Zod wire shape; they cannot carry arbitrary extra fields. The API validates dates, values, allowed codes, and cross-field rules. Free-form `AdditionalData` is rejected for these two known profiles; for legacy and future schemas it is passed to the API under the exact keys you supply. Values may be strings, booleans, numbers, `null`, nested dictionaries, or sequences of those; anything else throws an `ArgumentException` naming the key. Which keys your schema requires is documented per schema — the `au.payslip.v1` set is shown above.
 
 `VerifiablBarcode.CreateSvg` produces a standalone SVG that scales to any size without losing quality; embed it directly in your PDF pipeline when it supports vector images. If it needs a raster image, use `VerifiablBarcode.CreatePng`: it composites the badge deterministically with no native dependencies, so the same record produces the byte-identical raster in every Verifiabl SDK, and QR module edges stay crisp (rasterising the SVG with a general renderer blurs them and costs scannability). PNG output comes in fixed pixel widths (480, 720, 960 or 1440; the physical print size is set where you place the image in the PDF). See the [docs](https://docs.verifiabl.io/) for both flows.
 
@@ -273,51 +226,48 @@ The badge is the navy header and the QR code on a white ground, and the QR code 
 
 ### Retries and idempotency
 
-Failed requests are retried automatically with exponential backoff (`VerifiablClientOptions.MaxRetries`, default 2). The Verifiabl reference is the idempotency key, so retries are only applied where they are safe. `RegisterNonPiiAsync` generates a reference client-side (or uses the one you set on the request), so the API deduplicates a re-send and the SDK retries it on throttling, timeouts, `5xx`, and network faults — same as batch registration. `RegisterAndBuildBarcodeAsync` lets the API assign the reference and cannot be deduplicated, so it retries only `429`, which is enforced before any processing.
+Failed requests are retried automatically with exponential backoff (`VerifiablClientOptions.MaxRetries`, default 2). The Verifiabl reference is the idempotency key. The v2 preparation helpers create a reference for `RegisterNonPiiAsync` and batch registration. Persist the prepared registration and the ciphertext from `prepared.BarcodeParts(prepared.VerifiablReference).EncryptedPii` together before the first call; the registration includes the reference and encryption metadata but not the ciphertext. Reuse the same request after a process restart and render from the saved ciphertext and the returned reference. Do not prepare and encrypt again for an idempotent replay. The client retries these requests on throttling, timeouts, `5xx`, and network faults. `RegisterAndBuildBarcodeAsync` lets the API assign its own reference and retries only `429`, which is enforced before processing.
 
 ## Batch registration
 
-For pay runs, register up to 1000 records in one request with `RegisterNonPiiBatchAsync`. The provider generates each Verifiabl reference up-front with `VerifiablReference.Generate()` and includes it on each record, so the whole batch can go in one round trip. Results are returned index-aligned to the input; one bad record never fails the whole batch.
+For pay runs, register up to 1000 records in one request with `RegisterNonPiiBatchAsync`. Prepare each AU/NZ v2 record with its jurisdiction's helper first. Results match the input order; one bad record does not fail the whole batch.
 
 ```csharp
 DateTimeOffset issuedAt = DateTimeOffset.UtcNow;
-var prepared = payslips.Select(payslip =>
-{
-    string verifiablReference = VerifiablReference.Generate();
-    EncryptedPii encrypted = VerifiablCrypto.EncryptPii(Pii.Format(payslip.Pii), key);
-    // Keep the ciphertext alongside the reference locally: you need both to render the barcode.
-    return (verifiablReference, encrypted, payslip);
-}).ToList();
-
+var prepared = payslips.Select(payslip => payslip.Country == "AU"
+    ? V2Issuance.PrepareAustralian(payslip.AustralianPii, payslip.AustralianPayslip, issuedAt, key)
+    : V2Issuance.PrepareNewZealand(payslip.NewZealandPii, payslip.NewZealandPayslip, issuedAt, key)
+).ToList();
+// Persist each prepared reference and request before sending.
 RegisterNonPiiBatchResponse batch = await client.RegisterNonPiiBatchAsync(
-    prepared.Select(item => new BatchRecord
+    prepared.Select((item, index) => new BatchRecord
     {
-        VerifiablReference = item.verifiablReference,
-        Schema = "au.payslip.v1",
-        IssuedAt = issuedAt,
-        PayslipNonPii = new PayslipNonPii
-        {
-            PeriodStart = item.payslip.PeriodStart,
-            PeriodEnd = item.payslip.PeriodEnd,
-            AdditionalData = item.payslip.SchemaFields,
-        },
-        EncryptionMetadata = item.encrypted.Metadata,
-    }));
+        VerifiablReference = item.VerifiablReference,
+        Schema = item.Registration.Schema,
+        IssuedAt = item.Registration.IssuedAt,
+        PayslipNonPii = item.Registration.PayslipNonPii,
+        EncryptionMetadata = item.Registration.EncryptionMetadata,
+        ExternalId = payslips[index].ExternalId,
+    }).ToList());
 
-foreach (BatchRecordResult result in batch.Results)
+for (int i = 0; i < batch.Results.Count; i++)
 {
-    if (result.Status == BatchRecordStatuses.Error)
+    BatchRecordResult result = batch.Results[i];
+    if (result.Status == BatchRecordStatuses.Created || result.Status == BatchRecordStatuses.Duplicate)
     {
-        logger.LogError(
-            "Record {Reference} failed: {Code} {Detail}",
-            result.VerifiablReference, result.Code, result.Detail);
+        BarcodeParts parts = prepared[i].BarcodeParts(result.VerifiablReference);
+        // Render this record's barcode from parts.
+    }
+    else
+    {
+        // Handle result.Code; do not parse result.Detail.
     }
 }
 ```
 
 ## Executable example
 
-[`examples/SelfManagedIssuer`](./examples/SelfManagedIssuer/) is an executable self-managed flow for both AU2 and NZ2. It prepares one payslip per jurisdiction, registers the AU2 record individually and both records in a mixed-schema batch in sandbox live mode, and writes SVG barcodes and matching PDF XMP payloads. By default the example builds against the SDK project in this repository. Repository CI also restores it from a locally packed NuGet package and runs it offline as a package-consumer check; see its README for instructions.
+[`examples/SelfManagedIssuer/PreparedV2Example.cs`](./examples/SelfManagedIssuer/PreparedV2Example.cs) shows both prepared v2 flows. The [full executable example](./examples/SelfManagedIssuer/) also demonstrates advanced manual formatting and encryption. It prepares one payslip per jurisdiction, registers the AU2 record individually and both records in a mixed-schema batch in sandbox live mode, and writes SVG barcodes and matching PDF XMP payloads. By default the example builds against the SDK project in this repository. Repository CI also restores it from a locally packed NuGet package and runs it offline as a package-consumer check; see its README for instructions.
 
 ## Environments
 
@@ -387,6 +337,28 @@ List<string> toReEncrypt = batch.Results
 ## Security
 
 Employee PII is encrypted on your infrastructure and never reaches Verifiabl. Keep your encryption key and OAuth secret in a secrets manager. See the [security model](https://docs.verifiabl.io/architecture) for the full detail.
+
+### Strong-name signing
+
+[`verifiabl.snk`](./verifiabl.snk) intentionally contains an RSA **private key**, not just a public
+key. It is publicly available and used exclusively for .NET strong-name signing. This gives the SDK
+assemblies a stable identity and supports .NET Framework consumers that require strong-named
+dependencies. Committing the key also lets contributors build modified assemblies with the same
+identity without rebuilding every dependent library.
+
+This follows Microsoft's [.NET strong-name guidance](https://github.com/dotnet/runtime/blob/main/docs/project/strong-name-signing.md),
+which recommends checking in the strong-name private key for open-source libraries to enable drop-in
+replacements. Microsoft's [strong-named assembly documentation](https://learn.microsoft.com/en-us/dotnet/standard/assembly/strong-named)
+explicitly warns against relying on strong names for security.
+
+Anyone can use this key to sign an assembly with the same strong-name identity. A matching signature
+or public-key token is **not proof that Verifiabl published an assembly**, and must not be used to
+authorize code or decide whether it is safe to load. NuGet publishing is authenticated separately
+using GitHub Actions OIDC; this key grants no package-publishing permissions.
+
+This deliberately public key must never be reused for encryption, authentication, NuGet package
+signing, or any other security-sensitive purpose. Unlike this assembly-identity key, your PII
+encryption keys, OAuth secrets, and other credentials must remain private.
 
 ## Documentation
 
