@@ -6,6 +6,23 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-09-29
+
+### Added
+
+- Add `V2Issuance.PrepareAustralian` and `PrepareNewZealand` to pair the
+  jurisdictional PII profile with its v2 non-PII payload. Prepared registrations
+  retain a stable reference and independent payload, metadata and ciphertext
+  copies for self-managed retries and barcode rendering; API-managed requests
+  omit the caller reference.
+
+### Fixed
+
+- Cancel response body reads with the caller deadline on .NET 8+ and refresh
+  pooled DNS connections on .NET Framework for the shared transport.
+- Use thread-safe retry jitter on modern targets and document the strong-name
+  identity and supported free-form payload values.
+
 ## [0.11.0] - 2026-09-28
 
 ### Changed

@@ -295,6 +295,22 @@ public class ClientBatchTests
     }
 
     [Fact]
+    public void RejectsNullRecordWithItsIndexBeforeSending()
+    {
+        var handler = new FakeHttpHandler();
+        VerifiablClient client = Client(handler);
+
+        var exception = Assert.Throws<ArgumentException>(() =>
+        {
+            _ = client.RegisterNonPiiBatchAsync([ValidRecord(ReferenceA), null!]);
+        });
+
+        Assert.Equal("records", exception.ParamName);
+        Assert.Contains("records[1] must not be null", exception.Message);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
     public void RejectsAnEmptyBatchBeforeSending()
     {
         var handler = new FakeHttpHandler();

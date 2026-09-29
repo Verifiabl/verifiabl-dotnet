@@ -25,14 +25,18 @@ public class ClientConstructionTests
             () => VerifiablAuth.ClientCredentials(clientId, clientSecret));
     }
 
-    [Fact]
-    public void RejectsNonHttpsIssuerBaseUrls()
+    [Theory]
+    [InlineData("http://register.example.com", UriKind.Absolute)]
+    [InlineData("relative/path", UriKind.Relative)]
+    public void RejectsInvalidIssuerBaseUrlsWithOptionsParameterName(string url, UriKind kind)
     {
-        Assert.Throws<ArgumentException>(() => new VerifiablClient(new VerifiablClientOptions
+        var exception = Assert.Throws<ArgumentException>(() => new VerifiablClient(new VerifiablClientOptions
         {
             Auth = VerifiablAuth.ClientCredentials("client-id", "client-secret"),
-            IssuerBaseUrl = new Uri("http://register.example.com"),
+            IssuerBaseUrl = new Uri(url, kind),
         }));
+
+        Assert.Equal("options.IssuerBaseUrl", exception.ParamName);
     }
 
     [Fact]

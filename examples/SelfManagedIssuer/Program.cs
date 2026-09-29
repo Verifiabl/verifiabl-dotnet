@@ -24,8 +24,7 @@ internal static class IssuerExample
     [
         new(
             "PAY-1001",
-            PayslipSchemas.AustralianV2,
-            () => Pii.FormatAustralian(new AustralianPiiFields
+            new AustralianPiiFields
             {
                 EmployeeName = "Jane A. Doe",
                 Position = "Senior Developer",
@@ -42,7 +41,7 @@ internal static class IssuerExample
                     StateOrTerritory = "NSW",
                     Postcode = "2000",
                 },
-            }),
+            },
             new AustralianPayslipV2
             {
                 // v2 allows a payslip that prints only the period end.
@@ -55,8 +54,7 @@ internal static class IssuerExample
             }),
         new(
             "PAY-1002",
-            PayslipSchemas.NewZealandV2,
-            () => Pii.FormatNewZealand(new NewZealandPiiFields
+            new NewZealandPiiFields
             {
                 EmployeeName = "Zoë Nguyễn",
                 IrdNumber = "***-***-***",
@@ -72,7 +70,7 @@ internal static class IssuerExample
                     City = "Auckland",
                     Postcode = "1052",
                 },
-            }),
+            },
             new NewZealandPayslipV2
             {
                 PeriodEnd = "2026-08-31",
@@ -101,35 +99,14 @@ internal static class IssuerExample
 
                 IReadOnlyList<ExamplePayslip> payslips = Payslips;
                 PreparedPayslip single = Prepare(payslips[0], key);
-                ExamplePayslip payslip = single.Payslip;
-                string verifiablReference = single.VerifiablReference;
-                EncryptedPii encrypted = single.Encrypted;
-                DateTimeOffset issuedAt = single.IssuedAt;
                 // snippet:start:dotnet.self-managed.prepare-batch
-                var batch = payslips.Select(payslip =>
-                {
-                    string plaintext = payslip.FormatPii();
-                    EncryptedPii encrypted = VerifiablCrypto.EncryptPii(plaintext, key);
-
-                    string reference = VerifiablReference.Generate();
-                    DateTimeOffset recordIssuedAt = DateTimeOffset.UtcNow;
-
-                    // Persist these values with the payslip before registration.
-                    return (
-                        Payslip: payslip,
-                        VerifiablReference: reference,
-                        IssuedAt: recordIssuedAt,
-                        Encrypted: encrypted);
-                }).ToList();
+                List<PreparedPayslip> batch = payslips.Select(payslip => Prepare(payslip, key)).ToList();
+                // Persist each prepared registration and matching ciphertext before sending.
                 // snippet:end:dotnet.self-managed.prepare-batch
                 IReadOnlyList<BatchOutcome> outcomes;
-                IReadOnlyList<PreparedPayslip> batchToWrite = batch
-                    .Select(record => new PreparedPayslip(
-                        record.Payslip,
-                        record.VerifiablReference,
-                        record.IssuedAt,
-                        record.Encrypted))
-                    .ToList();
+                IReadOnlyList<PreparedPayslip> batchToWrite = batch;
+                string singleResultReference = single.Prepared.VerifiablReference;
+                var batchResultReferences = new Dictionary<string, string>();
 
                 // Persist each fixed registration request and encrypted barcode payload
                 // before network access so an ambiguous failure can be retried with the
@@ -151,26 +128,20 @@ internal static class IssuerExample
                     }
 
                     // snippet:start:dotnet.self-managed.register-single
-                    await client.RegisterNonPiiAsync(new RegisterNonPiiRequest
-                    {
-                        VerifiablReference = verifiablReference,
-                        Schema = payslip.Schema,
-                        IssuedAt = issuedAt,
-                        PayslipNonPii = payslip.NonPii,
-                        EncryptionMetadata = encrypted.Metadata,
-                    });
+                    RegisterNonPiiResponse singleResult = await client.RegisterNonPiiAsync(single.Prepared.Registration);
+                    singleResultReference = singleResult.VerifiablReference;
                     // snippet:end:dotnet.self-managed.register-single
 
                     // snippet:start:dotnet.self-managed.register-batch
                     RegisterNonPiiBatchResponse batchResult = await client.RegisterNonPiiBatchAsync(
                         batch.Select(record => new BatchRecord
                         {
-                            VerifiablReference = record.VerifiablReference,
+                            VerifiablReference = record.Prepared.VerifiablReference,
                             ExternalId = record.Payslip.ExternalId,
-                            Schema = record.Payslip.Schema,
-                            IssuedAt = record.IssuedAt,
-                            PayslipNonPii = record.Payslip.NonPii,
-                            EncryptionMetadata = record.Encrypted.Metadata,
+                            Schema = record.Prepared.Registration.Schema,
+                            IssuedAt = record.Prepared.Registration.IssuedAt,
+                            PayslipNonPii = record.Prepared.Registration.PayslipNonPii,
+                            EncryptionMetadata = record.Prepared.Registration.EncryptionMetadata,
                         }));
 
                     var registeredOutcomes = batchResult.Results
@@ -193,24 +164,24 @@ internal static class IssuerExample
                             result.Detail))
                         .ToList();
                     batchToWrite = batch
-                        .Where((_, index) =>
+                        .Where((record, index) =>
                         {
-                            string? status = batchResult.Results.ElementAtOrDefault(index)?.Status;
-                            return status == BatchRecordStatuses.Created
-                                || status == BatchRecordStatuses.Duplicate;
+                            BatchRecordResult? result = batchResult.Results.ElementAtOrDefault(index);
+                            if (result is null || (result.Status != BatchRecordStatuses.Created
+                                && result.Status != BatchRecordStatuses.Duplicate))
+                            {
+                                return false;
+                            }
+                            batchResultReferences[record.Prepared.VerifiablReference] = result.VerifiablReference;
+                            return true;
                         })
-                        .Select(record => new PreparedPayslip(
-                            record.Payslip,
-                            record.VerifiablReference,
-                            record.IssuedAt,
-                            record.Encrypted))
                         .ToList();
                 }
                 else
                 {
                     outcomes = batch.Select(record => new BatchOutcome(
                         record.Payslip.ExternalId,
-                        record.VerifiablReference,
+                        record.Prepared.VerifiablReference,
                         "registration-skipped-offline",
                         null,
                         null)).ToList();
@@ -218,10 +189,11 @@ internal static class IssuerExample
 
                 if (mode == Mode.Live)
                 {
-                    await WriteArtifactsAsync(outputRoot, "single", single, "sandbox-registered");
+                    await WriteArtifactsAsync(outputRoot, "single", single, "sandbox-registered", singleResultReference);
                     foreach (PreparedPayslip record in batchToWrite)
                     {
-                        await WriteArtifactsAsync(outputRoot, "batch", record, "sandbox-registered");
+                        await WriteArtifactsAsync(outputRoot, "batch", record, "sandbox-registered",
+                            batchResultReferences[record.Prepared.VerifiablReference]);
                     }
                 }
 
@@ -272,29 +244,35 @@ internal static class IssuerExample
     private static PreparedPayslip Prepare(ExamplePayslip payslip, byte[] key)
     {
         // snippet:start:dotnet.self-managed.format-and-encrypt
-        string plaintext = payslip.FormatPii();
-        EncryptedPii encrypted = VerifiablCrypto.EncryptPii(plaintext, key);
+        DateTimeOffset issuedAt = DateTimeOffset.UtcNow;
+        PreparedV2Payslip prepared = (payslip.Pii, payslip.Payload) switch
+        {
+            (AustralianPiiFields pii, AustralianPayslipV2 nonPii) =>
+                V2Issuance.PrepareAustralian(pii, nonPii, issuedAt, key),
+            (NewZealandPiiFields pii, NewZealandPayslipV2 nonPii) =>
+                V2Issuance.PrepareNewZealand(pii, nonPii, issuedAt, key),
+            _ => throw new InvalidOperationException("Unsupported example payslip"),
+        };
         // snippet:end:dotnet.self-managed.format-and-encrypt
 
         // snippet:start:dotnet.self-managed.prepare-registration
-        string verifiablReference = VerifiablReference.Generate();
-        DateTimeOffset issuedAt = DateTimeOffset.UtcNow;
-
-        // Persist these values with the payslip before registration.
+        // Atomically persist prepared.Registration and
+        // prepared.BarcodeParts(prepared.VerifiablReference).EncryptedPii before sending.
+        // After a restart, replay the same registration and render with saved ciphertext.
         // snippet:end:dotnet.self-managed.prepare-registration
-        return new PreparedPayslip(payslip, verifiablReference, issuedAt, encrypted);
+        return new PreparedPayslip(payslip, prepared);
     }
 
     private static async Task WriteArtifactsAsync(
         string outputRoot,
         string group,
         PreparedPayslip prepared,
-        string registration)
+        string registration,
+        string? resultReference = null)
     {
-        string verifiablReference = prepared.VerifiablReference;
-        EncryptedPii encrypted = prepared.Encrypted;
+        RegisterNonPiiRequest request = prepared.Prepared.Registration;
         // snippet:start:dotnet.self-managed.build-qr
-        var parts = new BarcodeParts(verifiablReference, encrypted.Ciphertext);
+        BarcodeParts parts = prepared.Prepared.BarcodeParts(resultReference ?? prepared.Prepared.VerifiablReference);
         BarcodeSvgResult badge = VerifiablBarcode.CreateSvg(
             parts,
             new BarcodeSvgOptions { Environment = VerifiablEnvironment.Sandbox });
@@ -307,7 +285,7 @@ internal static class IssuerExample
 
         // snippet:start:dotnet.self-managed.build-xmp
         string xmpPayload = VerifiablBarcode.BuildPayload(
-            new BarcodeParts(verifiablReference, encrypted.Ciphertext));
+            parts);
         // snippet:end:dotnet.self-managed.build-xmp
         if (badge.Content != scanUrl
             || !scanUrl.Contains("#2.", StringComparison.Ordinal)
@@ -326,16 +304,16 @@ internal static class IssuerExample
             new
             {
                 prepared.Payslip.ExternalId,
-                prepared.VerifiablReference,
+                VerifiablReference = parts.VerifiablReference,
                 Environment = "sandbox",
                 Registration = registration,
                 RegistrationRequest = new
                 {
                     Kind = group,
                     ExternalId = group == "batch" ? prepared.Payslip.ExternalId : null,
-                    prepared.VerifiablReference,
-                    Schema = prepared.Payslip.Schema,
-                    prepared.IssuedAt,
+                    request.VerifiablReference,
+                    request.Schema,
+                    request.IssuedAt,
                     // Persist the actual wire fields, not the SDK's typed wrapper:
                     // its internal payload is not serialized as public properties.
                     PayslipNonPii = JsonSerializer.SerializeToElement(
@@ -345,8 +323,8 @@ internal static class IssuerExample
                     EncryptionMetadataEncoding = "base64",
                     EncryptionMetadata = new
                     {
-                        Iv = Convert.ToBase64String(prepared.Encrypted.Metadata.Iv),
-                        Tag = Convert.ToBase64String(prepared.Encrypted.Metadata.Tag),
+                        Iv = Convert.ToBase64String(request.EncryptionMetadata.Iv),
+                        Tag = Convert.ToBase64String(request.EncryptionMetadata.Tag),
                     },
                 },
                 BarcodeFormat = "v2",
@@ -443,34 +421,9 @@ internal static class IssuerExample
         Live,
     }
 
-    private sealed record ExamplePayslip(
-        string ExternalId,
-        string Schema,
-        Func<string> FormatPii,
-        object Payload)
-    {
-        public PayslipNonPii NonPii => Payload switch
-        {
-            AustralianPayslipV2 au => PayslipNonPii.FromAustralianV2(au),
-            NewZealandPayslipV2 nz => PayslipNonPii.FromNewZealandV2(nz),
-            _ => throw new InvalidOperationException("Unsupported example payslip payload"),
-        };
-    }
+    private sealed record ExamplePayslip(string ExternalId, object Pii, object Payload);
 
-    private sealed class PreparedPayslip(
-        ExamplePayslip payslip,
-        string verifiablReference,
-        DateTimeOffset issuedAt,
-        EncryptedPii encrypted)
-    {
-        public ExamplePayslip Payslip { get; } = payslip;
-
-        public string VerifiablReference { get; } = verifiablReference;
-
-        public DateTimeOffset IssuedAt { get; } = issuedAt;
-
-        public EncryptedPii Encrypted { get; } = encrypted;
-    }
+    private sealed record PreparedPayslip(ExamplePayslip Payslip, PreparedV2Payslip Prepared);
 
     private sealed record BatchOutcome(
         string ExternalId,

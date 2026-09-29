@@ -20,7 +20,8 @@
     Strong-name every assembly with a shared key so the package has a stable
     identity for enterprise consumers (some locked-down .NET Framework hosts
     require strong-named dependencies). Strong naming is an identity, not a
-    security boundary, so the key is committed deliberately.
+    security boundary, so the private key is committed deliberately.
+    See README.md#strong-name-signing for the policy and Microsoft guidance.
   -->
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>

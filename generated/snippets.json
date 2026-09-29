@@ -11,43 +11,43 @@
       "ecosystem": "dotnet",
       "language": "csharp",
       "source": "examples/SelfManagedIssuer/Program.cs",
-      "code": "string plaintext = payslip.FormatPii();\nEncryptedPii encrypted = VerifiablCrypto.EncryptPii(plaintext, key);"
+      "code": "DateTimeOffset issuedAt = DateTimeOffset.UtcNow;\nPreparedV2Payslip prepared = (payslip.Pii, payslip.Payload) switch\n{\n    (AustralianPiiFields pii, AustralianPayslipV2 nonPii) =>\n        V2Issuance.PrepareAustralian(pii, nonPii, issuedAt, key),\n    (NewZealandPiiFields pii, NewZealandPayslipV2 nonPii) =>\n        V2Issuance.PrepareNewZealand(pii, nonPii, issuedAt, key),\n    _ => throw new InvalidOperationException(\"Unsupported example payslip\"),\n};"
     },
     "dotnet.self-managed.prepare-registration": {
       "ecosystem": "dotnet",
       "language": "csharp",
       "source": "examples/SelfManagedIssuer/Program.cs",
-      "code": "string verifiablReference = VerifiablReference.Generate();\nDateTimeOffset issuedAt = DateTimeOffset.UtcNow;\n\n// Persist these values with the payslip before registration."
+      "code": "// Atomically persist prepared.Registration and\n// prepared.BarcodeParts(prepared.VerifiablReference).EncryptedPii before sending.\n// After a restart, replay the same registration and render with saved ciphertext."
     },
     "dotnet.self-managed.register-single": {
       "ecosystem": "dotnet",
       "language": "csharp",
       "source": "examples/SelfManagedIssuer/Program.cs",
-      "code": "await client.RegisterNonPiiAsync(new RegisterNonPiiRequest\n{\n    VerifiablReference = verifiablReference,\n    Schema = payslip.Schema,\n    IssuedAt = issuedAt,\n    PayslipNonPii = payslip.NonPii,\n    EncryptionMetadata = encrypted.Metadata,\n});"
+      "code": "RegisterNonPiiResponse singleResult = await client.RegisterNonPiiAsync(single.Prepared.Registration);\nsingleResultReference = singleResult.VerifiablReference;"
     },
     "dotnet.self-managed.build-qr": {
       "ecosystem": "dotnet",
       "language": "csharp",
       "source": "examples/SelfManagedIssuer/Program.cs",
-      "code": "var parts = new BarcodeParts(verifiablReference, encrypted.Ciphertext);\nBarcodeSvgResult badge = VerifiablBarcode.CreateSvg(\n    parts,\n    new BarcodeSvgOptions { Environment = VerifiablEnvironment.Sandbox });\nstring svg = badge.Svg;"
+      "code": "BarcodeParts parts = prepared.Prepared.BarcodeParts(resultReference ?? prepared.Prepared.VerifiablReference);\nBarcodeSvgResult badge = VerifiablBarcode.CreateSvg(\n    parts,\n    new BarcodeSvgOptions { Environment = VerifiablEnvironment.Sandbox });\nstring svg = badge.Svg;"
     },
     "dotnet.self-managed.build-xmp": {
       "ecosystem": "dotnet",
       "language": "csharp",
       "source": "examples/SelfManagedIssuer/Program.cs",
-      "code": "string xmpPayload = VerifiablBarcode.BuildPayload(\n    new BarcodeParts(verifiablReference, encrypted.Ciphertext));"
+      "code": "string xmpPayload = VerifiablBarcode.BuildPayload(\n    parts);"
     },
     "dotnet.self-managed.prepare-batch": {
       "ecosystem": "dotnet",
       "language": "csharp",
       "source": "examples/SelfManagedIssuer/Program.cs",
-      "code": "var batch = payslips.Select(payslip =>\n{\n    string plaintext = payslip.FormatPii();\n    EncryptedPii encrypted = VerifiablCrypto.EncryptPii(plaintext, key);\n\n    string reference = VerifiablReference.Generate();\n    DateTimeOffset recordIssuedAt = DateTimeOffset.UtcNow;\n\n    // Persist these values with the payslip before registration.\n    return (\n        Payslip: payslip,\n        VerifiablReference: reference,\n        IssuedAt: recordIssuedAt,\n        Encrypted: encrypted);\n}).ToList();"
+      "code": "List<PreparedPayslip> batch = payslips.Select(payslip => Prepare(payslip, key)).ToList();\n// Persist each prepared registration and matching ciphertext before sending."
     },
     "dotnet.self-managed.register-batch": {
       "ecosystem": "dotnet",
       "language": "csharp",
       "source": "examples/SelfManagedIssuer/Program.cs",
-      "code": "RegisterNonPiiBatchResponse batchResult = await client.RegisterNonPiiBatchAsync(\n    batch.Select(record => new BatchRecord\n    {\n        VerifiablReference = record.VerifiablReference,\n        ExternalId = record.Payslip.ExternalId,\n        Schema = record.Payslip.Schema,\n        IssuedAt = record.IssuedAt,\n        PayslipNonPii = record.Payslip.NonPii,\n        EncryptionMetadata = record.Encrypted.Metadata,\n    }));\n\nvar registeredOutcomes = batchResult.Results\n    .Select(result => new\n    {\n        ExternalId = result.ExternalId ?? \"unknown\",\n        result.VerifiablReference,\n        result.Status,\n        result.Code,\n        result.Detail,\n    })\n    .ToList();"
+      "code": "RegisterNonPiiBatchResponse batchResult = await client.RegisterNonPiiBatchAsync(\n    batch.Select(record => new BatchRecord\n    {\n        VerifiablReference = record.Prepared.VerifiablReference,\n        ExternalId = record.Payslip.ExternalId,\n        Schema = record.Prepared.Registration.Schema,\n        IssuedAt = record.Prepared.Registration.IssuedAt,\n        PayslipNonPii = record.Prepared.Registration.PayslipNonPii,\n        EncryptionMetadata = record.Prepared.Registration.EncryptionMetadata,\n    }));\n\nvar registeredOutcomes = batchResult.Results\n    .Select(result => new\n    {\n        ExternalId = result.ExternalId ?? \"unknown\",\n        result.VerifiablReference,\n        result.Status,\n        result.Code,\n        result.Detail,\n    })\n    .ToList();"
     }
   }
 }
