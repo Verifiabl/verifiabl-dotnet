@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Verifiabl.Client;
 using Xunit;
+using static Verifiabl.Tests.TestDates;
 
 namespace Verifiabl.Tests;
 
@@ -11,8 +12,8 @@ public class PayslipDecimalTests
     {
         var payslip = new AustralianPayslipV2
         {
-            PeriodEnd = "2026-05-31",
-            PaymentDate = "2026-06-01",
+            PeriodEnd = PayslipDate("2026-05-31"),
+            PaymentDate = PayslipDate("2026-06-01"),
             Currency = PayslipCurrencies.Aud,
             Gross = 1.50m,
             Paygw = -0.0001m,

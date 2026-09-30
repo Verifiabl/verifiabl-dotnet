@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text.Json;
 using Verifiabl.Client;
 using Xunit;
+using static Verifiabl.Tests.TestDates;
 
 namespace Verifiabl.Tests;
 
@@ -244,8 +245,9 @@ public class ClientBatchTests
         record.Schema = PayslipSchemas.AustralianV2;
         record.PayslipNonPii = PayslipNonPii.FromAustralianV2(new AustralianPayslipV2
         {
-            PeriodEnd = "invalid",
-            PaymentDate = "2026-06-01",
+            PeriodStart = PayslipDate("2026-06-01"),
+            PeriodEnd = PayslipDate("2026-05-31"),
+            PaymentDate = PayslipDate("2026-06-01"),
             Currency = PayslipCurrencies.Aud,
             Gross = 100m,
             Paygw = 20m,
@@ -267,8 +269,8 @@ public class ClientBatchTests
         record.Schema = PayslipSchemas.AustralianV2;
         record.PayslipNonPii = PayslipNonPii.FromAustralianV2(new AustralianPayslipV2
         {
-            PeriodEnd = "2026-05-31",
-            PaymentDate = "2026-06-01",
+            PeriodEnd = PayslipDate("2026-05-31"),
+            PaymentDate = PayslipDate("2026-06-01"),
             Currency = "XYZ",
             Gross = 100m,
             Paygw = 20m,

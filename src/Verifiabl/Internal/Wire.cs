@@ -156,7 +156,7 @@ internal static class Wire
 
     private static BatchRecordResult LocalError(BatchRecord record, string detail) =>
         new(BatchRecordStatuses.Error, record.VerifiablReference, record.ExternalId,
-            "VALIDATION_FAILED", detail);
+            VerifiablErrorCodes.ValidationFailed, detail);
 
     private static JsonObject RegistrationFields(
         string label,
@@ -234,6 +234,16 @@ internal static class Wire
                     $"{label}.Currency must be a supported ISO 4217 currency code, for example AUD.",
                     $"{label}.Currency");
             }
+#if NET6_0_OR_GREATER
+            // `required DateOnly` accepts an explicit `default`, which would serialize as year 0001.
+            foreach ((DateOnly? date, string field) in TypedV2Dates(data.TypedV2Payload))
+            {
+                if (date == default(DateOnly))
+                {
+                    throw new ArgumentException($"{label}.{field} is required.", $"{label}.{field}");
+                }
+            }
+#endif
 
             return JsonSerializer.SerializeToNode(data.TypedV2Payload, data.TypedV2Payload.GetType(),
                 TypedV2PayloadOptions)!.AsObject();
@@ -277,6 +287,17 @@ internal static class Wire
         body["period_end"] = data.PeriodEnd;
         return body;
     }
+
+#if NET6_0_OR_GREATER
+    private static (DateOnly? Date, string Field)[] TypedV2Dates(object payload) => payload switch
+    {
+        AustralianPayslipV2 australian =>
+            [(australian.PeriodStart, "PeriodStart"), (australian.PeriodEnd, "PeriodEnd"), (australian.PaymentDate, "PaymentDate")],
+        NewZealandPayslipV2 newZealand =>
+            [(newZealand.PeriodStart, "PeriodStart"), (newZealand.PeriodEnd, "PeriodEnd"), (newZealand.PaymentDate, "PaymentDate")],
+        _ => [],
+    };
+#endif
 
     /// <summary>
     /// Maps a caller-supplied pass-through value onto the JSON tree, so the

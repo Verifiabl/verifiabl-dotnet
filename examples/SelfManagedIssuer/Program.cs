@@ -45,12 +45,14 @@ internal static class IssuerExample
             new AustralianPayslipV2
             {
                 // v2 allows a payslip that prints only the period end.
-                PeriodEnd = "2026-08-31",
-                PaymentDate = "2026-09-04",
+                PeriodEnd = new DateOnly(2026, 8, 31),
+                PaymentDate = new DateOnly(2026, 9, 4),
                 Currency = PayslipCurrencies.Aud,
+                PayFrequency = AustralianPayFrequencies.Monthly,
                 Gross = 9000.00m,
                 Paygw = 2250.00m,
                 Net = 6750.00m,
+                Earnings = [AustralianPayslipV2EarningsItem.Ordinary(9000.00m)],
             }),
         new(
             "PAY-1002",
@@ -73,12 +75,13 @@ internal static class IssuerExample
             },
             new NewZealandPayslipV2
             {
-                PeriodEnd = "2026-08-31",
-                PaymentDate = "2026-09-04",
+                PeriodEnd = new DateOnly(2026, 8, 31),
+                PaymentDate = new DateOnly(2026, 9, 4),
                 Currency = PayslipCurrencies.Nzd,
                 Gross = 7600.00m,
                 Paye = 1710.00m,
                 Net = 5890.00m,
+                Earnings = [NewZealandPayslipV2EarningsItem.Ordinary(7600.00m)],
             }),
     ];
 
