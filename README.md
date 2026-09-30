@@ -86,8 +86,10 @@ PreparedV2Payslip prepared = V2Issuance.PrepareAustralian(
     },
     payslip: new AustralianPayslipV2
     {
-        PeriodEnd = "2026-05-31", PaymentDate = "2026-06-04", Currency = "AUD",
+        PeriodEnd = new DateOnly(2026, 5, 31), PaymentDate = new DateOnly(2026, 6, 4),
+        Currency = PayslipCurrencies.Aud, PayFrequency = AustralianPayFrequencies.Monthly,
         Gross = 9000.00m, Paygw = 2250.00m, Net = 6750.00m,
+        Earnings = [AustralianPayslipV2EarningsItem.Ordinary(9000.00m)],
     },
     issuedAt: DateTimeOffset.UtcNow, key: key);
 
@@ -121,7 +123,8 @@ PreparedV2Payslip nzPrepared = V2Issuance.PrepareNewZealand(
     pii: new NewZealandPiiFields { EmployeeName = "Zoë Nguyễn", IrdNumber = "***-***-***" },
     payslip: new NewZealandPayslipV2
     {
-        PeriodEnd = "2026-05-31", PaymentDate = "2026-06-04", Currency = "NZD",
+        PeriodEnd = new DateOnly(2026, 5, 31), PaymentDate = new DateOnly(2026, 6, 4),
+        Currency = PayslipCurrencies.Nzd,
         Gross = 7600.00m, Paye = 1710.00m, Net = 5890.00m,
     },
     issuedAt: DateTimeOffset.UtcNow, key: key);
@@ -129,6 +132,36 @@ PreparedV2Payslip nzPrepared = V2Issuance.PrepareNewZealand(
 RegisterAndBuildBarcodeResponse nzResult =
     await client.RegisterAndBuildBarcodeAsync(nzPrepared.ApiManagedRegistration);
 ```
+
+### Dates, codes and earnings lines
+
+On .NET 8 and later, `PeriodStart`, `PeriodEnd` and `PaymentDate` are
+`DateOnly`. The SDK sends them as `YYYY-MM-DD`. On .NET Framework 4.7.2 they are
+`YYYY-MM-DD` strings, because .NET Framework has no `DateOnly` type.
+
+Each field with a fixed set of values has a constants class, for example
+`AustralianPayFrequencies`, `AustralianPaidLeaveTypes` and
+`NewZealandLeaveBalanceUnits`. Each class has an `All` list. The properties stay
+`string`, so you can send a code that the API accepts before you upgrade the
+SDK. Printed-text fields such as `Award` and the NZ `TaxCode` have no constants.
+
+Use the earnings line factories to set only the fields of one line type:
+
+```csharp
+Earnings =
+[
+    AustralianPayslipV2EarningsItem.Ordinary(8200.40m, units: 152m, rate: 53.95m),
+    AustralianPayslipV2EarningsItem.PaidLeave(AustralianPaidLeaveTypes.PaidParental, 600.00m),
+    AustralianPayslipV2EarningsItem.Allowance(AustralianAllowanceTypes.Tools, 20.00m),
+    AustralianPayslipV2EarningsItem.OtherAllowance(AustralianOtherAllowanceCategories.HomeOffice, 200.00m),
+],
+```
+
+An allowance of type `other` needs a category, so use `OtherAllowance` for it.
+`Allowance` rejects `AustralianAllowanceTypes.Other`.
+
+On .NET 8 and later, the SDK rejects a date left at `default(DateOnly)`
+before it sends the record, because that value is the year 0001.
 
 NZ2 carries the printed employee IRD number,
 employer name, account number and account name. It has no BSB or NZBN field.
@@ -148,6 +181,10 @@ whether printed non-PII strings contain personal information. Keep employee
 PII out of non-PII fields. Advanced integrations can still select the schema
 and formatter separately with the low-level APIs. The PII format and non-PII
 schema versions are independent; legacy v1 verification remains supported.
+The verifier currently interprets AU2 only for `au.payslip.v2` and NZ2 only
+for `nz.payslip.v2`. Future non-PII schemas need an explicit verifier reader
+mapping before reusing either PII format; an unknown schema falls back to raw
+PII text rather than structured fields.
 
 Every AU2 and NZ2 amount, rate and quantity is a `decimal`. The SDK sends it
 as a plain decimal JSON string, for example `"1234.56"`, with no rounding and
@@ -204,11 +241,11 @@ catalogue with:
 node script/api-reference.mjs
 ```
 
-The command restores the pinned tool and locked NuGet dependency graph, then replaces
-`generated/api/dotnet`. The catalogue contains public and protected APIs only; private and internal
-implementation details are excluded by DocFX's default API filter. It is checked in so the customer
-docs can import an exact SDK revision without running .NET or accessing this repository at build time.
-CI runs the non-mutating freshness check:
+The command restores the pinned tool and locked NuGet dependency graph, then writes the ignored
+`generated/api/dotnet` directory. The catalogue contains public and protected APIs only; private and
+internal implementation details are excluded by DocFX's default API filter. Only the customer docs
+repository commits this catalogue, generated from an exact SDK revision with its pinned DocFX tool.
+CI runs a non-mutating generation and public-API validation check:
 
 ```bash
 node script/api-reference.mjs --check

@@ -1,3 +1,7 @@
+#if NET6_0_OR_GREATER
+using Verifiabl.Internal;
+#endif
+
 namespace Verifiabl.Client;
 
 /// <summary>
@@ -7,8 +11,8 @@ namespace Verifiabl.Client;
 /// <remarks>
 /// Use <see cref="FromAustralianV2"/> or <see cref="FromNewZealandV2"/> for
 /// v2 payloads. They serialize only generated fields, send each amount as an
-/// exact decimal string, and require an ISO 4217 currency; the API validates
-/// the other values.
+/// exact decimal string and each date as YYYY-MM-DD, and require an ISO 4217
+/// currency; the API validates the other values.
 /// <see cref="AdditionalData"/> is for legacy or future-schema pass-through.
 /// </remarks>
 public sealed class PayslipNonPii
@@ -17,9 +21,17 @@ public sealed class PayslipNonPii
     /// First day of the pay period, YYYY-MM-DD. Required for v1 schemas and
     /// omitted for a v2 payslip that prints only a period end.
     /// </summary>
+    /// <remarks>
+    /// For a typed v2 payload this is a copy of the payload's date. The request
+    /// sends the payload, so setting this property has no effect.
+    /// </remarks>
     public string? PeriodStart { get; set; }
 
     /// <summary>Last day of the pay period, YYYY-MM-DD.</summary>
+    /// <remarks>
+    /// For a typed v2 payload this is a copy of the payload's date. The request
+    /// sends the payload, so setting this property has no effect.
+    /// </remarks>
     public required string PeriodEnd { get; set; }
 
     /// <summary>
@@ -49,8 +61,8 @@ public sealed class PayslipNonPii
         }
         return new PayslipNonPii
         {
-            PeriodStart = payload.PeriodStart,
-            PeriodEnd = payload.PeriodEnd,
+            PeriodStart = WireDate(payload.PeriodStart),
+            PeriodEnd = WireDate(payload.PeriodEnd),
             TypedV2Payload = payload,
             TypedV2Schema = PayslipSchemas.AustralianV2,
         };
@@ -65,10 +77,18 @@ public sealed class PayslipNonPii
         }
         return new PayslipNonPii
         {
-            PeriodStart = payload.PeriodStart,
-            PeriodEnd = payload.PeriodEnd,
+            PeriodStart = WireDate(payload.PeriodStart),
+            PeriodEnd = WireDate(payload.PeriodEnd),
             TypedV2Payload = payload,
             TypedV2Schema = PayslipSchemas.NewZealandV2,
         };
     }
+
+#if NET6_0_OR_GREATER
+    private static string? WireDate(DateOnly? value) => value is { } date ? PayslipDateConverter.Format(date) : null;
+
+    private static string WireDate(DateOnly value) => PayslipDateConverter.Format(value);
+#else
+    private static T WireDate<T>(T value) => value;
+#endif
 }

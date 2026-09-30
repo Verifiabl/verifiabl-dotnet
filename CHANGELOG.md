@@ -6,6 +6,31 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-09-30
+
+### Added
+
+- Add generated constants classes for every fixed AU2 and NZ2 code set, for
+  example `AustralianPayFrequencies`, `AustralianEarningsTypes` and
+  `NewZealandLeaveBalanceUnits`, each with an `All` list. Properties stay
+  `string`.
+- Add earnings line factories, for example
+  `AustralianPayslipV2EarningsItem.PaidLeave` and
+  `NewZealandPayslipV2EarningsItem.Ordinary`, that set the line `type` and only
+  that type's fields. An AU allowance of type `other` uses `OtherAllowance`,
+  which requires its category; `Allowance` rejects the `other` type.
+
+### Changed
+
+- **Breaking:** on `net8.0` and `net10.0`, the generated AU2 and NZ2
+  `PeriodStart`, `PeriodEnd` and `PaymentDate` properties are `DateOnly`
+  (`DateOnly?` for `PeriodStart`) instead of `string`. The SDK sends them as
+  `YYYY-MM-DD`, and reject a date left at `default(DateOnly)` before sending.
+  The `net472` build keeps `string`. The wire format is unchanged.
+- Clarify that structured AU2 and NZ2 verification currently requires the
+  exact `au.payslip.v2` and `nz.payslip.v2` record schemas. Future schema
+  versions need an explicit verifier reader update before issuance.
+
 ## [0.12.0] - 2026-09-29
 
 ### Added

@@ -9,7 +9,7 @@ internal static class PreparedV2Example
     {
         PreparedV2Payslip au = V2Issuance.PrepareAustralian(
             pii: new AustralianPiiFields { EmployeeName = "Example Employee", EmployerName = "Example Pty Ltd" },
-            payslip: new AustralianPayslipV2 { PeriodEnd = "2026-08-31", PaymentDate = "2026-09-04", Currency = "AUD", Gross = 9000m, Paygw = 2250m, Net = 6750m },
+            payslip: new AustralianPayslipV2 { PeriodEnd = new DateOnly(2026, 8, 31), PaymentDate = new DateOnly(2026, 9, 4), Currency = PayslipCurrencies.Aud, Gross = 9000m, Paygw = 2250m, Net = 6750m },
             issuedAt: DateTimeOffset.UtcNow, key: providerKey);
         // Atomically persist au.Registration and
         // au.BarcodeParts(au.VerifiablReference).EncryptedPii before the request.
@@ -20,7 +20,7 @@ internal static class PreparedV2Example
 
         PreparedV2Payslip nz = V2Issuance.PrepareNewZealand(
             pii: new NewZealandPiiFields { EmployeeName = "Example Employee", EmployerName = "Example NZ Ltd" },
-            payslip: new NewZealandPayslipV2 { PeriodEnd = "2026-08-31", PaymentDate = "2026-09-04", Currency = "NZD", Gross = 7600m, Paye = 1710m, Net = 5890m },
+            payslip: new NewZealandPayslipV2 { PeriodEnd = new DateOnly(2026, 8, 31), PaymentDate = new DateOnly(2026, 9, 4), Currency = PayslipCurrencies.Nzd, Gross = 7600m, Paye = 1710m, Net = 5890m },
             issuedAt: DateTimeOffset.UtcNow, key: providerKey);
         // No reference in this request: the API assigns one. Ambiguous failures
         // cannot safely be retried like self-managed registrations.

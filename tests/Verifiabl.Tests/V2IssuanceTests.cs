@@ -1,6 +1,7 @@
 using Verifiabl.Client;
 using Verifiabl.Internal;
 using Xunit;
+using static Verifiabl.Tests.TestDates;
 
 namespace Verifiabl.Tests;
 
@@ -13,7 +14,7 @@ public class V2IssuanceTests
     public void PreparesAustralianSelfManagedApiManagedAndBatchRequests()
     {
         var prepared = V2Issuance.PrepareAustralian(new AustralianPiiFields { EmployeeName = "Private Person" },
-            new AustralianPayslipV2 { PeriodEnd = "2026-08-31", PaymentDate = "2026-09-04", Currency = "AUD", Gross = 9000m, Paygw = 2250m, Net = 6750m },
+            new AustralianPayslipV2 { PeriodEnd = PayslipDate("2026-08-31"), PaymentDate = PayslipDate("2026-09-04"), Currency = "AUD", Gross = 9000m, Paygw = 2250m, Net = 6750m },
             IssuedAt, Key);
         Assert.Equal(PayslipSchemas.AustralianV2, prepared.Registration.Schema);
         Assert.Equal(prepared.VerifiablReference, prepared.Registration.VerifiablReference);
@@ -37,12 +38,12 @@ public class V2IssuanceTests
     {
         var earnings = new List<AustralianPayslipV2EarningsItem>
         {
-            new() { Type = "ordinary", Amount = 100.50m },
+            AustralianPayslipV2EarningsItem.Ordinary(100.50m),
         };
         var payslip = new AustralianPayslipV2
         {
-            PeriodEnd = "2026-08-31",
-            PaymentDate = "2026-09-04",
+            PeriodEnd = PayslipDate("2026-08-31"),
+            PaymentDate = PayslipDate("2026-09-04"),
             Currency = "AUD",
             Gross = 9000.00m,
             Paygw = 2250.00m,
@@ -82,13 +83,13 @@ public class V2IssuanceTests
     public void PreparesNewZealandWithPersistentReference()
     {
         string reference = VerifiablReference.Generate();
-        var earnings = new List<NewZealandPayslipV2EarningsItem> { new() { Type = "ordinary", Amount = 123.40m } };
+        var earnings = new List<NewZealandPayslipV2EarningsItem> { NewZealandPayslipV2EarningsItem.Ordinary(123.40m) };
         var balances = new NewZealandPayslipV2LeaveBalances
         {
-            Annual = new NewZealandPayslipV2LeaveBalancesAnnual { Amount = 5.50m, Unit = "days" },
+            Annual = new NewZealandPayslipV2LeaveBalancesAnnual { Amount = 5.50m, Unit = NewZealandLeaveBalanceUnits.Days },
         };
         var prepared = V2Issuance.PrepareNewZealand(new NewZealandPiiFields { EmployeeName = "Private Person" },
-            new NewZealandPayslipV2 { PeriodEnd = "2026-08-31", PaymentDate = "2026-09-04", Currency = "NZD", Gross = 7600m, Paye = 1710m, Net = 5890m, Earnings = earnings, LeaveBalances = balances },
+            new NewZealandPayslipV2 { PeriodEnd = PayslipDate("2026-08-31"), PaymentDate = PayslipDate("2026-09-04"), Currency = "NZD", Gross = 7600m, Paye = 1710m, Net = 5890m, Earnings = earnings, LeaveBalances = balances },
             IssuedAt, Key, reference);
         Assert.Equal(PayslipSchemas.NewZealandV2, prepared.Registration.Schema);
         Assert.Equal(reference, prepared.Registration.VerifiablReference);

@@ -1,6 +1,7 @@
 bin/
 obj/
 artifacts/
+/generated/api/dotnet/
 .nuget/
 *.user
 .vs/

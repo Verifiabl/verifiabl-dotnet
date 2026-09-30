@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Verifiabl.Client;
 using Xunit;
+using static Verifiabl.Tests.TestDates;
 
 namespace Verifiabl.Tests;
 
@@ -41,6 +42,66 @@ public class ClientRequestTests
             Tag = new byte[16],
         },
     };
+
+    [Fact]
+    public async Task MatchesSharedV2WireVectors()
+    {
+        string path = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + Path.DirectorySeparatorChar + "Fixtures" + Path.DirectorySeparatorChar + "v2-wire-vectors-v1.json";
+        using JsonDocument vectors = JsonDocument.Parse(File.ReadAllText(path));
+        Assert.Equal("verifiabl-v2-wire-vectors-v1", vectors.RootElement.GetProperty("format").GetString());
+        JsonElement cases = vectors.RootElement.GetProperty("cases");
+        Assert.Equal(2, cases.GetArrayLength());
+        var seen = new HashSet<string>();
+        foreach (JsonElement item in cases.EnumerateArray())
+        {
+            string id = item.GetProperty("id").GetString()!;
+            Assert.True(seen.Add(id), $"Duplicate vector {id}");
+            FakeHttpHandler handler = RegistrationHandler();
+            RegisterNonPiiRequest request = ValidRequest();
+            request.Schema = item.GetProperty("schema").GetString()!;
+            request.PayslipNonPii = id switch
+            {
+                "au-codes-and-earnings" => PayslipNonPii.FromAustralianV2(new AustralianPayslipV2
+                {
+                    PeriodStart = PayslipDate("2026-08-01"),
+                    PeriodEnd = PayslipDate("2026-08-31"),
+                    PaymentDate = PayslipDate("2026-09-04"),
+                    Currency = PayslipCurrencies.Aud,
+                    Gross = 9000.00m,
+                    Paygw = 2250.00m,
+                    Net = 6750.00m,
+                    PayFrequency = AustralianPayFrequencies.Monthly,
+                    EmploymentBasis = AustralianEmploymentBases.FullTime,
+                    Earnings = [AustralianPayslipV2EarningsItem.Ordinary(8987.50m),
+                        AustralianPayslipV2EarningsItem.OtherAllowance(AustralianOtherAllowanceCategories.HomeOffice, 12.50m)],
+                }),
+                "nz-leave-and-dates" => PayslipNonPii.FromNewZealandV2(new NewZealandPayslipV2
+                {
+                    PeriodEnd = PayslipDate("2026-08-31"),
+                    PaymentDate = PayslipDate("2026-09-04"),
+                    Currency = PayslipCurrencies.Nzd,
+                    Gross = 7600.00m,
+                    Paye = 1710.00m,
+                    Net = 5890.00m,
+                    Earnings = [NewZealandPayslipV2EarningsItem.PaidLeave(NewZealandPaidLeaveTypes.AnnualHoliday, 7000.00m),
+                        NewZealandPayslipV2EarningsItem.Overtime(600.00m, units: 10.0m, rate: 60.00m)],
+                    LeaveBalances = new NewZealandPayslipV2LeaveBalances
+                    {
+                        Annual = new NewZealandPayslipV2LeaveBalancesAnnual { Amount = 76.50m, Unit = NewZealandLeaveBalanceUnits.Hours },
+                    },
+                }),
+                _ => throw new InvalidOperationException($"Unknown v2 wire vector {id}"),
+            };
+            Assert.Equal(id.StartsWith("au-", StringComparison.Ordinal) ? PayslipSchemas.AustralianV2 : PayslipSchemas.NewZealandV2, request.Schema);
+            await Client(handler).RegisterNonPiiAsync(request);
+            using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
+            JsonNode expected = JsonNode.Parse(item.GetProperty("payslip_non_pii").GetRawText())!;
+            JsonNode actual = JsonNode.Parse(body.RootElement.GetProperty("payslip_non_pii").GetRawText())!;
+            Assert.True(JsonNode.DeepEquals(expected, actual), $"Wire mismatch for {id}: {actual}");
+        }
+        Assert.Equal(new[] { "au-codes-and-earnings", "nz-leave-and-dates" }, seen.OrderBy(id => id));
+    }
 
     private static VerifiablClient Client(
         FakeHttpHandler handler,
@@ -234,8 +295,8 @@ public class ClientRequestTests
         request.Schema = PayslipSchemas.AustralianV2;
         request.PayslipNonPii = PayslipNonPii.FromAustralianV2(new AustralianPayslipV2
         {
-            PeriodEnd = "2026-05-31",
-            PaymentDate = "2026-06-01",
+            PeriodEnd = PayslipDate("2026-05-31"),
+            PaymentDate = PayslipDate("2026-06-01"),
             Currency = PayslipCurrencies.Aud,
             Gross = 6000.00m,
             Paygw = 1500.5m,
@@ -283,8 +344,8 @@ public class ClientRequestTests
         request.Schema = PayslipSchemas.AustralianV2;
         request.PayslipNonPii = PayslipNonPii.FromAustralianV2(new AustralianPayslipV2
         {
-            PeriodEnd = "2026-05-31",
-            PaymentDate = "2026-06-01",
+            PeriodEnd = PayslipDate("2026-05-31"),
+            PaymentDate = PayslipDate("2026-06-01"),
             Currency = PayslipCurrencies.Aud,
             Gross = decimal.Parse(text, CultureInfo.InvariantCulture),
             Paygw = 0m,
@@ -316,8 +377,8 @@ public class ClientRequestTests
         request.Schema = PayslipSchemas.NewZealandV2;
         request.PayslipNonPii = PayslipNonPii.FromNewZealandV2(new NewZealandPayslipV2
         {
-            PeriodEnd = "2026-05-31",
-            PaymentDate = "2026-06-01",
+            PeriodEnd = PayslipDate("2026-05-31"),
+            PaymentDate = PayslipDate("2026-06-01"),
             Currency = currency!,
             Gross = 100m,
             Paye = 20m,
@@ -723,8 +784,8 @@ public class ClientRequestTests
     private static PayslipNonPii V2Payslip(string schema) => schema == PayslipSchemas.AustralianV2
         ? PayslipNonPii.FromAustralianV2(new AustralianPayslipV2
         {
-            PeriodEnd = "2026-05-31",
-            PaymentDate = "2026-06-01",
+            PeriodEnd = PayslipDate("2026-05-31"),
+            PaymentDate = PayslipDate("2026-06-01"),
             Currency = PayslipCurrencies.Aud,
             Gross = 100m,
             Paygw = 20m,
@@ -732,8 +793,8 @@ public class ClientRequestTests
         })
         : PayslipNonPii.FromNewZealandV2(new NewZealandPayslipV2
         {
-            PeriodEnd = "2026-05-31",
-            PaymentDate = "2026-06-01",
+            PeriodEnd = PayslipDate("2026-05-31"),
+            PaymentDate = PayslipDate("2026-06-01"),
             Currency = PayslipCurrencies.Nzd,
             Gross = 100m,
             Paye = 20m,
@@ -755,6 +816,71 @@ public class ClientRequestTests
         Assert.Empty(handler.Requests);
     }
 
+#if NET6_0_OR_GREATER
+    [Fact]
+    public async Task WritesTypedV2DatesAsIsoDatesInAnyCulture()
+    {
+        FakeHttpHandler handler = RegistrationHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.Schema = PayslipSchemas.NewZealandV2;
+        request.PayslipNonPii = PayslipNonPii.FromNewZealandV2(new NewZealandPayslipV2
+        {
+            PeriodStart = new DateOnly(2026, 2, 3),
+            PeriodEnd = new DateOnly(2026, 2, 16),
+            PaymentDate = new DateOnly(2026, 2, 18),
+            Currency = PayslipCurrencies.Nzd,
+            Gross = 100m,
+            Paye = 20m,
+            Net = 80m,
+        });
+        CultureInfo original = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = new CultureInfo("th-TH");
+        try
+        {
+            await client.RegisterNonPiiAsync(request);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
+
+        using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
+        JsonElement nonPii = body.RootElement.GetProperty("payslip_non_pii");
+        Assert.Equal("2026-02-03", nonPii.GetProperty("period_start").GetString());
+        Assert.Equal("2026-02-16", nonPii.GetProperty("period_end").GetString());
+        Assert.Equal("2026-02-18", nonPii.GetProperty("payment_date").GetString());
+    }
+
+    [Theory]
+    [InlineData("PeriodStart")]
+    [InlineData("PeriodEnd")]
+    [InlineData("PaymentDate")]
+    public async Task RejectsADefaultTypedV2DateBeforeSending(string field)
+    {
+        var handler = new FakeHttpHandler();
+        VerifiablClient client = Client(handler);
+        RegisterNonPiiRequest request = ValidRequest();
+        request.Schema = PayslipSchemas.AustralianV2;
+        var valid = new DateOnly(2026, 5, 31);
+        request.PayslipNonPii = PayslipNonPii.FromAustralianV2(new AustralianPayslipV2
+        {
+            PeriodStart = field == "PeriodStart" ? default(DateOnly) : valid,
+            PeriodEnd = field == "PeriodEnd" ? default : valid,
+            PaymentDate = field == "PaymentDate" ? default : valid,
+            Currency = PayslipCurrencies.Aud,
+            Gross = 100m,
+            Paygw = 20m,
+            Net = 80m,
+        });
+
+        ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(
+            () => client.RegisterNonPiiAsync(request));
+
+        Assert.Contains($"{field} is required", exception.Message);
+        Assert.Empty(handler.Requests);
+    }
+#else
     [Fact]
     public async Task DefersTypedV2DateValidationToTheApi()
     {
@@ -782,6 +908,7 @@ public class ClientRequestTests
         Assert.Equal("invalid", JsonDocument.Parse(Assert.Single(handler.Requests).Body)
             .RootElement.GetProperty("payslip_non_pii").GetProperty("period_end").GetString());
     }
+#endif
 
     [Theory]
     [InlineData(PayslipSchemas.AustralianV2)]

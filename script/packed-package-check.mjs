@@ -90,6 +90,8 @@ export function check(packageDirectory = "artifacts") {
         gross,
         [taxField]: tax,
         net: id === "PAY-1001" ? "6750.00" : "5890.00",
+        ...(id === "PAY-1001" ? { pay_frequency: "monthly" } : {}),
+        earnings: [{ type: "ordinary", amount: gross }],
       });
     }
     const single = manifest("single", "PAY-1001").registrationRequest;
