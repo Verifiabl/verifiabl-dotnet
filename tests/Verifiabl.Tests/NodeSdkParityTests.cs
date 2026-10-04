@@ -78,6 +78,46 @@ public class NodeSdkParityTests
         Assert.Equal(Fixture("node-svg-sandbox-q-720.svg"), result.Svg);
     }
 
+    [Theory]
+    [InlineData("horizontal-940", false, false, false, 940)]
+    [InlineData("short-horizontal-940", false, false, true, 940)]
+    [InlineData("sandbox-q-horizontal-1410", true, true, false, 1410)]
+    public void MatchesTheNodeRendererForAHorizontalBadge(
+        string caseName,
+        bool sandbox,
+        bool quartile,
+        bool shortPayload,
+        double width)
+    {
+        BarcodeSvgResult result = VerifiablBarcode.CreateSvg(
+            new BarcodeParts(
+                Reference,
+                shortPayload ? TestBinary.DecodeBase64Url("AA") : Ciphertext()),
+            new BarcodeSvgOptions
+            {
+                Environment = sandbox ? VerifiablEnvironment.Sandbox : VerifiablEnvironment.Production,
+                Layout = BarcodeLayout.Horizontal,
+                MaxErrorCorrection = quartile
+                    ? BarcodeErrorCorrectionLevel.Quartile
+                    : BarcodeErrorCorrectionLevel.Medium,
+                Width = width,
+            });
+
+        using JsonDocument meta = JsonDocument.Parse(Fixture("node-svg-meta.json"));
+        JsonElement expected = meta.RootElement.GetProperty(caseName);
+
+        Assert.Equal(expected.GetProperty("content").GetString(), result.Content);
+        Assert.Equal(expected.GetProperty("width").GetDouble(), result.Width);
+        Assert.Equal(expected.GetProperty("height").GetDouble(), result.Height);
+        Assert.Equal(
+            expected.GetProperty("errorCorrectionLevel").GetString(),
+            ToNodeLevel(result.ErrorCorrectionLevel));
+        Assert.Equal(expected.GetProperty("qrVersion").GetInt32(), result.QrVersion);
+        Assert.Equal(expected.GetProperty("modulePx").GetDouble(), result.ModulePx);
+        Assert.Equal(expected.GetProperty("degraded").GetBoolean(), result.Degraded);
+        Assert.Equal(Fixture($"node-svg-{caseName}.svg"), result.Svg);
+    }
+
     /// <summary>
     /// PNG parity is raster parity: the fixtures are the exact RGBA pixels the
     /// Node compositor produced (PNG file bytes differ across SDKs because the
@@ -86,20 +126,26 @@ public class NodeSdkParityTests
     /// scannability proof.
     /// </summary>
     [Theory]
-    [InlineData("png-default-1440", 1440, false, false, false)]
-    [InlineData("png-default-720", 720, false, false, false)]
-    [InlineData("png-short-default-480", 480, false, false, true)]
-    [InlineData("png-sandbox-q-480", 480, true, true, false)]
+    [InlineData("png-default-1440", 1440, false, false, false, false)]
+    [InlineData("png-default-720", 720, false, false, false, false)]
+    [InlineData("png-short-default-480", 480, false, false, true, false)]
+    [InlineData("png-sandbox-q-480", 480, true, true, false, false)]
+    [InlineData("png-horizontal-1410", 1410, false, false, false, true)]
+    [InlineData("png-horizontal-2820", 2820, false, false, false, true)]
+    [InlineData("png-short-horizontal-940", 940, false, false, true, true)]
+    [InlineData("png-sandbox-q-horizontal-940", 940, true, true, false, true)]
     public void PngRasterMatchesTheNodeCompositor(
         string caseName,
         int pixelWidth,
         bool sandbox,
         bool quartile,
-        bool shortPayload)
+        bool shortPayload,
+        bool horizontal)
     {
         var options = new BarcodeSvgOptions
         {
             Environment = sandbox ? VerifiablEnvironment.Sandbox : VerifiablEnvironment.Production,
+            Layout = horizontal ? BarcodeLayout.Horizontal : BarcodeLayout.Vertical,
             MaxErrorCorrection = quartile
                 ? BarcodeErrorCorrectionLevel.Quartile
                 : BarcodeErrorCorrectionLevel.Medium,

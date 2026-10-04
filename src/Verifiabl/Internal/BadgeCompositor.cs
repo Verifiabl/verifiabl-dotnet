@@ -8,8 +8,8 @@ namespace Verifiabl.Internal;
 /// </summary>
 /// <remarks>
 /// Everything here is integer arithmetic on exact rational coordinates. Module
-/// geometry is rational by construction (modulePx = BW / (96n) for the QR
-/// box size B), so the same inputs produce the identical raster in every
+/// geometry is rational by construction (modulePx = BW / (Vn) for the QR
+/// box size B and viewBox width V), so the same inputs produce the identical raster in every
 /// implementation of this spec; this file mirrors blit.ts in the Node SDK, and
 /// CI byte-compares the rasters. Do not introduce floating point here:
 /// cross-runtime float differences (e.g. x87 on .NET Framework x86) would
@@ -39,20 +39,21 @@ internal static class BadgeCompositor
         int rasterWidth,
         QrCode qr,
         int size,
-        int pixelWidth)
+        int pixelWidth,
+        SvgBadgeRenderer.BadgeGeometry geometry)
     {
         // Common denominator for all module-grid coordinates, in pixels.
-        long denom = SvgBadgeRenderer.FrameViewboxWidth * (long)size;
+        long denom = geometry.ViewboxWidth * (long)size;
 
         long NumX(int k) =>
             pixelWidth
-            * ((long)SvgBadgeRenderer.FrameQrBoxX * size
-                + (long)SvgBadgeRenderer.FrameQrBoxSize * k);
+            * ((long)geometry.QrBoxX * size
+                + (long)geometry.QrBoxSize * k);
 
         long NumY(int k) =>
             pixelWidth
-            * ((long)SvgBadgeRenderer.FrameQrBoxY * size
-                + (long)SvgBadgeRenderer.FrameQrBoxSize * k);
+            * ((long)geometry.QrBoxY * size
+                + (long)geometry.QrBoxSize * k);
 
         // Round half up; edges are >= 2px apart (modulePx >= 3), so never degenerate.
         int Snap(long num) => (int)((2 * num + denom) / (2 * denom));
@@ -92,8 +93,8 @@ internal static class BadgeCompositor
         {
             // Q units: 1/(QPerPixel * denom) of a pixel. All geometry below is integer in Q.
             long qPerPixel = QPerPixel * denom;
-            long moduleQ = (long)SvgBadgeRenderer.FrameQrBoxSize * pixelWidth * QPerPixel;
-            long radiusUnit = (long)SvgBadgeRenderer.FrameQrBoxSize * pixelWidth * QPerPixel / RadiusDenom;
+            long moduleQ = (long)geometry.QrBoxSize * pixelWidth * QPerPixel;
+            long radiusUnit = (long)geometry.QrBoxSize * pixelWidth * QPerPixel / RadiusDenom;
             var outer = new RoundedRect(
                 NumX(moduleX) * QPerPixel,
                 NumY(moduleY) * QPerPixel,

@@ -90,11 +90,15 @@ public class FrameAssetTests
     [Fact]
     public void EmbeddedFramesParseAndExpandForEverySupportedWidth()
     {
-        foreach (int width in FrameAssets.SupportedPixelWidths)
+        foreach (BarcodeLayout layout in new[] { BarcodeLayout.Vertical, BarcodeLayout.Horizontal })
         {
-            FrameAssets.ParsedFrame frame = FrameAssets.Load(width);
-            byte[] rgba = FrameAssets.ExpandRgba(frame);
-            Assert.Equal(frame.Width * frame.Height * 4, rgba.Length);
+            foreach (int width in FrameAssets.SupportedWidths(layout))
+            {
+                FrameAssets.ParsedFrame frame = FrameAssets.Load(layout, width);
+                byte[] rgba = FrameAssets.ExpandRgba(frame);
+                Assert.Equal(width, frame.Width);
+                Assert.Equal(frame.Width * frame.Height * 4, rgba.Length);
+            }
         }
     }
 }

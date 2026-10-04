@@ -4,4 +4,6 @@ namespace Verifiabl.Internal;
 internal static partial class FrameAssets
 {
     internal static readonly int[] SupportedPixelWidths = [480, 720, 960, 1440];
+
+    internal static readonly int[] SupportedHorizontalPixelWidths = [940, 1410, 1880, 2820];
 }

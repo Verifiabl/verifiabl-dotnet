@@ -6,6 +6,27 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-04
+
+### Added
+
+- Add `AustralianPayFrequencies.FourWeekly` and
+  `AustralianPayFrequencies.SemiMonthly`.
+- Add a horizontal badge layout: set `BarcodeSvgOptions.Layout` to
+  `BarcodeLayout.Horizontal` to put a white gap and a light-tinted "Secured by
+  Verifiabl" frame to the right of the QR code. It renders the QR code at the
+  same size as the vertical badge. Its minimum SVG width is 940, and its PNG
+  widths are 940, 1410, 1880 and 2820. The vertical layout remains the default
+  and its output is unchanged.
+
+### Changed
+
+- `BarcodeSvgOptions.Width` now defaults to the layout's minimum: 480 for the
+  vertical layout, as before, and 940 for the horizontal layout.
+- `VerifiablBarcode.CreatePng` now defaults `pixelWidth` to 0, which selects
+  720 for the vertical layout, as before, and 1410 for the horizontal layout.
+  Passing 0 explicitly no longer throws.
+
 ## [0.13.0] - 2026-09-30
 
 ### Added

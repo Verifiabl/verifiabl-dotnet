@@ -45,17 +45,80 @@ public class PngBarcodeTests
     }
 
     [Theory]
-    [InlineData(0)]
     [InlineData(-720)]
     [InlineData(479)]
     [InlineData(640)]
+    [InlineData(940)]
     [InlineData(1920)]
     public void RejectsUnsupportedPixelWidths(int pixelWidth)
     {
         ArgumentException error = Assert.Throws<ArgumentException>(
             () => VerifiablBarcode.CreatePng(Parts(), pixelWidth: pixelWidth));
 
-        Assert.Contains("480, 720, 960, 1440", error.Message);
+        Assert.Contains("480, 720, 960, 1440 for the vertical layout", error.Message);
+    }
+
+    [Theory]
+    [InlineData(940, 480)]
+    [InlineData(1410, 720)]
+    [InlineData(1880, 960)]
+    [InlineData(2820, 1440)]
+    public void RendersAHorizontalPngAtEachSupportedPixelWidth(int pixelWidth, int expectedHeight)
+    {
+        BarcodePngResult result = VerifiablBarcode.CreatePng(
+            Parts(),
+            new BarcodeSvgOptions { Layout = BarcodeLayout.Horizontal },
+            pixelWidth);
+
+        Assert.Equal(pixelWidth, result.Width);
+        Assert.Equal(expectedHeight, result.Height);
+    }
+
+    [Fact]
+    public void DefaultPixelWidthRendersTheSameQrSizeInEitherLayout()
+    {
+        BarcodePngResult vertical = VerifiablBarcode.CreatePng(Parts());
+        BarcodePngResult horizontal = VerifiablBarcode.CreatePng(
+            Parts(),
+            new BarcodeSvgOptions { Layout = BarcodeLayout.Horizontal });
+
+        Assert.Equal(720, vertical.Width);
+        Assert.Equal(1410, horizontal.Width);
+        Assert.Equal(vertical.ModulePx, horizontal.ModulePx);
+        Assert.Equal(vertical.QrVersion, horizontal.QrVersion);
+    }
+
+    [Theory]
+    [InlineData(480)]
+    [InlineData(720)]
+    [InlineData(1440)]
+    [InlineData(950)]
+    [InlineData(939)]
+    public void RejectsVerticalPixelWidthsForTheHorizontalLayout(int pixelWidth)
+    {
+        ArgumentException error = Assert.Throws<ArgumentException>(
+            () => VerifiablBarcode.CreatePng(
+                Parts(),
+                new BarcodeSvgOptions { Layout = BarcodeLayout.Horizontal },
+                pixelWidth));
+
+        Assert.Contains("940, 1410, 1880, 2820 for the horizontal layout", error.Message);
+    }
+
+    [Fact]
+    public void HorizontalPngReportsTheSameMetadataAsTheHorizontalSvg()
+    {
+        BarcodeSvgResult svg = VerifiablBarcode.CreateSvg(
+            Parts(),
+            new BarcodeSvgOptions { Layout = BarcodeLayout.Horizontal, Width = 1410 });
+        BarcodePngResult png = VerifiablBarcode.CreatePng(
+            Parts(),
+            new BarcodeSvgOptions { Layout = BarcodeLayout.Horizontal });
+
+        Assert.Equal(svg.Content, png.Content);
+        Assert.Equal(svg.ErrorCorrectionLevel, png.ErrorCorrectionLevel);
+        Assert.Equal(svg.ModulePx, png.ModulePx);
+        Assert.Equal(svg.Degraded, png.Degraded);
     }
 
     [Fact]
@@ -72,13 +135,17 @@ public class PngBarcodeTests
         Assert.Equal(svg.Degraded, png.Degraded);
     }
 
-    [Fact]
-    public void CompositedRasterDecodesWithAnIndependentReader()
+    [Theory]
+    [InlineData(BarcodeLayout.Vertical, 720)]
+    [InlineData(BarcodeLayout.Horizontal, 940)]
+    [InlineData(BarcodeLayout.Horizontal, 1410)]
+    [InlineData(BarcodeLayout.Horizontal, 2820)]
+    public void CompositedRasterDecodesWithAnIndependentReader(BarcodeLayout layout, int pixelWidth)
     {
         PngBadgeRenderer.CompositedBadge badge = PngBadgeRenderer.Compose(
             Parts(),
-            new BarcodeSvgOptions(),
-            720);
+            new BarcodeSvgOptions { Layout = layout },
+            pixelWidth);
 
         var reader = new BarcodeReaderGeneric
         {
