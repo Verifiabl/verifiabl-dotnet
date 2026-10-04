@@ -208,6 +208,24 @@ public sealed class AustralianPayslipV2EarningsItem
         YtdAmount = ytdAmount,
     };
 
+    /// <summary>Create an earnings line of type <c>other</c>.</summary>
+    /// <param name="amount">Wire field <c>amount</c>.</param>
+    /// <param name="units">Wire field <c>units</c>.</param>
+    /// <param name="rate">Wire field <c>rate</c>.</param>
+    /// <param name="ytdAmount">Wire field <c>ytd_amount</c>.</param>
+    public static AustralianPayslipV2EarningsItem Other(
+        decimal amount,
+        decimal? units = null,
+        decimal? rate = null,
+        decimal? ytdAmount = null) => new()
+    {
+        Type = AustralianEarningsTypes.Other,
+        Amount = amount,
+        Units = units,
+        Rate = rate,
+        YtdAmount = ytdAmount,
+    };
+
     /// <summary>Wire field <c>type</c>; see <see cref="AustralianEarningsTypes"/>.</summary>
     [JsonPropertyName("type")]
     public required string Type { get; init; }
@@ -749,6 +767,24 @@ public sealed class NewZealandPayslipV2EarningsItem
         decimal? ytdAmount = null) => new()
     {
         Type = NewZealandEarningsTypes.HolidayPayOnTermination,
+        Amount = amount,
+        Units = units,
+        Rate = rate,
+        YtdAmount = ytdAmount,
+    };
+
+    /// <summary>Create an earnings line of type <c>other</c>.</summary>
+    /// <param name="amount">Wire field <c>amount</c>.</param>
+    /// <param name="units">Wire field <c>units</c>.</param>
+    /// <param name="rate">Wire field <c>rate</c>.</param>
+    /// <param name="ytdAmount">Wire field <c>ytd_amount</c>.</param>
+    public static NewZealandPayslipV2EarningsItem Other(
+        decimal amount,
+        decimal? units = null,
+        decimal? rate = null,
+        decimal? ytdAmount = null) => new()
+    {
+        Type = NewZealandEarningsTypes.Other,
         Amount = amount,
         Units = units,
         Rate = rate,

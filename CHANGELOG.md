@@ -6,6 +6,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-04
+
+### Added
+
+- Add `AustralianEarningsTypes.Other`, `NewZealandEarningsTypes.Other` and the
+  matching `Other` earnings-line factories, for a pay code that fits no other
+  earnings type.
+
 ## [0.14.0] - 2026-10-04
 
 ### Added
