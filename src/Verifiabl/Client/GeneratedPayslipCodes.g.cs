@@ -31,6 +31,9 @@ public static class AustralianEarningsTypes
     /// <summary>The <c>return_to_work</c> code.</summary>
     public const string ReturnToWork = "return_to_work";
 
+    /// <summary>The <c>other</c> code.</summary>
+    public const string Other = "other";
+
     /// <summary>Every accepted value, in contract order.</summary>
     public static readonly IReadOnlyList<string> All = new ReadOnlyCollection<string>(
     [
@@ -42,6 +45,7 @@ public static class AustralianEarningsTypes
         DirectorsFees,
         LumpSum,
         ReturnToWork,
+        Other,
     ]);
 }
 
@@ -358,6 +362,9 @@ public static class NewZealandEarningsTypes
     /// <summary>The <c>holiday_pay_on_termination</c> code.</summary>
     public const string HolidayPayOnTermination = "holiday_pay_on_termination";
 
+    /// <summary>The <c>other</c> code.</summary>
+    public const string Other = "other";
+
     /// <summary>Every accepted value, in contract order.</summary>
     public static readonly IReadOnlyList<string> All = new ReadOnlyCollection<string>(
     [
@@ -376,6 +383,7 @@ public static class NewZealandEarningsTypes
         AnnualHolidayCashOut,
         AlternativeHolidayCashOut,
         HolidayPayOnTermination,
+        Other,
     ]);
 }
 
