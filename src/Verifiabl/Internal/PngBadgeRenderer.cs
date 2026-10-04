@@ -26,10 +26,17 @@ internal static class PngBadgeRenderer
     /// <summary>The raster before PNG encoding; the cross-SDK parity tests compare this.</summary>
     internal static CompositedBadge Compose(BarcodeParts parts, BarcodeSvgOptions options, int pixelWidth)
     {
-        if (!FrameAssets.IsSupported(pixelWidth))
+        SvgBadgeRenderer.BadgeGeometry geometry = SvgBadgeRenderer.GeometryFor(options.Layout);
+        if (pixelWidth == 0)
+        {
+            pixelWidth = DefaultPixelWidth(options.Layout);
+        }
+
+        if (!FrameAssets.IsSupported(options.Layout, pixelWidth))
         {
             throw new ArgumentException(
-                $"pixelWidth must be one of {string.Join(", ", FrameAssets.SupportedPixelWidths)}.",
+                $"pixelWidth must be one of {string.Join(", ", FrameAssets.SupportedWidths(options.Layout))} "
+                + $"for the {options.Layout.ToString().ToLowerInvariant()} layout.",
                 nameof(pixelWidth));
         }
 
@@ -43,18 +50,19 @@ internal static class PngBadgeRenderer
         BarcodeErrorCorrectionLevel[] ladder =
             SvgBadgeRenderer.ErrorCorrectionLadder(options.MaxErrorCorrection);
         SvgBadgeRenderer.SelectedQrRendering selected =
-            SvgBadgeRenderer.SelectQrRendering(content, pixelWidth, ladder);
+            SvgBadgeRenderer.SelectQrRendering(content, pixelWidth, ladder, geometry);
         bool degraded = selected.ErrorCorrectionLevel != ladder[0]
             || selected.ModulePx < SvgBadgeRenderer.IdealModulePx;
 
-        FrameAssets.ParsedFrame frame = FrameAssets.Load(pixelWidth);
+        FrameAssets.ParsedFrame frame = FrameAssets.Load(options.Layout, pixelWidth);
         byte[] rgba = FrameAssets.ExpandRgba(frame);
         BadgeCompositor.BlitQrOntoFrame(
             rgba,
             frame.Width,
             selected.Qr,
             selected.Size,
-            pixelWidth);
+            pixelWidth,
+            geometry);
 
         return new CompositedBadge(
             rgba,
@@ -66,6 +74,13 @@ internal static class PngBadgeRenderer
             SvgBadgeRenderer.Round2(selected.ModulePx),
             degraded);
     }
+
+    /// <summary>
+    /// The width that renders the QR code at the vertical default's size: 720
+    /// for the vertical layout and 1410 for the horizontal layout.
+    /// </summary>
+    internal static int DefaultPixelWidth(BarcodeLayout layout) =>
+        layout == BarcodeLayout.Horizontal ? 1410 : 720;
 
     internal readonly struct CompositedBadge
     {

@@ -1,3 +1,5 @@
+using Verifiabl.Internal;
+
 namespace Verifiabl;
 
 /// <summary>QR error-correction levels used by the barcode renderer.</summary>
@@ -13,9 +15,24 @@ public enum BarcodeErrorCorrectionLevel
     Quartile = 2,
 }
 
+/// <summary>Badge arrangements for the barcode renderer.</summary>
+public enum BarcodeLayout
+{
+    /// <summary>The navy "Secured by Verifiabl" header above the QR code. The default.</summary>
+    Vertical = 0,
+
+    /// <summary>
+    /// A light-tinted "Secured by Verifiabl" frame to the right of the QR code,
+    /// for short, wide spaces.
+    /// </summary>
+    Horizontal = 1,
+}
+
 /// <summary>Options for <see cref="VerifiablBarcode.CreateSvg"/>.</summary>
 public sealed class BarcodeSvgOptions
 {
+    private double? _width;
+
     /// <summary>API environment for the public QR scan URL. Defaults to production.</summary>
     public VerifiablEnvironment Environment { get; set; } = VerifiablEnvironment.Production;
 
@@ -25,8 +42,22 @@ public sealed class BarcodeSvgOptions
     /// </summary>
     public Uri? ScanBaseUrl { get; set; }
 
-    /// <summary>Total badge width in SVG user units / px (default: 480, the minimum).</summary>
-    public double Width { get; set; } = 480;
+    /// <summary>
+    /// Badge arrangement (default: <see cref="BarcodeLayout.Vertical"/>).
+    /// </summary>
+    public BarcodeLayout Layout { get; set; } = BarcodeLayout.Vertical;
+
+    /// <summary>
+    /// Total badge width in SVG user units / px. Unless set, this is the
+    /// minimum for <see cref="Layout"/>: 480 for the vertical layout and 940
+    /// for the horizontal layout. Both minimums render the QR code at the same
+    /// size.
+    /// </summary>
+    public double Width
+    {
+        get => _width ?? SvgBadgeRenderer.MinBadgeWidth(Layout);
+        set => _width = value;
+    }
 
     /// <summary>
     /// Highest QR error-correction level to use: <see cref="BarcodeErrorCorrectionLevel.Low"/>,

@@ -238,6 +238,12 @@ public static class AustralianPayFrequencies
     /// <summary>The <c>quarterly</c> code.</summary>
     public const string Quarterly = "quarterly";
 
+    /// <summary>The <c>four_weekly</c> code.</summary>
+    public const string FourWeekly = "four_weekly";
+
+    /// <summary>The <c>semi_monthly</c> code.</summary>
+    public const string SemiMonthly = "semi_monthly";
+
     /// <summary>Every accepted value, in contract order.</summary>
     public static readonly IReadOnlyList<string> All = new ReadOnlyCollection<string>(
     [
@@ -245,6 +251,8 @@ public static class AustralianPayFrequencies
         Fortnightly,
         Monthly,
         Quarterly,
+        FourWeekly,
+        SemiMonthly,
     ]);
 }
 

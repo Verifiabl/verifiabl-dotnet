@@ -261,6 +261,16 @@ For low-level AU/NZ v2 registrations, use `PayslipNonPii.FromAustralianV2(new Au
 
 The badge is the navy header and the QR code on a white ground, and the QR code spans the full badge width. Keep a clear light margin of at least a tenth of the badge width on the left, the right and the bottom of the badge. That margin is the QR quiet zone. Scanners need it, and the badge does not carry it itself.
 
+For a short, wide space, set `Layout = BarcodeLayout.Horizontal`. The QR code then spans the full badge height, with a white gap and then a light-tinted "Secured by Verifiabl" frame to its right. Keep the same clear margin, a tenth of the badge height, above, below and to the left of the badge. The gap supplies the margin on the right.
+
+```csharp
+var options = new BarcodeSvgOptions { Layout = BarcodeLayout.Horizontal };
+BarcodeSvgResult svg = VerifiablBarcode.CreateSvg(parts, options);
+BarcodePngResult png = VerifiablBarcode.CreatePng(parts, options);
+```
+
+The horizontal badge renders the QR code at the same size as the vertical badge. Its minimum SVG width is 940 (the vertical minimum is 480), and its PNG widths are 940, 1410, 1880 and 2820. Unless you set them, `BarcodeSvgOptions.Width` defaults to the layout's minimum and PNG output defaults to 720 pixels wide for the vertical layout and 1410 for the horizontal layout.
+
 ### Retries and idempotency
 
 Failed requests are retried automatically with exponential backoff (`VerifiablClientOptions.MaxRetries`, default 2). The Verifiabl reference is the idempotency key. The v2 preparation helpers create a reference for `RegisterNonPiiAsync` and batch registration. Persist the prepared registration and the ciphertext from `prepared.BarcodeParts(prepared.VerifiablReference).EncryptedPii` together before the first call; the registration includes the reference and encryption metadata but not the ciphertext. Reuse the same request after a process restart and render from the saved ciphertext and the returned reference. Do not prepare and encrypt again for an idempotent replay. The client retries these requests on throttling, timeouts, `5xx`, and network faults. `RegisterAndBuildBarcodeAsync` lets the API assign its own reference and retries only `429`, which is enforced before processing.

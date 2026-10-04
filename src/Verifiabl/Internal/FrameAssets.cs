@@ -11,16 +11,20 @@ namespace Verifiabl.Internal;
 internal static partial class FrameAssets
 {
 
-    private static readonly ConcurrentDictionary<int, ParsedFrame> Cache = new();
+    private static readonly ConcurrentDictionary<(BarcodeLayout Layout, int PixelWidth), ParsedFrame> Cache = new();
 
-    internal static bool IsSupported(int pixelWidth)
+    /// <summary>The supported PNG pixel widths for <paramref name="layout"/>.</summary>
+    internal static int[] SupportedWidths(BarcodeLayout layout) =>
+        layout == BarcodeLayout.Horizontal ? SupportedHorizontalPixelWidths : SupportedPixelWidths;
+
+    internal static bool IsSupported(BarcodeLayout layout, int pixelWidth)
     {
-        return Array.IndexOf(SupportedPixelWidths, pixelWidth) >= 0;
+        return Array.IndexOf(SupportedWidths(layout), pixelWidth) >= 0;
     }
 
-    internal static ParsedFrame Load(int pixelWidth)
+    internal static ParsedFrame Load(BarcodeLayout layout, int pixelWidth)
     {
-        return Cache.GetOrAdd(pixelWidth, Parse);
+        return Cache.GetOrAdd((layout, pixelWidth), Parse);
     }
 
     /// <summary>A fresh straight-alpha RGBA raster of the frame; the compositor mutates it.</summary>
@@ -40,9 +44,13 @@ internal static partial class FrameAssets
         return rgba;
     }
 
-    private static ParsedFrame Parse(int pixelWidth)
+    private static ParsedFrame Parse((BarcodeLayout Layout, int PixelWidth) key)
     {
-        return ParseContainer(ReadResource($"Verifiabl.Assets.frame-{pixelWidth}.vfr1"), pixelWidth);
+        // Vertical frames keep their original resource names.
+        string name = key.Layout == BarcodeLayout.Horizontal
+            ? $"Verifiabl.Assets.frame-horizontal-{key.PixelWidth}.vfr1"
+            : $"Verifiabl.Assets.frame-{key.PixelWidth}.vfr1";
+        return ParseContainer(ReadResource(name), key.PixelWidth);
     }
 
     /// <summary>
@@ -62,8 +70,9 @@ internal static partial class FrameAssets
         int width = ReadUInt16(container, 4);
         int height = ReadUInt16(container, 6);
         int paletteCount = ReadUInt16(container, 8);
-        // Baked frames sit at height = 1.5625 * width, so 2x bounds the raster
-        // allocation (max 1440 * 2880) before a tampered height can force it.
+        // Baked frames sit at height = 1.5625 * width (vertical) or about 0.511 *
+        // width (horizontal), so 2x bounds the raster allocation (max 2820 *
+        // 5640) before a tampered height can force it.
         if (width != expectedWidth || height <= 0 || height > width * 2)
         {
             throw new InvalidOperationException("Corrupt frame asset: unexpected dimensions.");

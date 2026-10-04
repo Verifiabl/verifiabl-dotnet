@@ -118,19 +118,24 @@ public static class VerifiablBarcode
     /// exact pixel-aligned QR modules - no vector rasteriser and no native
     /// dependencies - so the same record produces the byte-identical raster in
     /// every Verifiabl SDK. Because the frame is pre-rasterised, PNG output
-    /// exists only at pixel widths 480, 720, 960 and 1440; the physical print
+    /// exists only at pixel widths 480, 720, 960 and 1440 for the vertical
+    /// layout, and 940, 1410, 1880 and 2820 for the horizontal layout. Both
+    /// width sets render the QR code at the same sizes. The physical print
     /// size is set where the image is placed in the PDF. If you need a
     /// different size, prefer <see cref="CreateSvg"/>, which scales
     /// continuously. <see cref="BarcodeSvgOptions.Width"/> is ignored here;
     /// <paramref name="pixelWidth"/> controls the bitmap size.
     /// </remarks>
     /// <param name="parts">The Verifiabl reference and encrypted PII ciphertext.</param>
-    /// <param name="options">Scan URL and error-correction options.</param>
-    /// <param name="pixelWidth">Output bitmap width in pixels (default: 720).</param>
+    /// <param name="options">Scan URL, layout and error-correction options.</param>
+    /// <param name="pixelWidth">
+    /// Output bitmap width in pixels. The default, 0, selects 720 for the
+    /// vertical layout and 1410 for the horizontal layout.
+    /// </param>
     public static BarcodePngResult CreatePng(
         BarcodeParts parts,
         BarcodeSvgOptions? options = null,
-        int pixelWidth = 720)
+        int pixelWidth = 0)
     {
         return PngBadgeRenderer.Render(parts, options ?? new BarcodeSvgOptions(), pixelWidth);
     }

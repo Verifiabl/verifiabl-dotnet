@@ -197,6 +197,109 @@ public class SvgBarcodeTests
     }
 
     [Fact]
+    public void RendersTheExplicitVerticalLayoutExactlyAsTheDefault()
+    {
+        BarcodeParts parts = new(Reference, RealisticCiphertext());
+
+        Assert.Equal(
+            VerifiablBarcode.CreateSvg(parts).Svg,
+            VerifiablBarcode.CreateSvg(parts, new BarcodeSvgOptions { Layout = BarcodeLayout.Vertical }).Svg);
+    }
+
+    [Fact]
+    public void RendersTheHorizontalFrameGeometry()
+    {
+        BarcodeSvgResult result = VerifiablBarcode.CreateSvg(
+            new BarcodeParts(Reference, RealisticCiphertext()),
+            new BarcodeSvgOptions { Layout = BarcodeLayout.Horizontal });
+
+        Assert.Equal(940, result.Width);
+        Assert.Equal(480, result.Height);
+        Assert.StartsWith("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"940\" height=\"480\" ", result.Svg);
+        Assert.Contains("viewBox=\"0 0 188 96\"", result.Svg);
+        // White under the 96-unit QR box and the vertical layout's 7-unit gap, then
+        // the opaque 85-unit panel with the 70x80 design scaled to the QR box's height.
+        Assert.Matches(
+            "^<svg [^>]*><rect x=\"0\" y=\"0\" width=\"103\" height=\"96\" fill=\"#FFFFFF\"/>"
+            + "<g transform=\"translate\\(103 0\\)\"><path d=\"M0 0H75\\.4C[^\"]*85 9\\.6V86\\.4C[^\"]*\" fill=\"#EDEFFF\"/>"
+            + "<g transform=\"translate\\(0\\.5 0\\) scale\\(1\\.2\\)\" fill=\"#010A4F\">",
+            result.Svg);
+        Assert.Contains("<g transform=\"translate(0 0)\"><g shape-rendering=\"crispEdges\">", result.Svg);
+        Assert.DoesNotContain("opacity", result.Svg);
+        Assert.DoesNotContain("clipPath", result.Svg);
+        Assert.DoesNotContain("M0 8C0 3.58172", result.Svg);
+        Assert.Equal(3, Regex.Matches(result.Svg, "fill-rule=\"evenodd\"").Count);
+    }
+
+    [Fact]
+    public void WidthDefaultsToTheLayoutMinimumUnlessSet()
+    {
+        var options = new BarcodeSvgOptions();
+        Assert.Equal(480, options.Width);
+
+        options.Layout = BarcodeLayout.Horizontal;
+        Assert.Equal(940, options.Width);
+
+        options.Width = 1425;
+        options.Layout = BarcodeLayout.Vertical;
+        Assert.Equal(1425, options.Width);
+    }
+
+    [Theory]
+    [InlineData(480, 940)]
+    [InlineData(720, 1410)]
+    public void HorizontalBadgeRendersTheSameQrAsTheVerticalBadge(double verticalWidth, double width)
+    {
+        BarcodeParts parts = new(Reference, RealisticCiphertext());
+
+        BarcodeSvgResult vertical = VerifiablBarcode.CreateSvg(
+            parts,
+            new BarcodeSvgOptions { Width = verticalWidth });
+        BarcodeSvgResult horizontal = VerifiablBarcode.CreateSvg(
+            parts,
+            new BarcodeSvgOptions { Layout = BarcodeLayout.Horizontal, Width = width });
+
+        Assert.Equal(vertical.Content, horizontal.Content);
+        Assert.Equal(vertical.ErrorCorrectionLevel, horizontal.ErrorCorrectionLevel);
+        Assert.Equal(vertical.QrVersion, horizontal.QrVersion);
+        Assert.Equal(vertical.ModulePx, horizontal.ModulePx);
+        Assert.Equal(vertical.Degraded, horizontal.Degraded);
+    }
+
+    [Fact]
+    public void RejectsWidthsBelowTheHorizontalMinimum()
+    {
+        ArgumentException error = Assert.Throws<ArgumentException>(() => VerifiablBarcode.CreateSvg(
+            new BarcodeParts(Reference, RealisticCiphertext()),
+            new BarcodeSvgOptions { Layout = BarcodeLayout.Horizontal, Width = 939 }));
+
+        Assert.Contains("at least 940", error.Message);
+    }
+
+    [Fact]
+    public void RejectsAnUnknownLayout()
+    {
+        ArgumentException error = Assert.Throws<ArgumentException>(() => VerifiablBarcode.CreateSvg(
+            new BarcodeParts(Reference, RealisticCiphertext()),
+            new BarcodeSvgOptions { Layout = (BarcodeLayout)7 }));
+
+        Assert.Contains("Layout must be Vertical or Horizontal", error.Message);
+    }
+
+    [Fact]
+    public void HorizontalBadgeHardErrorsAtTheSamePayloadLengthAsTheVerticalBadge()
+    {
+        byte[] huge = new byte[2_175];
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => VerifiablBarcode.CreateSvg(
+                new BarcodeParts(Reference, huge),
+                new BarcodeSvgOptions { Layout = BarcodeLayout.Horizontal }));
+
+        Assert.Contains("at width 940", exception.Message);
+    }
+
+    [Fact]
     public void SvgModulesMatchTheQrMatrixAndDecodeToTheScanUrl()
     {
         BarcodeSvgResult result = VerifiablBarcode.CreateSvg(
