@@ -152,7 +152,6 @@ public class JurisdictionPiiTests
         const string value = "Synthetic|Value";
         (string Field, Action Format)[] cases =
         [
-            ("EmployeeName", () => Pii.Format(new PiiFields { EmployeeName = value })),
             ("EmployeeName", () => Pii.FormatAustralian(new AustralianPiiFields { EmployeeName = value })),
             ("EmployeeName", () => Pii.FormatNewZealand(new NewZealandPiiFields { EmployeeName = value })),
             ("Lines[1]", () => Pii.FormatAustralian(new AustralianPiiFields { Address = new AustralianAddress { Lines = ["Valid line", value] } })),
@@ -183,7 +182,7 @@ public class JurisdictionPiiTests
             EmployeeName = boundaryValue,
         });
 
-        Assert.Equal(Pii.PayloadMaxBytes, Encoding.UTF8.GetByteCount(plaintext));
+        Assert.Equal(JurisdictionPiiProfiles.PayloadMaxBytes, Encoding.UTF8.GetByteCount(plaintext));
         Assert.Throws<ArgumentException>(() => Pii.FormatAustralian(new AustralianPiiFields
         {
             EmployeeName = boundaryValue + "a",

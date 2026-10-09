@@ -18,7 +18,7 @@ public class CryptoTests
     public void ProducesTheVerifiablCiphertextShape()
     {
         byte[] key = NewKey();
-        string plaintext = Pii.Format(new PiiFields { EmployeeName = "Jane A. Doe" });
+        string plaintext = Pii.FormatAustralian(new AustralianPiiFields { EmployeeName = "Jane A. Doe" });
 
         EncryptedPii encrypted = VerifiablCrypto.EncryptPii(plaintext, key);
 
@@ -31,7 +31,7 @@ public class CryptoTests
     public void CiphertextDecryptsBackToThePlaintext()
     {
         byte[] key = NewKey();
-        string plaintext = Pii.Format(new PiiFields
+        string plaintext = Pii.FormatAustralian(new AustralianPiiFields
         {
             EmployeeName = "Jane A. Doe",
             Bsb = "062-000",
@@ -55,7 +55,7 @@ public class CryptoTests
     public void TamperedCiphertextFailsAuthentication()
     {
         byte[] key = NewKey();
-        EncryptedPii encrypted = VerifiablCrypto.EncryptPii("P1|Jane||||||", key);
+        EncryptedPii encrypted = VerifiablCrypto.EncryptPii("AU2|Jane|||||||", key);
 
         encrypted.Ciphertext[0] ^= 0xFF;
         byte[] decrypted = new byte[encrypted.Ciphertext.Length];
@@ -73,8 +73,8 @@ public class CryptoTests
     {
         byte[] key = NewKey();
 
-        EncryptedPii first = VerifiablCrypto.EncryptPii("P1|Jane||||||", key);
-        EncryptedPii second = VerifiablCrypto.EncryptPii("P1|Jane||||||", key);
+        EncryptedPii first = VerifiablCrypto.EncryptPii("AU2|Jane|||||||", key);
+        EncryptedPii second = VerifiablCrypto.EncryptPii("AU2|Jane|||||||", key);
 
         Assert.False(first.Metadata.Iv.SequenceEqual(second.Metadata.Iv));
         Assert.False(first.Ciphertext.SequenceEqual(second.Ciphertext));
@@ -88,7 +88,7 @@ public class CryptoTests
     public void RejectsKeysThatAreNot32Bytes(int keyLength)
     {
         var exception = Assert.Throws<ArgumentException>(
-            () => VerifiablCrypto.EncryptPii("P1|||||||", new byte[keyLength]));
+            () => VerifiablCrypto.EncryptPii("AU2||||||||", new byte[keyLength]));
 
         Assert.Contains("32 bytes", exception.Message);
     }

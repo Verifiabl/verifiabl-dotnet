@@ -1,11 +1,27 @@
-using System.Text;
 using System.Text.Json;
 using Xunit;
 
 namespace Verifiabl.Tests;
 
+/// <summary>
+/// AU2 and NZ2 apply the shared PII text profile to every field.
+/// </summary>
 public class PiiTests
 {
+    private static readonly Func<string, string>[] Formatters =
+    [
+        value => Pii.FormatAustralian(new AustralianPiiFields { EmployeeName = value }),
+        value => Pii.FormatNewZealand(new NewZealandPiiFields { EmployeeName = value }),
+        value => Pii.FormatAustralian(new AustralianPiiFields
+        {
+            Address = new AustralianAddress { Lines = [value] },
+        }),
+        value => Pii.FormatNewZealand(new NewZealandPiiFields
+        {
+            Address = new NewZealandAddress { Lines = [value] },
+        }),
+    ];
+
     private static string AppendRelativePath(string basePath, string relativePath)
     {
         if (Path.IsPathRooted(relativePath))
@@ -18,149 +34,16 @@ public class PiiTests
             + relativePath;
     }
 
-    [Fact]
-    public void FormatsP2ByDefaultInWireOrder()
-    {
-        string formatted = Pii.Format(new PiiFields
+    private static IEnumerable<int> CodePoints(JsonElement ranges) =>
+        ranges.EnumerateArray().SelectMany(range =>
         {
-            EmployeeName = "Jane A. Doe",
-            Position = "Senior Developer",
-            Department = "Engineering",
-            EmployerAbn = "12345678901",
-            Bsb = "062-000",
-            AccountNumber = "12345678",
-            AccountName = "Jane A Doe",
-            Address = "12 Example St, Sydney NSW 2000",
+            int start = Convert.ToInt32(range[0].GetString(), 16);
+            int end = Convert.ToInt32(range[1].GetString(), 16);
+            return Enumerable.Range(start, end - start + 1);
         });
 
-        Assert.Equal(
-            "P2|Jane A. Doe|Senior Developer|Engineering|12345678901|062-000|12345678|Jane A Doe|12 Example St, Sydney NSW 2000",
-            formatted);
-    }
-
     [Fact]
-    public void EncodesOmittedP2FieldsAsEmptySegments()
-    {
-        string formatted = Pii.Format(new PiiFields { EmployeeName = "Jane" });
-
-        Assert.Equal("P2|Jane|||||||", formatted);
-    }
-
-    [Fact]
-    public void RoundTripsP2ThroughParse()
-    {
-        var fields = new PiiFields
-        {
-            EmployeeName = "Jane A. Doe",
-            Department = "Engineering",
-            AccountNumber = "12345678",
-            Address = "12 Example St",
-        };
-
-        PiiFields parsed = Pii.Parse(Pii.Format(fields));
-
-        Assert.Equal(fields.EmployeeName, parsed.EmployeeName);
-        Assert.Null(parsed.Position);
-        Assert.Equal(fields.Department, parsed.Department);
-        Assert.Null(parsed.EmployerAbn);
-        Assert.Null(parsed.Bsb);
-        Assert.Equal(fields.AccountNumber, parsed.AccountNumber);
-        Assert.Null(parsed.AccountName);
-        Assert.Equal(fields.Address, parsed.Address);
-    }
-
-    [Fact]
-    public void ParsesLegacyP1FromExistingDocuments()
-    {
-        PiiFields parsed = Pii.Parse("P1|Jane||||||");
-
-        Assert.Equal("Jane", parsed.EmployeeName);
-        Assert.Null(parsed.Address);
-    }
-
-    [Fact]
-    public void RejectsPipeCharacters()
-    {
-        var exception = Assert.Throws<ArgumentException>(
-            () => Pii.Format(new PiiFields { EmployeeName = "Jane|Doe" }));
-
-        Assert.Contains("EmployeeName", exception.Message);
-    }
-
-    [Fact]
-    public void RejectsControlCharacters()
-    {
-        Assert.Throws<ArgumentException>(
-            () => Pii.Format(new PiiFields { Position = "Dev\nOps" }));
-        Assert.Throws<ArgumentException>(
-            () => Pii.Format(new PiiFields { Position = "Dev\tOps" }));
-    }
-
-    [Fact]
-    public void AcceptsFieldsAboveTheFormerPerFieldLimit()
-    {
-        string value = new('a', 257);
-        Assert.EndsWith(value + "|", Pii.Format(new PiiFields { AccountName = value }));
-    }
-
-    [Fact]
-    public void AcceptsFieldsAtTheFormerLengthLimit()
-    {
-        string formatted = Pii.Format(new PiiFields { AccountName = new string('a', 256) });
-
-        Assert.EndsWith(new string('a', 256) + "|", formatted);
-    }
-
-    private static PiiFields V2Fields(string? address = null) => new()
-    {
-        EmployeeName = "Zoë Nguyễn",
-        Position = "Ingénieure",
-        Department = "R&D",
-        EmployerAbn = "53004085616",
-        Bsb = "062-000",
-        AccountNumber = "12345678",
-        AccountName = "Zoë Nguyễn",
-        Address = address,
-    };
-
-    [Fact]
-    public void V2WritesExactBytesWithAnEmptyFinalAddress()
-    {
-        byte[] actual = Encoding.UTF8.GetBytes(Pii.Format(V2Fields()));
-        byte[] expected = Encoding.UTF8.GetBytes(
-            "P2|Zoë Nguyễn|Ingénieure|R&D|53004085616|062-000|12345678|Zoë Nguyễn|");
-
-        Assert.Equal(expected, actual);
-    }
-
-    [Fact]
-    public void V2PreservesARealisticInternationalAddressVerbatim()
-    {
-        const string address = "12 Rue de l’Église, Apt 4B, 75005 Paris, France 🇫🇷";
-        Assert.EndsWith("|" + address, Pii.Format(V2Fields(address)));
-    }
-
-    [Fact]
-    public void V2AcceptsAddressesOverTheFormer320Utf8ByteLimit()
-    {
-        string address = new('x', 321);
-        Assert.EndsWith("|" + address, Pii.Format(V2Fields(address)));
-    }
-
-    [Theory]
-    [InlineData("bad|address")]
-    [InlineData("bad\naddress")]
-    [InlineData("bad\u200Baddress")]
-    [InlineData("bad\u2028address")]
-    [InlineData("bad\u2029address")]
-    [InlineData("bad\U000E0001address")]
-    public void V2RejectsDelimiterControlFormatAndSeparatorCharacters(string address)
-    {
-        Assert.Throws<ArgumentException>(() => Pii.Format(V2Fields(address)));
-    }
-
-    [Fact]
-    public void V2MatchesTheCanonicalTextProfile()
+    public void MatchesTheCanonicalTextProfile()
     {
         string fixturesDirectory = AppendRelativePath(AppContext.BaseDirectory, "Fixtures");
         string profilePath = AppendRelativePath(fixturesDirectory, "p2-pii-text-profile-v1.json");
@@ -170,143 +53,118 @@ public class PiiTests
         JsonElement profile = profileDocument.RootElement;
         JsonElement vectors = vectorsDocument.RootElement;
 
-        Assert.Equal(Pii.TextProfileId, profile.GetProperty("profileId").GetString());
         Assert.Equal(
             profile.GetProperty("profileId").GetString(),
             vectors.GetProperty("profileId").GetString());
         Assert.Equal(
             Pii.TextProfileUnicodeVersion,
             profile.GetProperty("unicodeVersion").GetString());
-        Assert.Equal(Pii.PayloadMaxBytes, profile.GetProperty("writerPayloadMaxUtf8Bytes").GetInt32());
 
-        foreach ((int start, int end) in profile.GetProperty("controlCharacterRanges")
-                     .EnumerateArray()
-                     .Select(range => (
-                         Convert.ToInt32(range[0].GetString(), 16),
-                         Convert.ToInt32(range[1].GetString(), 16))))
-        {
-            for (int codePoint = start; codePoint <= end; codePoint++)
-            {
-                Assert.Throws<ArgumentException>(
-                    () => Pii.Format(
-                        new PiiFields { EmployeeName = char.ConvertFromUtf32(codePoint) }));
-            }
-        }
-
-        foreach (int codePoint in profile.GetProperty("lineSeparatorCodePoints")
-                     .EnumerateArray()
-                     .Select(value => Convert.ToInt32(value.GetString(), 16)))
-        {
-            Assert.Throws<ArgumentException>(
-                () => Pii.Format(
-                    new PiiFields { EmployeeName = char.ConvertFromUtf32(codePoint) }));
-        }
-
-        foreach ((int start, int end) in profile.GetProperty("formatCharacterRanges")
-                     .EnumerateArray()
-                     .Select(range => (
-                         Convert.ToInt32(range[0].GetString(), 16),
-                         Convert.ToInt32(range[1].GetString(), 16))))
-        {
-            for (int codePoint = start; codePoint <= end; codePoint++)
-            {
-                Assert.Throws<ArgumentException>(
-                    () => Pii.Format(
-                        new PiiFields { EmployeeName = char.ConvertFromUtf32(codePoint) }));
-            }
-        }
-
-        foreach (string value in vectors.GetProperty("validText")
-                     .EnumerateArray()
-                     .Select(vector => vector.GetProperty("value").GetString()!))
-        {
-            Assert.Contains(value, Pii.Format(new PiiFields { EmployeeName = value }));
-            Assert.EndsWith("|" + value, Pii.Format(new PiiFields { Address = value }));
-        }
-
-        foreach (JsonElement vector in vectors.GetProperty("invalidText").EnumerateArray())
-        {
-            string value = string.Concat(
-                vector.GetProperty("codePoints")
-                    .EnumerateArray()
-                    .Select(codePoint => char.ConvertFromUtf32(
-                        Convert.ToInt32(codePoint.GetString(), 16))));
-            Assert.Throws<ArgumentException>(
-                () => Pii.Format(new PiiFields { EmployeeName = value }));
-            Assert.Throws<ArgumentException>(
-                () => Pii.Format(new PiiFields { Address = value }));
-        }
-
-        foreach (JsonElement vector in vectors.GetProperty("invalidUtf16").EnumerateArray())
-        {
-            char[] codeUnits = vector.GetProperty("codeUnits")
+        int[] forbidden =
+        [
+            .. CodePoints(profile.GetProperty("controlCharacterRanges")),
+            .. profile.GetProperty("lineSeparatorCodePoints")
                 .EnumerateArray()
-                .Select(value => (char)value.GetInt32())
-                .ToArray();
-            Assert.Throws<ArgumentException>(
-                () => Pii.Format(new PiiFields { EmployeeName = new string(codeUnits) }));
+                .Select(value => Convert.ToInt32(value.GetString(), 16)),
+            .. CodePoints(profile.GetProperty("formatCharacterRanges")),
+        ];
+        string[] validText =
+        [
+            .. vectors.GetProperty("validText")
+                .EnumerateArray()
+                .Select(vector => vector.GetProperty("value").GetString()!),
+        ];
+        string[] invalidText =
+        [
+            .. vectors.GetProperty("invalidText")
+                .EnumerateArray()
+                .Select(vector => string.Concat(
+                    vector.GetProperty("codePoints")
+                        .EnumerateArray()
+                        .Select(codePoint => char.ConvertFromUtf32(
+                            Convert.ToInt32(codePoint.GetString(), 16))))),
+        ];
+        string[] invalidUtf16 =
+        [
+            .. vectors.GetProperty("invalidUtf16")
+                .EnumerateArray()
+                .Select(vector => new string(vector.GetProperty("codeUnits")
+                    .EnumerateArray()
+                    .Select(value => (char)value.GetInt32())
+                    .ToArray())),
+        ];
+
+        foreach (Func<string, string> format in Formatters)
+        {
+            foreach (int codePoint in forbidden)
+            {
+                Assert.Throws<ArgumentException>(() => format(char.ConvertFromUtf32(codePoint)));
+            }
+
+            foreach (string value in validText)
+            {
+                Assert.Contains(value, format(value));
+            }
+
+            foreach (string value in invalidText.Concat(invalidUtf16))
+            {
+                Assert.Throws<ArgumentException>(() => format(value));
+            }
         }
     }
 
     [Fact]
-    public void V2AcceptsFieldsOverTheFormer256Utf16CodeUnitLimit()
+    public void AcceptsFieldsOverTheFormer256Utf16CodeUnitLimit()
     {
         string value = new('x', 257);
-        Assert.Contains(value, Pii.Format(new PiiFields { EmployeeName = value }));
+        foreach (Func<string, string> format in Formatters)
+        {
+            Assert.Contains(value, format(value));
+        }
+    }
+
+    [Fact]
+    public void PreservesARealisticInternationalAddressLineVerbatim()
+    {
+        const string line = "12 Rue de l’Église, Apt 4B 🇫🇷";
+        Assert.Equal(
+            "AU2||||||||" + line,
+            Pii.FormatAustralian(new AustralianPiiFields { Address = new AustralianAddress { Lines = [line] } }));
+        Assert.Equal(
+            "NZ2||||||||" + line,
+            Pii.FormatNewZealand(new NewZealandPiiFields { Address = new NewZealandAddress { Lines = [line] } }));
+    }
+
+    [Fact]
+    public void AcceptsAddressesOverTheFormer320Utf8ByteLimit()
+    {
+        string line = new('x', 321);
+        Assert.EndsWith(
+            "|" + line,
+            Pii.FormatAustralian(new AustralianPiiFields { Address = new AustralianAddress { Lines = [line] } }));
     }
 
     [Theory]
-    [InlineData("\u0600")]
-    [InlineData("\u0890")]
+    [InlineData("؀")]
+    [InlineData("࢐")]
     [InlineData("\U00013430")]
     [InlineData("\U0001BCA0")]
     [InlineData("\U000E007F")]
-    public void V2UsesTheFixedUnicode17FormatCharacterTable(string formatCharacter)
+    public void UsesTheFixedUnicode17FormatCharacterTable(string formatCharacter)
     {
-        Assert.Throws<ArgumentException>(
-            () => Pii.Format(new PiiFields { EmployeeName = "Jane" + formatCharacter }));
+        foreach (Func<string, string> format in Formatters)
+        {
+            Assert.Throws<ArgumentException>(() => format("Jane" + formatCharacter));
+        }
     }
 
     [Fact]
-    public void V2EnforcesTheCompletePlaintextByteLimitOnlyOnWrites()
+    public void RejectsMalformedUtf16InsteadOfChangingItDuringEncryption()
     {
-        var boundary = new PiiFields { EmployeeName = new string('a', 1014) };
-        string plaintext = Pii.Format(boundary);
-
-        Assert.Equal(Pii.PayloadMaxBytes, Encoding.UTF8.GetByteCount(plaintext));
-        boundary.EmployeeName += "a";
-        Assert.Throws<ArgumentException>(() => Pii.Format(boundary));
-
-        string legacyOversized = plaintext + "a";
-        Assert.Equal(Pii.PayloadMaxBytes + 1, Encoding.UTF8.GetByteCount(legacyOversized));
-        Assert.Equal("a", Pii.Parse(legacyOversized).Address);
-    }
-
-    [Fact]
-    public void V2RejectsMalformedUtf16InsteadOfChangingItDuringEncryption()
-    {
-        Assert.Throws<ArgumentException>(() => Pii.Format(V2Fields("bad\uD800address")));
-        Assert.Throws<ArgumentException>(() => Pii.Format(new PiiFields { EmployeeName = "bad\uDC00name" }));
-    }
-
-    [Fact]
-    public void ParseRejectsMissingPrefix()
-    {
-        Assert.Throws<FormatException>(() => Pii.Parse("P2|a|b|c|d|e|f|g"));
-    }
-
-    [Fact]
-    public void ParseRejectsWrongFieldCount()
-    {
-        Assert.Throws<FormatException>(() => Pii.Parse("P1|a|b|c"));
-        Assert.Throws<FormatException>(() => Pii.Parse("P1|a|b|c|d|e|f|g|extra"));
-    }
-
-    [Fact]
-    public void FieldOrdersArePermanentWireContracts()
-    {
-        Assert.Equal(
-            ["employeeName", "position", "department", "employerAbn", "bsb", "accountNumber", "accountName", "address"],
-            Pii.FieldOrder);
+        foreach (Func<string, string> format in Formatters)
+        {
+            Assert.Throws<ArgumentException>(() => format("bad\uD800value"));
+            Assert.Throws<ArgumentException>(() => format("bad\uDC00value"));
+        }
     }
 }

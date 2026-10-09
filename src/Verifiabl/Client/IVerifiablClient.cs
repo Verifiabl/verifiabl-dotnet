@@ -58,7 +58,9 @@ public interface IVerifiablClient
     /// provider-generated Verifiabl reference (from
     /// <see cref="Verifiabl.VerifiablReference.Generate"/>) and the same fields as
     /// <see cref="RegisterNonPiiAsync"/>. The response contains a per-record
-    /// result index-aligned to the input: one bad record never fails the batch.
+    /// result index-aligned to the input. A record with invalid payslip data
+    /// comes back as its own error result. A malformed envelope, or a payload not
+    /// created for its schema, throws and nothing is sent.
     /// A record whose encryption IV is already registered to this issuer, or is
     /// repeated within this batch, comes back as an error result matched by
     /// <see cref="BatchRecordResult.IsIvReused"/>.
@@ -66,7 +68,12 @@ public interface IVerifiablClient
     /// <param name="records">The records to register.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
     /// <exception cref="ArgumentNullException"><paramref name="records"/> is null.</exception>
-    /// <exception cref="ArgumentException">The batch is empty, oversized, or a record is malformed.</exception>
+    /// <exception cref="ArgumentException">
+    /// The batch is empty or oversized, a record's envelope is malformed, or a
+    /// record's <see cref="BatchRecord.PayslipNonPii"/> was not created for its
+    /// <see cref="BatchRecord.Schema"/>. Invalid payslip data instead comes back as
+    /// that record's <see cref="VerifiablErrorCodes.ValidationFailed"/> result.
+    /// </exception>
     /// <exception cref="VerifiablApiException">The API returned a non-2xx response.</exception>
     /// <exception cref="VerifiablAuthException">An OAuth token could not be obtained.</exception>
     /// <exception cref="VerifiablTimeoutException">The call exceeded the configured timeout.</exception>

@@ -134,6 +134,13 @@ internal static class Wire
             {
                 Validation.ValidateExternalId(record.ExternalId, $"{label}.ExternalId");
             }
+            // A payload built for another schema is a coding error, so it throws as the
+            // single-record methods do. Only payslip data errors become per-record results.
+            if (record.PayslipNonPii is null)
+            {
+                throw new ArgumentException($"{label}.PayslipNonPii is required.", nameof(records));
+            }
+            RequirePayloadForSchema(record.PayslipNonPii, selectedSchema, $"{label}.PayslipNonPii", nameof(records));
 
             try
             {
@@ -216,12 +223,9 @@ internal static class Wire
         string schema,
         string label)
     {
+        RequirePayloadForSchema(data, schema, label, label);
         if (data.TypedV2Payload is not null)
         {
-            if (schema != data.TypedV2Schema || data.AdditionalData is not null)
-            {
-                throw new ArgumentException($"{label} typed payload must match its schema and cannot include AdditionalData.", label);
-            }
             string? currency = data.TypedV2Payload switch
             {
                 AustralianPayslipV2 australian => australian.Currency,
@@ -248,20 +252,7 @@ internal static class Wire
             return JsonSerializer.SerializeToNode(data.TypedV2Payload, data.TypedV2Payload.GetType(),
                 TypedV2PayloadOptions)!.AsObject();
         }
-        if (schema is PayslipSchemas.AustralianV2 or PayslipSchemas.NewZealandV2)
-        {
-            throw new ArgumentException($"{label} requires PayslipNonPii.FromAustralianV2 or FromNewZealandV2.", label);
-        }
-        if (data.PeriodStart is null)
-        {
-            throw new ArgumentException(
-                $"{label}.PeriodStart is required for {schema}.",
-                $"{label}.PeriodStart");
-        }
-        else
-        {
-            Validation.ValidateIsoDate(data.PeriodStart, $"{label}.PeriodStart");
-        }
+        Validation.ValidateIsoDate(data.PeriodStart, $"{label}.PeriodStart");
         Validation.ValidateIsoDate(data.PeriodEnd, $"{label}.PeriodEnd");
 
         var body = new JsonObject();
@@ -276,16 +267,25 @@ internal static class Wire
                     continue;
                 }
 
-                body[field.Key] = ToJsonNode(field.Value, $"{label}.AdditionalData[\"{field.Key}\"]");
+                body[field.Key] = FreeFormValues.ToJsonNode(field.Value);
             }
         }
 
-        if (data.PeriodStart is not null)
-        {
-            body["period_start"] = data.PeriodStart;
-        }
+        body["period_start"] = data.PeriodStart;
         body["period_end"] = data.PeriodEnd;
         return body;
+    }
+
+    private static void RequirePayloadForSchema(PayslipNonPii data, string schema, string label, string paramName)
+    {
+        if (data.TypedV2Schema is { } typedSchema && schema != typedSchema)
+        {
+            throw new ArgumentException($"{label} was created for {typedSchema}, not {schema}.", paramName);
+        }
+        if (data.TypedV2Payload is null && schema is PayslipSchemas.AustralianV2 or PayslipSchemas.NewZealandV2)
+        {
+            throw new ArgumentException($"{label} requires PayslipNonPii.FromAustralianV2 or FromNewZealandV2.", paramName);
+        }
     }
 
 #if NET6_0_OR_GREATER
@@ -298,85 +298,6 @@ internal static class Wire
         _ => [],
     };
 #endif
-
-    /// <summary>
-    /// Maps a caller-supplied pass-through value onto the JSON tree, so the
-    /// public surface never asks integrators to reference System.Text.Json.
-    /// </summary>
-    private static JsonNode? ToJsonNode(object? value, string label)
-    {
-        switch (value)
-        {
-            case null:
-                return null;
-            case string text:
-                return JsonValue.Create(text);
-            case bool flag:
-                return JsonValue.Create(flag);
-            case sbyte or byte or short or ushort or int or uint or long:
-                return JsonValue.Create(Convert.ToInt64(value, CultureInfo.InvariantCulture));
-            case ulong unsigned:
-                return JsonValue.Create(unsigned);
-            case double d:
-                return JsonValue.Create(d);
-            // Widening a float to double would print its binary noise, so keep it single.
-            case float f:
-                return JsonValue.Create(f);
-            case decimal m:
-                return JsonValue.Create(m);
-            // Covers IDictionary<string, object?> and IReadOnlyDictionary-only
-            // implementations (immutable/frozen wrappers) that would otherwise
-            // fall into the array arm as KeyValuePair sequences.
-            case IEnumerable<KeyValuePair<string, object?>> nested:
-                {
-                    var obj = new JsonObject();
-                    foreach (KeyValuePair<string, object?> entry in nested)
-                    {
-                        obj[entry.Key] = ToJsonNode(entry.Value, $"{label}[\"{entry.Key}\"]");
-                    }
-
-                    return obj;
-                }
-
-            case System.Collections.IDictionary rawMap:
-                {
-                    var obj = new JsonObject();
-                    foreach (System.Collections.DictionaryEntry entry in rawMap)
-                    {
-                        if (entry.Key is not string key)
-                        {
-                            throw new ArgumentException(
-                                $"{label} has a non-string key; nested objects must be keyed by string.",
-                                label);
-                        }
-
-                        obj[key] = ToJsonNode(entry.Value, $"{label}[\"{key}\"]");
-                    }
-
-                    return obj;
-                }
-
-            case System.Collections.IEnumerable items:
-                {
-                    var array = new JsonArray();
-                    int index = 0;
-                    foreach (object? item in items)
-                    {
-                        array.Add(ToJsonNode(item, $"{label}[{index}]"));
-                        index++;
-                    }
-
-                    return array;
-                }
-
-            default:
-                throw new ArgumentException(
-                    $"{label} has unsupported type {value.GetType().FullName}. Supported values are " +
-                    "null, string, bool, numbers, nested dictionaries, and " +
-                    "sequences of those.",
-                    label);
-        }
-    }
 
     internal static RegisterNonPiiResponse RegistrationFromWire(JsonElement root)
     {

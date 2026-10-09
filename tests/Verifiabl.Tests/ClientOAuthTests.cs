@@ -12,9 +12,9 @@ public class ClientOAuthTests
 
     private static RegisterNonPiiRequest ValidRequest() => new()
     {
-        Schema = "au.payslip.v1",
+        Schema = PayslipSchemas.AustralianV2,
         IssuedAt = new DateTimeOffset(2026, 5, 31, 1, 2, 3, TimeSpan.Zero),
-        PayslipNonPii = new PayslipNonPii { PeriodStart = "2026-05-01", PeriodEnd = "2026-05-31" },
+        PayslipNonPii = TestPayslips.Australian(),
         EncryptionMetadata = new EncryptionMetadata
         {
             Iv = new byte[12],

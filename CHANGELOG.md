@@ -6,6 +6,70 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-09
+
+### Changed
+
+- **Breaking:** `AustralianPayslipV2EarningsItem.LumpSum` now takes a required
+  `lumpSumType` first, one of the new `AustralianLumpSumTypes`: `ARedundancy`
+  (STP lump sum A type R), `AOther` (A type T), `B`, `D` or `E`. The SDK sends
+  it as `lump_sum_type`. Lump sum W stays `ReturnToWork`, and lump sum U stays
+  `PaidLeave` with `AustralianPaidLeaveTypes.UnusedOnTermination`. An object
+  initializer can still omit `LumpSumType`; the API accepts that line for now
+  and will require `lump_sum_type` before production, once every issuer is on
+  an SDK release with the lump sum codes.
+- **Breaking:** `PayslipNonPii` has no public constructor, and its
+  `PeriodStart`, `PeriodEnd` and `AdditionalData` properties are read-only.
+  Create v2 payloads with `PayslipNonPii.FromAustralianV2` or
+  `FromNewZealandV2`, or use `V2Issuance`. For a schema without a typed model,
+  replace `new PayslipNonPii { PeriodStart = ..., PeriodEnd = ...,
+  AdditionalData = ... }` with `PayslipNonPii.ForFutureSchema(periodStart,
+  periodEnd, additionalData)`. It takes any
+  `IEnumerable<KeyValuePair<string, object?>>`, and throws `ArgumentException`
+  naming the key for an unsupported value type when it is called, not when the
+  registration is sent. `AdditionalData` is now a read-only deep copy typed
+  `IReadOnlyDictionary<string, object?>`: nested objects are read-only
+  dictionaries and sequences are `IReadOnlyList<object?>`, so later changes to
+  your objects are not sent.
+  The v2 factories now copy their payload too, so later changes to it are not
+  sent. `PayslipNonPii`, and so `RegisterNonPiiRequest` and `BatchRecord`, can
+  no longer be deserialized from JSON; persist the wire fields and rebuild the
+  payload with a factory instead.
+- **Breaking:** `RegisterNonPiiBatchAsync` now throws `ArgumentException` and
+  sends nothing when a record's `PayslipNonPii` was not created for its
+  `Schema` or is null, as `RegisterNonPiiAsync` does. Before, the record came
+  back as a local `VALIDATION_FAILED` result that read like an API rejection.
+  Invalid payslip data, such as an unsupported currency, still comes back as
+  that record's result.
+
+### Added
+
+- Add `AustralianEarningsTypes.Etp` and the
+  `AustralianPayslipV2EarningsItem.Etp` factory for an employment termination
+  payment. It takes a required `etpType`, one of the new `AustralianEtpTypes`:
+  `Redundancy` (ETP code R), `Other` (O), `RedundancySplit` (S), `OtherSplit`
+  (P), `DeathDependant` (D), `DeathNonDependant` (N), `DeathNonDependantSplit`
+  (B) or `DeathTrustee` (T), then a required `etpComponent`, one of the new
+  `AustralianEtpComponents`: `Taxable` or `TaxFree`. The SDK sends them as
+  `etp_type` and `etp_component`. Send the taxable and tax-free components as
+  separate lines. Tax withheld from an ETP is part of `Paygw`.
+- Add the `LumpSumType`, `EtpType` and `EtpComponent` properties to
+  `AustralianPayslipV2EarningsItem`.
+
+### Removed
+
+- **Breaking:** removed `PayslipSchemas.AustralianV1` and
+  `PayslipSchemas.NewZealandV1`. The issuer API no longer registers
+  `au.payslip.v1` or `nz.payslip.v1`. The SDK sends those identifiers like any
+  other schema without a typed model, and the API rejects them. Send
+  `au.payslip.v2` instead, for example with `V2Issuance.PrepareAustralian`.
+- **Breaking:** removed the P2 PII writer and the P1/P2 parser: `Pii.Format`,
+  `Pii.Parse` and the `PiiFields` type. Verifiabl now accepts only the AU2 and
+  NZ2 PII formats from issuers. Use `V2Issuance.PrepareAustralian` or
+  `V2Issuance.PrepareNewZealand`, or for low-level use `Pii.FormatAustralian`
+  or `Pii.FormatNewZealand` with `VerifiablCrypto.EncryptPii`. Payslips already
+  issued with P1 or P2 still verify.
+
 ## [0.15.0] - 2026-10-04
 
 ### Added

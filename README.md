@@ -154,11 +154,15 @@ Earnings =
     AustralianPayslipV2EarningsItem.PaidLeave(AustralianPaidLeaveTypes.PaidParental, 600.00m),
     AustralianPayslipV2EarningsItem.Allowance(AustralianAllowanceTypes.Tools, 20.00m),
     AustralianPayslipV2EarningsItem.OtherAllowance(AustralianOtherAllowanceCategories.HomeOffice, 200.00m),
+    AustralianPayslipV2EarningsItem.LumpSum(AustralianLumpSumTypes.ARedundancy, 6000.00m),
+    AustralianPayslipV2EarningsItem.Etp(AustralianEtpTypes.Redundancy, AustralianEtpComponents.Taxable, 12000.00m),
 ],
 ```
 
 An allowance of type `other` needs a category, so use `OtherAllowance` for it.
-`Allowance` rejects `AustralianAllowanceTypes.Other`.
+`Allowance` rejects `AustralianAllowanceTypes.Other`. A lump sum needs a type
+from `AustralianLumpSumTypes`. An employment termination payment needs a type
+from `AustralianEtpTypes` and a component from `AustralianEtpComponents`.
 
 On .NET 8 and later, the SDK rejects a date left at `default(DateOnly)`
 before it sends the record, because that value is the year 0001.
@@ -197,18 +201,38 @@ wages are paid in legal tender. The `PayslipCurrencies` constants cover common
 codes, and `PayslipCurrencies.All` lists every accepted code. The SDK rejects
 any other value before it sends the record.
 
-### Legacy P2 compatibility format
+### Low-level AU2 and NZ2 formatting
 
-`Pii.Format(PiiFields)` writes P2 plaintext for existing integrations. P2 is exactly
-`P2|employeeName|position|department|employerAbn|bsb|accountNumber|accountName|address`.
-P2 preserves valid Unicode without normalization. Writers limit the complete plaintext, including
-framing and delimiters, to 1024 UTF-8 bytes. Readers continue to accept oversized P2 plaintext from
-legacy documents. The pipe, malformed Unicode, and Unicode General Categories Cc (control), Cf
-(format), Zl (line separator), and Zp (paragraph separator) are rejected before encryption. Ordinary
-international Unicode remains valid. A v2 QR uses uppercase, unpadded RFC 4648 Base32 and the
-short scan host with `#2.<BASE32>`, with an explicit byte/alphanumeric segment split; its XMP copy
-is the matching `2|reference|BASE32` returned by
-`VerifiablBarcode.BuildPayload(parts)`.
+Most integrations should use the `V2Issuance` preparation helpers. To select the schema and
+formatter yourself, format the PII with `Pii.FormatAustralian` or `Pii.FormatNewZealand`, then
+encrypt it with `VerifiablCrypto.EncryptPii`:
+
+```csharp
+string plaintext = Pii.FormatAustralian(new AustralianPiiFields
+{
+    EmployeeName = "Zoë Nguyễn",
+    Position = "Ingénieure",
+    EmployerAbn = "12 345 678 901",
+    Address = new AustralianAddress
+    {
+        Lines = ["12 Example St"],
+        Suburb = "Sydney",
+        StateOrTerritory = "NSW",
+        Postcode = "2000",
+    },
+});
+EncryptedPii encrypted = VerifiablCrypto.EncryptPii(plaintext, key);
+var parts = new BarcodeParts(verifiablReference, encrypted.Ciphertext);
+string xmpPayload = VerifiablBarcode.BuildPayload(parts);
+```
+
+Register the non-PII fields with `au.payslip.v2` for AU2 plaintext and `nz.payslip.v2` for NZ2.
+Both formatters preserve valid Unicode without normalization. The pipe, malformed Unicode, and
+Unicode General Categories Cc (control), Cf (format), Zl (line separator), and Zp (paragraph
+separator) are rejected before encryption. Ordinary international Unicode remains valid. A v2 QR
+uses uppercase, unpadded RFC 4648 Base32 and the short scan host with `#2.<BASE32>`, with an
+explicit byte/alphanumeric segment split; its XMP copy is the matching `2|reference|BASE32`
+returned by `VerifiablBarcode.BuildPayload(parts)`.
 
 Ciphertext, IV, and authentication tags are binary values and the SDK exposes
 all three as `byte[]`. You can persist them directly in binary database columns.
@@ -253,7 +277,7 @@ node script/api-reference.mjs --check
 
 The compiler enforces the mandatory fields: `Schema`, `IssuedAt`, `PayslipNonPii`, and `EncryptionMetadata` are `required`, so an incomplete request will not build.
 
-For low-level AU/NZ v2 registrations, use `PayslipNonPii.FromAustralianV2(new AustralianPayslipV2 { ... })` or `FromNewZealandV2(new NewZealandPayslipV2 { ... })`. The recommended `V2Issuance` helpers do this for you. These types and nested fields are generated from the Node Zod wire shape; they cannot carry arbitrary extra fields. The API validates dates, values, allowed codes, and cross-field rules. Free-form `AdditionalData` is rejected for these two known profiles; for legacy and future schemas it is passed to the API under the exact keys you supply. Values may be strings, booleans, numbers, `null`, nested dictionaries, or sequences of those; anything else throws an `ArgumentException` naming the key. Which keys your schema requires is documented per schema — the `au.payslip.v1` set is shown above.
+`PayslipNonPii` has no public constructor. For low-level AU/NZ v2 registrations, use `PayslipNonPii.FromAustralianV2(new AustralianPayslipV2 { ... })` or `FromNewZealandV2(new NewZealandPayslipV2 { ... })`. The recommended `V2Issuance` helpers do this for you. These types and nested fields are generated from the Node Zod wire shape; they cannot carry arbitrary extra fields. The API validates dates, values, allowed codes, and cross-field rules. For a future schema without a typed model, `PayslipNonPii.ForFutureSchema(periodStart, periodEnd, additionalData)` passes the extra fields to the API under the exact keys you supply. Values may be strings, booleans, numbers, `null`, nested dictionaries, or sequences of those; anything else makes `ForFutureSchema` throw an `ArgumentException` naming the key. It deep-copies the fields, so later changes to your objects are not sent. A registration throws an `ArgumentException` before sending when its `PayslipNonPii` was not created for its `Schema`, for example a free-form payload for `au.payslip.v2`. The SDK does not validate `au.payslip.v1` or `nz.payslip.v1` registrations locally; the API rejects them.
 
 `VerifiablBarcode.CreateSvg` produces a standalone SVG that scales to any size without losing quality; embed it directly in your PDF pipeline when it supports vector images. If it needs a raster image, use `VerifiablBarcode.CreatePng`: it composites the badge deterministically with no native dependencies, so the same record produces the byte-identical raster in every Verifiabl SDK, and QR module edges stay crisp (rasterising the SVG with a general renderer blurs them and costs scannability). PNG output comes in fixed pixel widths (480, 720, 960 or 1440; the physical print size is set where you place the image in the PDF). See the [docs](https://docs.verifiabl.io/) for both flows.
 
@@ -277,7 +301,7 @@ Failed requests are retried automatically with exponential backoff (`VerifiablCl
 
 ## Batch registration
 
-For pay runs, register up to 1000 records in one request with `RegisterNonPiiBatchAsync`. Prepare each AU/NZ v2 record with its jurisdiction's helper first. Results match the input order; one bad record does not fail the whole batch.
+For pay runs, register up to 1000 records in one request with `RegisterNonPiiBatchAsync`. Prepare each AU/NZ v2 record with its jurisdiction's helper first. Results match the input order; a record with invalid payslip data comes back as that record's error result and does not fail the whole batch. A record whose `PayslipNonPii` was not created for its `Schema` throws an `ArgumentException`, and nothing is sent.
 
 ```csharp
 DateTimeOffset issuedAt = DateTimeOffset.UtcNow;

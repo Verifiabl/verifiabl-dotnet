@@ -47,7 +47,10 @@ public static class VerifiablCrypto
     /// <see cref="Client.VerifiablIvReuseException"/>, or in a batch as an error
     /// result matched by <see cref="Client.BatchRecordResult.IsIvReused"/>.
     /// </remarks>
-    /// <param name="plaintext">The formatted string from <see cref="Pii.Format"/>.</param>
+    /// <param name="plaintext">
+    /// The AU2 or NZ2 plaintext from <see cref="Pii.FormatAustralian(AustralianPiiFields)"/> or
+    /// <see cref="Pii.FormatNewZealand(NewZealandPiiFields)"/>.
+    /// </param>
     /// <param name="key">Your 32-byte provider encryption key.</param>
     public static EncryptedPii EncryptPii(string plaintext, byte[] key)
     {

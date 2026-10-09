@@ -13,7 +13,7 @@ public class SvgBarcodeTests
 
     private static byte[] RealisticCiphertext()
     {
-        string pii = Pii.Format(new PiiFields
+        string pii = Pii.FormatAustralian(new AustralianPiiFields
         {
             EmployeeName = "Jane A. Doe",
             Position = "Senior Developer",

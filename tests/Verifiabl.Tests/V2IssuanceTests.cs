@@ -61,12 +61,10 @@ public class V2IssuanceTests
         var parts = prepared.BarcodeParts(prepared.VerifiablReference);
 
         earnings.Clear();
-        registration.PayslipNonPii.PeriodEnd = "2026-01-01";
         Assert.IsType<List<AustralianPayslipV2EarningsItem>>(
             ((AustralianPayslipV2)registration.PayslipNonPii.TypedV2Payload!).Earnings).Clear();
         registration.EncryptionMetadata.Iv[0] ^= 0xff;
         registration.EncryptionMetadata.Tag[0] ^= 0xff;
-        apiManaged.PayslipNonPii.PeriodEnd = "2026-01-01";
         Assert.IsType<List<AustralianPayslipV2EarningsItem>>(
             ((AustralianPayslipV2)apiManaged.PayslipNonPii.TypedV2Payload!).Earnings).Clear();
         apiManaged.EncryptionMetadata.Iv[0] ^= 0xff;
@@ -106,9 +104,7 @@ public class V2IssuanceTests
         Assert.NotSame(firstPayload.LeaveBalances, secondPayload.LeaveBalances);
         Assert.NotSame(firstPayload.LeaveBalances!.Annual, secondPayload.LeaveBalances!.Annual);
         earnings.Clear();
-        first.PayslipNonPii.PeriodEnd = "2026-01-01";
         Assert.IsType<List<NewZealandPayslipV2EarningsItem>>(firstPayload.Earnings).Clear();
-        second.PayslipNonPii.PeriodEnd = "2026-01-01";
         Assert.IsType<List<NewZealandPayslipV2EarningsItem>>(secondPayload.Earnings).Clear();
         Assert.Equal(original, Wire.ToWire(prepared.Registration, reference).ToJsonString());
         Assert.Contains("\"amount\":\"123.40\"", Wire.ToWire(prepared.ApiManagedRegistration).ToJsonString());

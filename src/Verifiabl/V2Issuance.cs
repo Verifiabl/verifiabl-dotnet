@@ -54,8 +54,8 @@ public sealed class PreparedV2Payslip
     // Copying decimals directly also retains their scale for wire serialization.
     internal static PayslipNonPii CopyPayslip(PayslipNonPii payslip) => payslip.TypedV2Payload switch
     {
-        AustralianPayslipV2 au => PayslipNonPii.FromAustralianV2(GeneratedPayslipCopies.Copy(au)),
-        NewZealandPayslipV2 nz => PayslipNonPii.FromNewZealandV2(GeneratedPayslipCopies.Copy(nz)),
+        AustralianPayslipV2 au => PayslipNonPii.FromAustralianV2(au),
+        NewZealandPayslipV2 nz => PayslipNonPii.FromNewZealandV2(nz),
         _ => throw new ArgumentException("A prepared payslip requires a typed v2 payload.", nameof(payslip)),
     };
 

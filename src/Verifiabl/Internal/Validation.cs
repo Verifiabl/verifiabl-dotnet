@@ -5,7 +5,7 @@ namespace Verifiabl.Internal;
 
 internal static class Validation
 {
-    /// <summary>Payslip schema identifier: <c>xx.type.vN</c>, e.g. "au.payslip.v1".</summary>
+    /// <summary>Payslip schema identifier: <c>xx.type.vN</c>, e.g. "au.payslip.v2".</summary>
     internal static readonly Regex SchemaRegex = new(
         "^[a-z]{2}\\.[a-z]+\\.v[0-9]+$",
         RegexOptions.CultureInvariant);
@@ -25,7 +25,7 @@ internal static class Validation
         if (schema is null || !SchemaRegex.IsMatch(schema))
         {
             throw new ArgumentException(
-                $"{name} must be in format 'xx.type.vN' (e.g. 'au.payslip.v1').",
+                $"{name} must be in format 'xx.type.vN' (e.g. 'au.payslip.v2').",
                 name);
         }
 
