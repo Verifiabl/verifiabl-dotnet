@@ -4,7 +4,9 @@ namespace Verifiabl.Client;
 /// Per-record outcome of a batch registration, in the same order as the
 /// submitted records (so <c>Results[i]</c> is the outcome of record <c>i</c>).
 /// <see cref="Code"/> and <see cref="Detail"/> accompany an "error" status.
-/// One bad record never fails the whole batch. Correlate by position, by the
+/// A record with invalid payslip data comes back as its own error result; a
+/// malformed envelope, or a payload not created for its schema, throws and
+/// nothing is sent. Correlate by position, by the
 /// record's <see cref="ExternalId"/>, or by <see cref="VerifiablReference"/>.
 /// </summary>
 public sealed class BatchRecordResult

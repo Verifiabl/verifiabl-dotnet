@@ -100,6 +100,51 @@ public sealed class AustralianPayslipV2EarningsItem
         YtdAmount = ytdAmount,
     };
 
+    /// <summary>Create an earnings line of type <c>lump_sum</c>.</summary>
+    /// <param name="lumpSumType">One of <see cref="AustralianLumpSumTypes"/>.</param>
+    /// <param name="amount">Wire field <c>amount</c>.</param>
+    /// <param name="units">Wire field <c>units</c>.</param>
+    /// <param name="rate">Wire field <c>rate</c>.</param>
+    /// <param name="ytdAmount">Wire field <c>ytd_amount</c>.</param>
+    public static AustralianPayslipV2EarningsItem LumpSum(
+        string lumpSumType,
+        decimal amount,
+        decimal? units = null,
+        decimal? rate = null,
+        decimal? ytdAmount = null) => new()
+    {
+        Type = AustralianEarningsTypes.LumpSum,
+        LumpSumType = lumpSumType,
+        Amount = amount,
+        Units = units,
+        Rate = rate,
+        YtdAmount = ytdAmount,
+    };
+
+    /// <summary>Create an earnings line of type <c>etp</c>.</summary>
+    /// <param name="etpType">One of <see cref="AustralianEtpTypes"/>.</param>
+    /// <param name="etpComponent">One of <see cref="AustralianEtpComponents"/>.</param>
+    /// <param name="amount">Wire field <c>amount</c>.</param>
+    /// <param name="units">Wire field <c>units</c>.</param>
+    /// <param name="rate">Wire field <c>rate</c>.</param>
+    /// <param name="ytdAmount">Wire field <c>ytd_amount</c>.</param>
+    public static AustralianPayslipV2EarningsItem Etp(
+        string etpType,
+        string etpComponent,
+        decimal amount,
+        decimal? units = null,
+        decimal? rate = null,
+        decimal? ytdAmount = null) => new()
+    {
+        Type = AustralianEarningsTypes.Etp,
+        EtpType = etpType,
+        EtpComponent = etpComponent,
+        Amount = amount,
+        Units = units,
+        Rate = rate,
+        YtdAmount = ytdAmount,
+    };
+
     /// <summary>Create an earnings line of type <c>ordinary</c>.</summary>
     /// <param name="amount">Wire field <c>amount</c>.</param>
     /// <param name="units">Wire field <c>units</c>.</param>
@@ -166,24 +211,6 @@ public sealed class AustralianPayslipV2EarningsItem
         decimal? ytdAmount = null) => new()
     {
         Type = AustralianEarningsTypes.DirectorsFees,
-        Amount = amount,
-        Units = units,
-        Rate = rate,
-        YtdAmount = ytdAmount,
-    };
-
-    /// <summary>Create an earnings line of type <c>lump_sum</c>.</summary>
-    /// <param name="amount">Wire field <c>amount</c>.</param>
-    /// <param name="units">Wire field <c>units</c>.</param>
-    /// <param name="rate">Wire field <c>rate</c>.</param>
-    /// <param name="ytdAmount">Wire field <c>ytd_amount</c>.</param>
-    public static AustralianPayslipV2EarningsItem LumpSum(
-        decimal amount,
-        decimal? units = null,
-        decimal? rate = null,
-        decimal? ytdAmount = null) => new()
-    {
-        Type = AustralianEarningsTypes.LumpSum,
         Amount = amount,
         Units = units,
         Rate = rate,
@@ -261,6 +288,18 @@ public sealed class AustralianPayslipV2EarningsItem
     /// <summary>Wire field <c>other_category</c>; see <see cref="AustralianOtherAllowanceCategories"/>.</summary>
     [JsonPropertyName("other_category")]
     public string? OtherCategory { get; init; }
+
+    /// <summary>Wire field <c>lump_sum_type</c>; see <see cref="AustralianLumpSumTypes"/>.</summary>
+    [JsonPropertyName("lump_sum_type")]
+    public string? LumpSumType { get; init; }
+
+    /// <summary>Wire field <c>etp_type</c>; see <see cref="AustralianEtpTypes"/>.</summary>
+    [JsonPropertyName("etp_type")]
+    public string? EtpType { get; init; }
+
+    /// <summary>Wire field <c>etp_component</c>; see <see cref="AustralianEtpComponents"/>.</summary>
+    [JsonPropertyName("etp_component")]
+    public string? EtpComponent { get; init; }
 }
 
 /// <summary>Generated AU/NZ v2 non-PII wire fields; the API validates values.</summary>

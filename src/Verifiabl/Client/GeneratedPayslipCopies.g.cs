@@ -23,6 +23,9 @@ internal static class GeneratedPayslipCopies
         YtdAmount = source.YtdAmount,
         AllowanceType = source.AllowanceType,
         OtherCategory = source.OtherCategory,
+        LumpSumType = source.LumpSumType,
+        EtpType = source.EtpType,
+        EtpComponent = source.EtpComponent,
     };
 
     internal static AustralianPayslipV2SalarySacrificeItem Copy(AustralianPayslipV2SalarySacrificeItem source) => new()

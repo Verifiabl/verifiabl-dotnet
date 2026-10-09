@@ -15,13 +15,9 @@ public class ClientBatchTests
     private static BatchRecord ValidRecord(string reference) => new()
     {
         VerifiablReference = reference,
-        Schema = "au.payslip.v1",
+        Schema = PayslipSchemas.AustralianV2,
         IssuedAt = new DateTimeOffset(2026, 5, 31, 1, 2, 3, TimeSpan.Zero),
-        PayslipNonPii = new PayslipNonPii
-        {
-            PeriodStart = "2026-05-01",
-            PeriodEnd = "2026-05-31",
-        },
+        PayslipNonPii = TestPayslips.Australian(),
         EncryptionMetadata = new EncryptionMetadata
         {
             Iv = new byte[12],
@@ -64,7 +60,8 @@ public class ClientBatchTests
         Assert.Equal(
             ReferenceA,
             records[0].GetProperty("verifiabl_reference").GetString());
-        Assert.Equal("au.payslip.v1", records[0].GetProperty("schema").GetString());
+        Assert.Equal(PayslipSchemas.AustralianV2, records[0].GetProperty("schema").GetString());
+        Assert.Equal("9000.00", records[0].GetProperty("payslip_non_pii").GetProperty("gross").GetString());
 
         Assert.Equal(2, response.Results.Count);
         Assert.Equal(BatchRecordStatuses.Created, response.Results[0].Status);
@@ -75,7 +72,7 @@ public class ClientBatchTests
     }
 
     [Fact]
-    public async Task PostsLegacyNewZealandV1BatchRecords()
+    public async Task PostsNewZealandV2BatchRecords()
     {
         var handler = new FakeHttpHandler
         {
@@ -85,14 +82,67 @@ public class ClientBatchTests
         };
         VerifiablClient client = Client(handler);
         BatchRecord record = ValidRecord(ReferenceA);
-        record.Schema = PayslipSchemas.NewZealandV1;
+        record.Schema = PayslipSchemas.NewZealandV2;
+        record.PayslipNonPii = PayslipNonPii.FromNewZealandV2(new NewZealandPayslipV2
+        {
+            PeriodEnd = PayslipDate("2026-05-31"),
+            PaymentDate = PayslipDate("2026-06-01"),
+            Currency = PayslipCurrencies.Nzd,
+            Gross = 100m,
+            Paye = 20m,
+            Net = 80m,
+        });
 
         RegisterNonPiiBatchResponse response = await client.RegisterNonPiiBatchAsync([record]);
 
         using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
         JsonElement sent = Assert.Single(body.RootElement.GetProperty("records").EnumerateArray());
-        Assert.Equal(PayslipSchemas.NewZealandV1, sent.GetProperty("schema").GetString());
+        Assert.Equal(PayslipSchemas.NewZealandV2, sent.GetProperty("schema").GetString());
+        Assert.Equal("20", sent.GetProperty("payslip_non_pii").GetProperty("paye").GetString());
         Assert.Equal(BatchRecordStatuses.Created, Assert.Single(response.Results).Status);
+    }
+
+    // v1 is no longer special: like any schema without a typed model, it goes to
+    // the API, which rejects it per record.
+    [Theory]
+    [InlineData("au.payslip.v1")]
+    [InlineData("nz.payslip.v1")]
+    public async Task SendsV1BatchRecordsToTheApiLikeAnyUnknownSchema(string schema)
+    {
+        var handler = new FakeHttpHandler
+        {
+            Responder = (_, _, _) => Task.FromResult(FakeHttpHandler.Json(HttpStatusCode.OK,
+                $"{{\"results\":[{{\"status\":\"error\",\"code\":\"VALIDATION_FAILED\",\"detail\":\"unsupported schema\",\"verifiabl_reference\":\"{ReferenceA}\"}}]}}")),
+        };
+        VerifiablClient client = Client(handler);
+        BatchRecord record = ValidRecord(ReferenceA);
+        record.Schema = schema;
+        record.PayslipNonPii = TestPayslips.FreeForm();
+
+        RegisterNonPiiBatchResponse response = await client.RegisterNonPiiBatchAsync([record]);
+
+        using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
+        JsonElement sent = Assert.Single(body.RootElement.GetProperty("records").EnumerateArray());
+        Assert.Equal(schema, sent.GetProperty("schema").GetString());
+        Assert.Equal("VALIDATION_FAILED", Assert.Single(response.Results).Code);
+    }
+
+    [Theory]
+    [InlineData("au.payslip.v1")]
+    [InlineData(PayslipSchemas.NewZealandV2)]
+    public async Task ThrowsForATypedAustralianV2PayslipUnderAnotherSchema(string schema)
+    {
+        var handler = new FakeHttpHandler();
+        VerifiablClient client = Client(handler);
+        BatchRecord record = ValidRecord(ReferenceB);
+        record.Schema = schema;
+
+        ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(
+            () => client.RegisterNonPiiBatchAsync([ValidRecord(ReferenceA), record]));
+
+        Assert.StartsWith($"records[1].PayslipNonPii was created for au.payslip.v2, not {schema}.", exception.Message);
+        Assert.Equal("records", exception.ParamName);
+        Assert.Empty(handler.Requests);
     }
 
     [Fact]
@@ -107,6 +157,7 @@ public class ClientBatchTests
         VerifiablClient client = Client(handler);
         BatchRecord record = ValidRecord(ReferenceA);
         record.Schema = "au.payslip.v3";
+        record.PayslipNonPii = TestPayslips.FreeForm();
 
         RegisterNonPiiBatchResponse response = await client.RegisterNonPiiBatchAsync([record]);
 
@@ -187,8 +238,47 @@ public class ClientBatchTests
         Assert.Equal("quarantined", response.Results[1].Status);
     }
 
+    // A free-form payload under a v2 schema is a coding error, not payslip data the
+    // API would reject, so the whole call throws like RegisterNonPiiAsync.
+    [Theory]
+    [InlineData(PayslipSchemas.AustralianV2)]
+    [InlineData(PayslipSchemas.NewZealandV2)]
+    public async Task ThrowsForAFreeFormPayslipUnderAV2SchemaAndSendsNothing(string schema)
+    {
+        var handler = new FakeHttpHandler();
+        VerifiablClient client = Client(handler);
+        BatchRecord invalid = ValidRecord(ReferenceB);
+        invalid.Schema = schema;
+        invalid.PayslipNonPii = TestPayslips.FreeForm();
+
+        ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(
+            () => client.RegisterNonPiiBatchAsync([ValidRecord(ReferenceA), invalid]));
+
+        Assert.StartsWith(
+            "records[1].PayslipNonPii requires PayslipNonPii.FromAustralianV2 or FromNewZealandV2.",
+            exception.Message);
+        Assert.Equal("records", exception.ParamName);
+        Assert.Empty(handler.Requests);
+    }
+
     [Fact]
-    public async Task UntypedV2PayslipIsNotSentAndDoesNotDropOtherRecords()
+    public async Task ThrowsForANullPayslipAndSendsNothing()
+    {
+        var handler = new FakeHttpHandler();
+        VerifiablClient client = Client(handler);
+        BatchRecord invalid = ValidRecord(ReferenceB);
+        invalid.PayslipNonPii = null!;
+
+        ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(
+            () => client.RegisterNonPiiBatchAsync([ValidRecord(ReferenceA), invalid]));
+
+        Assert.StartsWith("records[1].PayslipNonPii is required.", exception.Message);
+        Assert.Equal("records", exception.ParamName);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task ReportsFreeFormPayslipDataErrorsPerRecord()
     {
         var handler = new FakeHttpHandler
         {
@@ -198,12 +288,9 @@ public class ClientBatchTests
         };
         VerifiablClient client = Client(handler);
         BatchRecord invalid = ValidRecord(ReferenceA);
-        invalid.Schema = PayslipSchemas.AustralianV2;
+        invalid.Schema = "au.payslip.v3";
         invalid.ExternalId = "bad-1";
-        invalid.PayslipNonPii.AdditionalData = new Dictionary<string, object?>
-        {
-            ["employee_name"] = "Jane",
-        };
+        invalid.PayslipNonPii = TestPayslips.FreeForm(periodStart: "2026-02-30");
 
         RegisterNonPiiBatchResponse response = await client.RegisterNonPiiBatchAsync(
             [invalid, ValidRecord(ReferenceB)]);
@@ -213,23 +300,10 @@ public class ClientBatchTests
             .GetProperty("verifiabl_reference").GetString());
         Assert.Equal(BatchRecordStatuses.Error, response.Results[0].Status);
         Assert.Equal("VALIDATION_FAILED", response.Results[0].Code);
+        Assert.StartsWith("records[0].PayslipNonPii.PeriodStart must be a YYYY-MM-DD date.", response.Results[0].Detail);
         Assert.Equal("bad-1", response.Results[0].ExternalId);
         Assert.Equal(ReferenceA, response.Results[0].VerifiablReference);
         Assert.Equal(BatchRecordStatuses.Created, response.Results[1].Status);
-    }
-
-    [Fact]
-    public async Task AllUntypedV2PayslipsReturnLocalResultsWithoutNetwork()
-    {
-        var handler = new FakeHttpHandler();
-        VerifiablClient client = Client(handler);
-        BatchRecord invalid = ValidRecord(ReferenceA);
-        invalid.Schema = PayslipSchemas.AustralianV2;
-        invalid.PayslipNonPii.AdditionalData = new Dictionary<string, object?> { ["employee_name"] = "Jane" };
-        RegisterNonPiiBatchResponse response = await client.RegisterNonPiiBatchAsync([invalid]);
-
-        Assert.Empty(handler.Requests);
-        Assert.Equal("VALIDATION_FAILED", Assert.Single(response.Results).Code);
     }
 
     [Fact]

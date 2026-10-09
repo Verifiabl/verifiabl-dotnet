@@ -18,16 +18,27 @@ public class IssuanceConformanceTests
         foreach (JsonElement vector in document.RootElement.GetProperty("valid").EnumerateArray())
         {
             JsonElement fields = vector.GetProperty("fields");
-            string plaintext = Pii.Format(new PiiFields
+            string plaintext = Pii.FormatAustralian(new AustralianPiiFields
             {
                 EmployeeName = OptionalString(fields, "employeeName"),
                 Position = OptionalString(fields, "position"),
                 Department = OptionalString(fields, "department"),
+                EmployerName = OptionalString(fields, "employerName"),
                 EmployerAbn = OptionalString(fields, "employerAbn"),
                 Bsb = OptionalString(fields, "bsb"),
                 AccountNumber = OptionalString(fields, "accountNumber"),
                 AccountName = OptionalString(fields, "accountName"),
-                Address = OptionalString(fields, "address"),
+                Address = fields.TryGetProperty("address", out JsonElement address)
+                    ? new AustralianAddress
+                    {
+                        Lines = address.TryGetProperty("lines", out JsonElement lines)
+                            ? lines.EnumerateArray().Select(line => line.GetString()!).ToArray()
+                            : null,
+                        Suburb = OptionalString(address, "suburb"),
+                        StateOrTerritory = OptionalString(address, "stateOrTerritory"),
+                        Postcode = OptionalString(address, "postcode"),
+                    }
+                    : null,
             });
 
             Assert.Equal(vector.GetProperty("plaintext").GetString(), plaintext);

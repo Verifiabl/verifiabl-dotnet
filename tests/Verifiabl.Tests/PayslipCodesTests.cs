@@ -13,6 +13,9 @@ public class PayslipCodesTests
         typeof(AustralianPaidLeaveTypes),
         typeof(AustralianAllowanceTypes),
         typeof(AustralianOtherAllowanceCategories),
+        typeof(AustralianLumpSumTypes),
+        typeof(AustralianEtpTypes),
+        typeof(AustralianEtpComponents),
         typeof(AustralianSalarySacrificeTypes),
         typeof(AustralianDeductionTypes),
         typeof(AustralianSuperContributionTypes),
@@ -72,6 +75,33 @@ public class PayslipCodesTests
     }
 
     [Fact]
+    public void LumpSumAndEtpFactoriesSetTheirRequiredType()
+    {
+        AustralianPayslipV2EarningsItem lumpSum = AustralianPayslipV2EarningsItem.LumpSum(
+            AustralianLumpSumTypes.ARedundancy, 6000.00m, ytdAmount: 6000.00m);
+        AustralianPayslipV2EarningsItem etp = AustralianPayslipV2EarningsItem.Etp(
+            AustralianEtpTypes.DeathNonDependantSplit, AustralianEtpComponents.TaxFree, 12000.00m, units: 8m, rate: 1500.00m);
+
+        Assert.Equal(
+            "{\"type\":\"lump_sum\",\"amount\":\"6000.00\",\"ytd_amount\":\"6000.00\",\"lump_sum_type\":\"a_redundancy\"}",
+            Serialize(lumpSum));
+        Assert.Equal(
+            "{\"type\":\"etp\",\"amount\":\"12000.00\",\"units\":\"8\",\"rate\":\"1500.00\",\"etp_type\":\"death_non_dependant_split\",\"etp_component\":\"tax_free\"}",
+            Serialize(etp));
+        Assert.Equal(new[] { "lumpSumType", "amount", "units?", "rate?", "ytdAmount?" }, FactoryParameters("LumpSum"));
+        Assert.Equal(new[] { "etpType", "etpComponent", "amount", "units?", "rate?", "ytdAmount?" }, FactoryParameters("Etp"));
+        Assert.Equal(new[] { "a_redundancy", "a_other", "b", "d", "e" }, AustralianLumpSumTypes.All);
+        Assert.Equal(
+            new[]
+            {
+                "redundancy", "other", "redundancy_split", "other_split", "death_dependant", "death_non_dependant",
+                "death_non_dependant_split", "death_trustee",
+            },
+            AustralianEtpTypes.All);
+        Assert.Equal(new[] { "taxable", "tax_free" }, AustralianEtpComponents.All);
+    }
+
+    [Fact]
     public void AllowanceFactoryRejectsTheOtherTypeThatNeedsACategory()
     {
         ArgumentException exception = Assert.Throws<ArgumentException>(
@@ -80,6 +110,12 @@ public class PayslipCodesTests
         Assert.Equal("allowanceType", exception.ParamName);
         Assert.Contains("OtherAllowance", exception.Message);
     }
+
+    // Names the parameters, marking each optional one with a trailing "?".
+    private static IEnumerable<string> FactoryParameters(string name) => typeof(AustralianPayslipV2EarningsItem)
+        .GetMethod(name)!
+        .GetParameters()
+        .Select(parameter => parameter.Name + (parameter.HasDefaultValue ? "?" : ""));
 
     private static HashSet<string> FactoryTypes<T>() => typeof(T)
         .GetMethods(BindingFlags.Public | BindingFlags.Static)

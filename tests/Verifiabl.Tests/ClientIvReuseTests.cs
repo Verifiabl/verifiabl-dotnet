@@ -32,17 +32,17 @@ public class ClientIvReuseTests
 
     private static RegisterNonPiiRequest SingleRequest() => new()
     {
-        Schema = "au.payslip.v1",
+        Schema = PayslipSchemas.AustralianV2,
         IssuedAt = new DateTimeOffset(2026, 5, 31, 1, 2, 3, TimeSpan.Zero),
-        PayslipNonPii = new PayslipNonPii { PeriodStart = "2026-05-01", PeriodEnd = "2026-05-31" },
+        PayslipNonPii = TestPayslips.Australian(),
         EncryptionMetadata = Metadata(),
     };
 
     private static RegisterAndBuildBarcodeRequest BarcodeRequest() => new()
     {
-        Schema = "au.payslip.v1",
+        Schema = PayslipSchemas.AustralianV2,
         IssuedAt = new DateTimeOffset(2026, 5, 31, 1, 2, 3, TimeSpan.Zero),
-        PayslipNonPii = new PayslipNonPii { PeriodStart = "2026-05-01", PeriodEnd = "2026-05-31" },
+        PayslipNonPii = TestPayslips.Australian(),
         EncryptionMetadata = Metadata(),
         EncryptedPii = TestBinary.DecodeBase64Url("abc123DEF456-_"),
     };
@@ -50,9 +50,9 @@ public class ClientIvReuseTests
     private static BatchRecord BatchRecordItem(string reference) => new()
     {
         VerifiablReference = reference,
-        Schema = "au.payslip.v1",
+        Schema = PayslipSchemas.AustralianV2,
         IssuedAt = new DateTimeOffset(2026, 5, 31, 1, 2, 3, TimeSpan.Zero),
-        PayslipNonPii = new PayslipNonPii { PeriodStart = "2026-05-01", PeriodEnd = "2026-05-31" },
+        PayslipNonPii = TestPayslips.Australian(),
         EncryptionMetadata = Metadata(),
     };
 

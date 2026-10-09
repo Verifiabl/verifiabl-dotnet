@@ -13,6 +13,12 @@ public static class AustralianEarningsTypes
     /// <summary>The <c>allowance</c> code.</summary>
     public const string Allowance = "allowance";
 
+    /// <summary>The <c>lump_sum</c> code.</summary>
+    public const string LumpSum = "lump_sum";
+
+    /// <summary>The <c>etp</c> code.</summary>
+    public const string Etp = "etp";
+
     /// <summary>The <c>ordinary</c> code.</summary>
     public const string Ordinary = "ordinary";
 
@@ -25,9 +31,6 @@ public static class AustralianEarningsTypes
     /// <summary>The <c>directors_fees</c> code.</summary>
     public const string DirectorsFees = "directors_fees";
 
-    /// <summary>The <c>lump_sum</c> code.</summary>
-    public const string LumpSum = "lump_sum";
-
     /// <summary>The <c>return_to_work</c> code.</summary>
     public const string ReturnToWork = "return_to_work";
 
@@ -39,11 +42,12 @@ public static class AustralianEarningsTypes
     [
         PaidLeave,
         Allowance,
+        LumpSum,
+        Etp,
         Ordinary,
         Overtime,
         BonusCommission,
         DirectorsFees,
-        LumpSum,
         ReturnToWork,
         Other,
     ]);
@@ -157,6 +161,93 @@ public static class AustralianOtherAllowanceCategories
         Uniform,
         PrivateVehicle,
         General,
+    ]);
+}
+
+/// <summary>Lump sum <c>lump_sum_type</c> values for <c>au.payslip.v2</c>.</summary>
+public static class AustralianLumpSumTypes
+{
+    /// <summary>The <c>a_redundancy</c> code.</summary>
+    public const string ARedundancy = "a_redundancy";
+
+    /// <summary>The <c>a_other</c> code.</summary>
+    public const string AOther = "a_other";
+
+    /// <summary>The <c>b</c> code.</summary>
+    public const string B = "b";
+
+    /// <summary>The <c>d</c> code.</summary>
+    public const string D = "d";
+
+    /// <summary>The <c>e</c> code.</summary>
+    public const string E = "e";
+
+    /// <summary>Every accepted value, in contract order.</summary>
+    public static readonly IReadOnlyList<string> All = new ReadOnlyCollection<string>(
+    [
+        ARedundancy,
+        AOther,
+        B,
+        D,
+        E,
+    ]);
+}
+
+/// <summary>Employment termination payment <c>etp_type</c> values for <c>au.payslip.v2</c>.</summary>
+public static class AustralianEtpTypes
+{
+    /// <summary>The <c>redundancy</c> code.</summary>
+    public const string Redundancy = "redundancy";
+
+    /// <summary>The <c>other</c> code.</summary>
+    public const string Other = "other";
+
+    /// <summary>The <c>redundancy_split</c> code.</summary>
+    public const string RedundancySplit = "redundancy_split";
+
+    /// <summary>The <c>other_split</c> code.</summary>
+    public const string OtherSplit = "other_split";
+
+    /// <summary>The <c>death_dependant</c> code.</summary>
+    public const string DeathDependant = "death_dependant";
+
+    /// <summary>The <c>death_non_dependant</c> code.</summary>
+    public const string DeathNonDependant = "death_non_dependant";
+
+    /// <summary>The <c>death_non_dependant_split</c> code.</summary>
+    public const string DeathNonDependantSplit = "death_non_dependant_split";
+
+    /// <summary>The <c>death_trustee</c> code.</summary>
+    public const string DeathTrustee = "death_trustee";
+
+    /// <summary>Every accepted value, in contract order.</summary>
+    public static readonly IReadOnlyList<string> All = new ReadOnlyCollection<string>(
+    [
+        Redundancy,
+        Other,
+        RedundancySplit,
+        OtherSplit,
+        DeathDependant,
+        DeathNonDependant,
+        DeathNonDependantSplit,
+        DeathTrustee,
+    ]);
+}
+
+/// <summary>Employment termination payment <c>etp_component</c> values for <c>au.payslip.v2</c>.</summary>
+public static class AustralianEtpComponents
+{
+    /// <summary>The <c>taxable</c> code.</summary>
+    public const string Taxable = "taxable";
+
+    /// <summary>The <c>tax_free</c> code.</summary>
+    public const string TaxFree = "tax_free";
+
+    /// <summary>Every accepted value, in contract order.</summary>
+    public static readonly IReadOnlyList<string> All = new ReadOnlyCollection<string>(
+    [
+        Taxable,
+        TaxFree,
     ]);
 }
 
