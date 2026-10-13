@@ -319,15 +319,16 @@ public class ClientRequestTests
             Paygw = 1500.5m,
             Net = -0.0001m,
             YtdGross = 12345678901234567890.123456789m,
-            Hourly = new AustralianPayslipV2Hourly
+            BaseRate = new AustralianPayslipV2BaseRate
             {
-                OrdinaryRate = 47.3684m,
-                Hours = -76.00m,
-                Amount = 0m,
+                Amount = 47.3684m,
+                Per = AustralianBaseRatePeriods.Hour,
             },
             Earnings = [new AustralianPayslipV2EarningsItem
             {
                 Type = "ordinary",
+                Units = -76.00m,
+                Rate = 0m,
                 Amount = 6000.00m,
             }],
         });
@@ -341,9 +342,10 @@ public class ClientRequestTests
         Assert.Equal("1500.5", nonPii.GetProperty("paygw").GetString());
         Assert.Equal("-0.0001", nonPii.GetProperty("net").GetString());
         Assert.Equal("12345678901234567890.123456789", nonPii.GetProperty("ytd_gross").GetString());
-        Assert.Equal("47.3684", nonPii.GetProperty("hourly").GetProperty("ordinary_rate").GetString());
-        Assert.Equal("-76.00", nonPii.GetProperty("hourly").GetProperty("hours").GetString());
-        Assert.Equal("0", nonPii.GetProperty("hourly").GetProperty("amount").GetString());
+        Assert.Equal("47.3684", nonPii.GetProperty("base_rate").GetProperty("amount").GetString());
+        Assert.Equal("hour", nonPii.GetProperty("base_rate").GetProperty("per").GetString());
+        Assert.Equal("-76.00", nonPii.GetProperty("earnings")[0].GetProperty("units").GetString());
+        Assert.Equal("0", nonPii.GetProperty("earnings")[0].GetProperty("rate").GetString());
         Assert.Equal("6000.00", nonPii.GetProperty("earnings")[0].GetProperty("amount").GetString());
         Assert.False(nonPii.TryGetProperty("ytd_paygw", out _));
     }

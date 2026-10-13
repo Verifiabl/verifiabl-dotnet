@@ -405,6 +405,27 @@ public static class AustralianEngagementTypes
     ]);
 }
 
+/// <summary>Base rate <c>per</c> values for <c>au.payslip.v2</c>.</summary>
+public static class AustralianBaseRatePeriods
+{
+    /// <summary>The <c>hour</c> code.</summary>
+    public const string Hour = "hour";
+
+    /// <summary>The <c>day</c> code.</summary>
+    public const string Day = "day";
+
+    /// <summary>The <c>year</c> code.</summary>
+    public const string Year = "year";
+
+    /// <summary>Every accepted value, in contract order.</summary>
+    public static readonly IReadOnlyList<string> All = new ReadOnlyCollection<string>(
+    [
+        Hour,
+        Day,
+        Year,
+    ]);
+}
+
 /// <summary>Earnings line <c>type</c> values for <c>nz.payslip.v2</c>.</summary>
 public static class NewZealandEarningsTypes
 {
@@ -619,5 +640,30 @@ public static class NewZealandLeaveBalanceUnits
         Hours,
         Days,
         Weeks,
+    ]);
+}
+
+/// <summary>Base rate <c>per</c> values for <c>nz.payslip.v2</c>.</summary>
+public static class NewZealandBaseRatePeriods
+{
+    /// <summary>The <c>hour</c> code.</summary>
+    public const string Hour = "hour";
+
+    /// <summary>The <c>day</c> code.</summary>
+    public const string Day = "day";
+
+    /// <summary>The <c>week</c> code.</summary>
+    public const string Week = "week";
+
+    /// <summary>The <c>year</c> code.</summary>
+    public const string Year = "year";
+
+    /// <summary>Every accepted value, in contract order.</summary>
+    public static readonly IReadOnlyList<string> All = new ReadOnlyCollection<string>(
+    [
+        Hour,
+        Day,
+        Week,
+        Year,
     ]);
 }
