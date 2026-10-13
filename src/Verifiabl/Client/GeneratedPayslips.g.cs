@@ -7,22 +7,16 @@ using Verifiabl.Internal;
 namespace Verifiabl.Client;
 
 /// <summary>Generated AU/NZ v2 non-PII wire fields; the API validates values.</summary>
-public sealed class AustralianPayslipV2Hourly
+public sealed class AustralianPayslipV2BaseRate
 {
-    /// <summary>Wire field <c>ordinary_rate</c>.</summary>
-    [JsonPropertyName("ordinary_rate")]
-    [JsonConverter(typeof(PayslipDecimalConverter))]
-    public required decimal OrdinaryRate { get; init; }
-
-    /// <summary>Wire field <c>hours</c>.</summary>
-    [JsonPropertyName("hours")]
-    [JsonConverter(typeof(PayslipDecimalConverter))]
-    public required decimal Hours { get; init; }
-
     /// <summary>Wire field <c>amount</c>.</summary>
     [JsonPropertyName("amount")]
     [JsonConverter(typeof(PayslipDecimalConverter))]
     public required decimal Amount { get; init; }
+
+    /// <summary>Wire field <c>per</c>; see <see cref="AustralianBaseRatePeriods"/>.</summary>
+    [JsonPropertyName("per")]
+    public required string Per { get; init; }
 }
 
 /// <summary>Generated AU/NZ v2 non-PII wire fields; the API validates values.</summary>
@@ -469,14 +463,9 @@ public sealed class AustralianPayslipV2
     [JsonPropertyName("award")]
     public string? Award { get; init; }
 
-    /// <summary>Wire field <c>hourly</c>.</summary>
-    [JsonPropertyName("hourly")]
-    public AustralianPayslipV2Hourly? Hourly { get; init; }
-
-    /// <summary>Wire field <c>annual_rate</c>.</summary>
-    [JsonPropertyName("annual_rate")]
-    [JsonConverter(typeof(PayslipDecimalConverter))]
-    public decimal? AnnualRate { get; init; }
+    /// <summary>Wire field <c>base_rate</c>.</summary>
+    [JsonPropertyName("base_rate")]
+    public AustralianPayslipV2BaseRate? BaseRate { get; init; }
 
     /// <summary>Wire field <c>taxable_gross</c>.</summary>
     [JsonPropertyName("taxable_gross")]
@@ -515,22 +504,16 @@ public sealed class AustralianPayslipV2
 }
 
 /// <summary>Generated AU/NZ v2 non-PII wire fields; the API validates values.</summary>
-public sealed class NewZealandPayslipV2Hourly
+public sealed class NewZealandPayslipV2BaseRate
 {
-    /// <summary>Wire field <c>ordinary_rate</c>.</summary>
-    [JsonPropertyName("ordinary_rate")]
-    [JsonConverter(typeof(PayslipDecimalConverter))]
-    public required decimal OrdinaryRate { get; init; }
-
-    /// <summary>Wire field <c>hours</c>.</summary>
-    [JsonPropertyName("hours")]
-    [JsonConverter(typeof(PayslipDecimalConverter))]
-    public required decimal Hours { get; init; }
-
     /// <summary>Wire field <c>amount</c>.</summary>
     [JsonPropertyName("amount")]
     [JsonConverter(typeof(PayslipDecimalConverter))]
     public required decimal Amount { get; init; }
+
+    /// <summary>Wire field <c>per</c>; see <see cref="NewZealandBaseRatePeriods"/>.</summary>
+    [JsonPropertyName("per")]
+    public required string Per { get; init; }
 }
 
 /// <summary>Generated AU/NZ v2 non-PII wire fields; the API validates values.</summary>
@@ -1085,14 +1068,9 @@ public sealed class NewZealandPayslipV2
     [JsonConverter(typeof(PayslipDecimalConverter))]
     public decimal? HoursPaid { get; init; }
 
-    /// <summary>Wire field <c>hourly</c>.</summary>
-    [JsonPropertyName("hourly")]
-    public NewZealandPayslipV2Hourly? Hourly { get; init; }
-
-    /// <summary>Wire field <c>annual_rate</c>.</summary>
-    [JsonPropertyName("annual_rate")]
-    [JsonConverter(typeof(PayslipDecimalConverter))]
-    public decimal? AnnualRate { get; init; }
+    /// <summary>Wire field <c>base_rate</c>.</summary>
+    [JsonPropertyName("base_rate")]
+    public NewZealandPayslipV2BaseRate? BaseRate { get; init; }
 
     /// <summary>Wire field <c>earnings_not_liable_for_acc</c>.</summary>
     [JsonPropertyName("earnings_not_liable_for_acc")]

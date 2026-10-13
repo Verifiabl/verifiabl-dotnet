@@ -6,11 +6,10 @@ namespace Verifiabl.Client;
 
 internal static class GeneratedPayslipCopies
 {
-    internal static AustralianPayslipV2Hourly Copy(AustralianPayslipV2Hourly source) => new()
+    internal static AustralianPayslipV2BaseRate Copy(AustralianPayslipV2BaseRate source) => new()
     {
-        OrdinaryRate = source.OrdinaryRate,
-        Hours = source.Hours,
         Amount = source.Amount,
+        Per = source.Per,
     };
 
     internal static AustralianPayslipV2EarningsItem Copy(AustralianPayslipV2EarningsItem source) => new()
@@ -75,8 +74,7 @@ internal static class GeneratedPayslipCopies
         EmploymentBasis = source.EmploymentBasis,
         EngagementType = source.EngagementType,
         Award = source.Award,
-        Hourly = source.Hourly is null ? null : Copy(source.Hourly),
-        AnnualRate = source.AnnualRate,
+        BaseRate = source.BaseRate is null ? null : Copy(source.BaseRate),
         TaxableGross = source.TaxableGross,
         StslWithholding = source.StslWithholding,
         Earnings = source.Earnings is null ? null : source.Earnings.Select(item => item is null ? null! : Copy(item)).ToList(),
@@ -87,11 +85,10 @@ internal static class GeneratedPayslipCopies
         Ytd = source.Ytd is null ? null : Copy(source.Ytd),
     };
 
-    internal static NewZealandPayslipV2Hourly Copy(NewZealandPayslipV2Hourly source) => new()
+    internal static NewZealandPayslipV2BaseRate Copy(NewZealandPayslipV2BaseRate source) => new()
     {
-        OrdinaryRate = source.OrdinaryRate,
-        Hours = source.Hours,
         Amount = source.Amount,
+        Per = source.Per,
     };
 
     internal static NewZealandPayslipV2EarningsItem Copy(NewZealandPayslipV2EarningsItem source) => new()
@@ -177,8 +174,7 @@ internal static class GeneratedPayslipCopies
         TaxCode = source.TaxCode,
         EmploymentType = source.EmploymentType,
         HoursPaid = source.HoursPaid,
-        Hourly = source.Hourly is null ? null : Copy(source.Hourly),
-        AnnualRate = source.AnnualRate,
+        BaseRate = source.BaseRate is null ? null : Copy(source.BaseRate),
         EarningsNotLiableForAcc = source.EarningsNotLiableForAcc,
         Earnings = source.Earnings is null ? null : source.Earnings.Select(item => item is null ? null! : Copy(item)).ToList(),
         EmployeeShareScheme = source.EmployeeShareScheme,
