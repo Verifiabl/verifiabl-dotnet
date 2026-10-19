@@ -26,14 +26,14 @@ internal static class IssuerExample
             "PAY-1001",
             new AustralianPiiFields
             {
-                EmployeeName = "Jane A. Doe",
+                EmployeeName = "Ana Leota",
                 Position = "Senior Developer",
                 Department = "Engineering",
-                EmployerName = "Example Payroll Pty Ltd",
+                EmployerName = "Example Software Pty Ltd",
                 EmployerAbn = "12 345 678 901",
                 Bsb = "062-000",
                 AccountNumber = "****5678",
-                AccountName = "Jane A Doe",
+                AccountName = "A Leota",
                 Address = new AustralianAddress
                 {
                     Lines = ["12 Example St"],
@@ -58,19 +58,19 @@ internal static class IssuerExample
             "PAY-1002",
             new NewZealandPiiFields
             {
-                EmployeeName = "Zoë Nguyễn",
+                EmployeeName = "Ana Leota",
                 IrdNumber = "***-***-***",
-                Position = "Product Designer",
-                Department = "Product",
-                EmployerName = "Example Payroll NZ Ltd",
+                Position = "Senior Developer",
+                Department = "Engineering",
+                EmployerName = "Example Software Limited",
                 AccountNumber = "**-****-*******-**",
-                AccountName = "Zoë Nguyễn",
+                AccountName = "A Leota",
                 Address = new NewZealandAddress
                 {
-                    Lines = ["44 Harbour Rd"],
-                    Suburb = "Parnell",
-                    City = "Auckland",
-                    Postcode = "1052",
+                    Lines = ["12 Example Street"],
+                    Suburb = "Te Aro",
+                    City = "Wellington",
+                    Postcode = "6011",
                 },
             },
             new NewZealandPayslipV2
@@ -78,10 +78,10 @@ internal static class IssuerExample
                 PeriodEnd = new DateOnly(2026, 8, 31),
                 PaymentDate = new DateOnly(2026, 9, 4),
                 Currency = PayslipCurrencies.Nzd,
-                Gross = 7600.00m,
-                Paye = 1710.00m,
-                Net = 5890.00m,
-                Earnings = [NewZealandPayslipV2EarningsItem.Ordinary(7600.00m)],
+                Gross = 9000.00m,
+                Paye = 2283.96m,
+                Net = 6716.04m,
+                Earnings = [NewZealandPayslipV2EarningsItem.Ordinary(9000.00m)],
             }),
     ];
 

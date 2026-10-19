@@ -41,26 +41,26 @@ public class JurisdictionPiiTests
     {
         string plaintext = Pii.FormatAustralian(new AustralianPiiFields
         {
-            EmployeeName = "Jo Worker",
-            Position = "Analyst",
+            EmployeeName = "Taylor Nguyen",
+            Position = "Payroll Officer",
             Department = "Finance",
-            EmployerName = "Acme Pty Ltd",
+            EmployerName = "Example Software Pty Ltd",
             EmployerAbn = "12 345 678 901",
             Bsb = "062-000",
             AccountNumber = "****5678",
-            AccountName = "J Worker",
+            AccountName = "T Nguyen",
             Address = new AustralianAddress
             {
-                Lines = ["A204/11-17 Eve Street"],
-                Suburb = "Erskineville",
+                Lines = ["12 Example St"],
+                Suburb = "Sydney",
                 StateOrTerritory = "NSW",
-                Postcode = "2043",
+                Postcode = "2000",
             },
         });
 
         Assert.Equal(
-            "AU2|Jo Worker|Analyst|Finance|12 345 678 901|062-000|****5678|J Worker|" +
-            "A204/11-17 Eve Street, Erskineville NSW 2043",
+            "AU2|Taylor Nguyen|Payroll Officer|Finance|12 345 678 901|062-000|****5678|T Nguyen|" +
+            "12 Example St, Sydney NSW 2000",
             plaintext);
     }
 
@@ -69,10 +69,10 @@ public class JurisdictionPiiTests
     {
         string plaintext = Pii.FormatAustralian(new AustralianPiiFields
         {
-            EmployerName = "Acme Pty Ltd",
+            EmployerName = "Example Software Pty Ltd",
         });
 
-        Assert.Equal("AU2||||Acme Pty Ltd||||", plaintext);
+        Assert.Equal("AU2||||Example Software Pty Ltd||||", plaintext);
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public class JurisdictionPiiTests
     {
         string plaintext = Pii.FormatAustralian(new AustralianPiiFields
         {
-            EmployerName = "Acme Pty Ltd",
+            EmployerName = "Example Software Pty Ltd",
             EmployerAbn = "12 345 678 901",
         });
 
@@ -92,25 +92,25 @@ public class JurisdictionPiiTests
     {
         string plaintext = Pii.FormatNewZealand(new NewZealandPiiFields
         {
-            EmployeeName = "Jo Worker",
+            EmployeeName = "Taylor Nguyen",
             IrdNumber = "***-***-789",
-            Position = "Analyst",
+            Position = "Payroll Officer",
             Department = "Finance",
-            EmployerName = "Acme Limited",
+            EmployerName = "Example Software Limited",
             AccountNumber = "**-****-****5678-**",
-            AccountName = "J Worker",
+            AccountName = "T Nguyen",
             Address = new NewZealandAddress
             {
-                Lines = ["Level 2", "10 Lambton Quay"],
-                Suburb = "Wellington Central",
+                Lines = ["12 Example Street"],
+                Suburb = "Te Aro",
                 City = "Wellington",
                 Postcode = "6011",
             },
         });
 
         Assert.Equal(
-            "NZ2|Jo Worker|***-***-789|Analyst|Finance|Acme Limited|**-****-****5678-**|" +
-            "J Worker|Level 2, 10 Lambton Quay, Wellington Central, Wellington 6011",
+            "NZ2|Taylor Nguyen|***-***-789|Payroll Officer|Finance|Example Software Limited|**-****-****5678-**|" +
+            "T Nguyen|12 Example Street, Te Aro, Wellington 6011",
             plaintext);
     }
 

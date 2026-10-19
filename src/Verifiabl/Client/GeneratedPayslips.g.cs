@@ -19,9 +19,15 @@ public sealed class AustralianPayslipV2BaseRate
     public required string Per { get; init; }
 }
 
-/// <summary>Generated AU/NZ v2 non-PII wire fields; the API validates values.</summary>
+/// <summary>Generated AU/NZ v2 non-PII wire fields; create a line with one of its factories. The API validates values.</summary>
 public sealed class AustralianPayslipV2EarningsItem
 {
+    internal AustralianPayslipV2EarningsItem(string type, decimal amount)
+    {
+        Type = type;
+        Amount = amount;
+    }
+
     /// <summary>Create an earnings line of type <c>paid_leave</c>.</summary>
     /// <param name="leaveType">One of <see cref="AustralianPaidLeaveTypes"/>.</param>
     /// <param name="amount">Wire field <c>amount</c>.</param>
@@ -33,15 +39,21 @@ public sealed class AustralianPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null)
     {
-        Type = AustralianEarningsTypes.PaidLeave,
-        LeaveType = leaveType,
-        Amount = amount,
-        Units = units,
-        Rate = rate,
-        YtdAmount = ytdAmount,
-    };
+        if (leaveType is null)
+        {
+            throw new ArgumentNullException(nameof(leaveType));
+        }
+
+        return new(AustralianEarningsTypes.PaidLeave, amount)
+        {
+            LeaveType = leaveType,
+            Units = units,
+            Rate = rate,
+            YtdAmount = ytdAmount,
+        };
+    }
 
     /// <summary>Create an allowance line of any type except <c>other</c>; use <see cref="OtherAllowance"/> for that type.</summary>
     /// <param name="allowanceType">One of <see cref="AustralianAllowanceTypes"/>.</param>
@@ -56,16 +68,19 @@ public sealed class AustralianPayslipV2EarningsItem
         decimal? rate = null,
         decimal? ytdAmount = null)
     {
+        if (allowanceType is null)
+        {
+            throw new ArgumentNullException(nameof(allowanceType));
+        }
+
         if (allowanceType == AustralianAllowanceTypes.Other)
         {
             throw new ArgumentException("Use OtherAllowance for an allowance of type other.", nameof(allowanceType));
         }
 
-        return new()
+        return new(AustralianEarningsTypes.Allowance, amount)
         {
-            Type = AustralianEarningsTypes.Allowance,
             AllowanceType = allowanceType,
-            Amount = amount,
             Units = units,
             Rate = rate,
             YtdAmount = ytdAmount,
@@ -83,16 +98,22 @@ public sealed class AustralianPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null)
     {
-        Type = AustralianEarningsTypes.Allowance,
-        AllowanceType = AustralianAllowanceTypes.Other,
-        OtherCategory = otherCategory,
-        Amount = amount,
-        Units = units,
-        Rate = rate,
-        YtdAmount = ytdAmount,
-    };
+        if (otherCategory is null)
+        {
+            throw new ArgumentNullException(nameof(otherCategory));
+        }
+
+        return new(AustralianEarningsTypes.Allowance, amount)
+        {
+            AllowanceType = AustralianAllowanceTypes.Other,
+            OtherCategory = otherCategory,
+            Units = units,
+            Rate = rate,
+            YtdAmount = ytdAmount,
+        };
+    }
 
     /// <summary>Create an earnings line of type <c>lump_sum</c>.</summary>
     /// <param name="lumpSumType">One of <see cref="AustralianLumpSumTypes"/>.</param>
@@ -105,15 +126,21 @@ public sealed class AustralianPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null)
     {
-        Type = AustralianEarningsTypes.LumpSum,
-        LumpSumType = lumpSumType,
-        Amount = amount,
-        Units = units,
-        Rate = rate,
-        YtdAmount = ytdAmount,
-    };
+        if (lumpSumType is null)
+        {
+            throw new ArgumentNullException(nameof(lumpSumType));
+        }
+
+        return new(AustralianEarningsTypes.LumpSum, amount)
+        {
+            LumpSumType = lumpSumType,
+            Units = units,
+            Rate = rate,
+            YtdAmount = ytdAmount,
+        };
+    }
 
     /// <summary>Create an earnings line of type <c>etp</c>.</summary>
     /// <param name="etpType">One of <see cref="AustralianEtpTypes"/>.</param>
@@ -128,16 +155,27 @@ public sealed class AustralianPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null)
     {
-        Type = AustralianEarningsTypes.Etp,
-        EtpType = etpType,
-        EtpComponent = etpComponent,
-        Amount = amount,
-        Units = units,
-        Rate = rate,
-        YtdAmount = ytdAmount,
-    };
+        if (etpType is null)
+        {
+            throw new ArgumentNullException(nameof(etpType));
+        }
+
+        if (etpComponent is null)
+        {
+            throw new ArgumentNullException(nameof(etpComponent));
+        }
+
+        return new(AustralianEarningsTypes.Etp, amount)
+        {
+            EtpType = etpType,
+            EtpComponent = etpComponent,
+            Units = units,
+            Rate = rate,
+            YtdAmount = ytdAmount,
+        };
+    }
 
     /// <summary>Create an earnings line of type <c>ordinary</c>.</summary>
     /// <param name="amount">Wire field <c>amount</c>.</param>
@@ -148,10 +186,8 @@ public sealed class AustralianPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(AustralianEarningsTypes.Ordinary, amount)
     {
-        Type = AustralianEarningsTypes.Ordinary,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -166,10 +202,8 @@ public sealed class AustralianPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(AustralianEarningsTypes.Overtime, amount)
     {
-        Type = AustralianEarningsTypes.Overtime,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -184,10 +218,8 @@ public sealed class AustralianPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(AustralianEarningsTypes.BonusCommission, amount)
     {
-        Type = AustralianEarningsTypes.BonusCommission,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -202,10 +234,8 @@ public sealed class AustralianPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(AustralianEarningsTypes.DirectorsFees, amount)
     {
-        Type = AustralianEarningsTypes.DirectorsFees,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -220,10 +250,8 @@ public sealed class AustralianPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(AustralianEarningsTypes.ReturnToWork, amount)
     {
-        Type = AustralianEarningsTypes.ReturnToWork,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -238,10 +266,8 @@ public sealed class AustralianPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(AustralianEarningsTypes.Other, amount)
     {
-        Type = AustralianEarningsTypes.Other,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -249,51 +275,51 @@ public sealed class AustralianPayslipV2EarningsItem
 
     /// <summary>Wire field <c>type</c>; see <see cref="AustralianEarningsTypes"/>.</summary>
     [JsonPropertyName("type")]
-    public required string Type { get; init; }
+    public string Type { get; }
 
     /// <summary>Wire field <c>leave_type</c>; see <see cref="AustralianPaidLeaveTypes"/>.</summary>
     [JsonPropertyName("leave_type")]
-    public string? LeaveType { get; init; }
+    public string? LeaveType { get; internal init; }
 
     /// <summary>Wire field <c>amount</c>.</summary>
     [JsonPropertyName("amount")]
     [JsonConverter(typeof(PayslipDecimalConverter))]
-    public required decimal Amount { get; init; }
+    public decimal Amount { get; }
 
     /// <summary>Wire field <c>units</c>.</summary>
     [JsonPropertyName("units")]
     [JsonConverter(typeof(PayslipDecimalConverter))]
-    public decimal? Units { get; init; }
+    public decimal? Units { get; internal init; }
 
     /// <summary>Wire field <c>rate</c>.</summary>
     [JsonPropertyName("rate")]
     [JsonConverter(typeof(PayslipDecimalConverter))]
-    public decimal? Rate { get; init; }
+    public decimal? Rate { get; internal init; }
 
     /// <summary>Wire field <c>ytd_amount</c>.</summary>
     [JsonPropertyName("ytd_amount")]
     [JsonConverter(typeof(PayslipDecimalConverter))]
-    public decimal? YtdAmount { get; init; }
+    public decimal? YtdAmount { get; internal init; }
 
     /// <summary>Wire field <c>allowance_type</c>; see <see cref="AustralianAllowanceTypes"/>.</summary>
     [JsonPropertyName("allowance_type")]
-    public string? AllowanceType { get; init; }
+    public string? AllowanceType { get; internal init; }
 
     /// <summary>Wire field <c>other_category</c>; see <see cref="AustralianOtherAllowanceCategories"/>.</summary>
     [JsonPropertyName("other_category")]
-    public string? OtherCategory { get; init; }
+    public string? OtherCategory { get; internal init; }
 
     /// <summary>Wire field <c>lump_sum_type</c>; see <see cref="AustralianLumpSumTypes"/>.</summary>
     [JsonPropertyName("lump_sum_type")]
-    public string? LumpSumType { get; init; }
+    public string? LumpSumType { get; internal init; }
 
     /// <summary>Wire field <c>etp_type</c>; see <see cref="AustralianEtpTypes"/>.</summary>
     [JsonPropertyName("etp_type")]
-    public string? EtpType { get; init; }
+    public string? EtpType { get; internal init; }
 
     /// <summary>Wire field <c>etp_component</c>; see <see cref="AustralianEtpComponents"/>.</summary>
     [JsonPropertyName("etp_component")]
-    public string? EtpComponent { get; init; }
+    public string? EtpComponent { get; internal init; }
 }
 
 /// <summary>Generated AU/NZ v2 non-PII wire fields; the API validates values.</summary>
@@ -516,9 +542,15 @@ public sealed class NewZealandPayslipV2BaseRate
     public required string Per { get; init; }
 }
 
-/// <summary>Generated AU/NZ v2 non-PII wire fields; the API validates values.</summary>
+/// <summary>Generated AU/NZ v2 non-PII wire fields; create a line with one of its factories. The API validates values.</summary>
 public sealed class NewZealandPayslipV2EarningsItem
 {
+    internal NewZealandPayslipV2EarningsItem(string type, decimal amount)
+    {
+        Type = type;
+        Amount = amount;
+    }
+
     /// <summary>Create an earnings line of type <c>paid_leave</c>.</summary>
     /// <param name="leaveType">One of <see cref="NewZealandPaidLeaveTypes"/>.</param>
     /// <param name="amount">Wire field <c>amount</c>.</param>
@@ -530,15 +562,21 @@ public sealed class NewZealandPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null)
     {
-        Type = NewZealandEarningsTypes.PaidLeave,
-        LeaveType = leaveType,
-        Amount = amount,
-        Units = units,
-        Rate = rate,
-        YtdAmount = ytdAmount,
-    };
+        if (leaveType is null)
+        {
+            throw new ArgumentNullException(nameof(leaveType));
+        }
+
+        return new(NewZealandEarningsTypes.PaidLeave, amount)
+        {
+            LeaveType = leaveType,
+            Units = units,
+            Rate = rate,
+            YtdAmount = ytdAmount,
+        };
+    }
 
     /// <summary>Create an earnings line of type <c>allowance</c>.</summary>
     /// <param name="allowanceType">One of <see cref="NewZealandAllowanceTypes"/>.</param>
@@ -551,15 +589,21 @@ public sealed class NewZealandPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null)
     {
-        Type = NewZealandEarningsTypes.Allowance,
-        AllowanceType = allowanceType,
-        Amount = amount,
-        Units = units,
-        Rate = rate,
-        YtdAmount = ytdAmount,
-    };
+        if (allowanceType is null)
+        {
+            throw new ArgumentNullException(nameof(allowanceType));
+        }
+
+        return new(NewZealandEarningsTypes.Allowance, amount)
+        {
+            AllowanceType = allowanceType,
+            Units = units,
+            Rate = rate,
+            YtdAmount = ytdAmount,
+        };
+    }
 
     /// <summary>Create an earnings line of type <c>ordinary</c>.</summary>
     /// <param name="amount">Wire field <c>amount</c>.</param>
@@ -570,10 +614,8 @@ public sealed class NewZealandPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(NewZealandEarningsTypes.Ordinary, amount)
     {
-        Type = NewZealandEarningsTypes.Ordinary,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -588,10 +630,8 @@ public sealed class NewZealandPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(NewZealandEarningsTypes.Overtime, amount)
     {
-        Type = NewZealandEarningsTypes.Overtime,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -606,10 +646,8 @@ public sealed class NewZealandPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(NewZealandEarningsTypes.PenalRate, amount)
     {
-        Type = NewZealandEarningsTypes.PenalRate,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -624,10 +662,8 @@ public sealed class NewZealandPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(NewZealandEarningsTypes.PieceWork, amount)
     {
-        Type = NewZealandEarningsTypes.PieceWork,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -642,10 +678,8 @@ public sealed class NewZealandPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(NewZealandEarningsTypes.BonusCommission, amount)
     {
-        Type = NewZealandEarningsTypes.BonusCommission,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -660,10 +694,8 @@ public sealed class NewZealandPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(NewZealandEarningsTypes.ExtraPay, amount)
     {
-        Type = NewZealandEarningsTypes.ExtraPay,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -678,10 +710,8 @@ public sealed class NewZealandPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(NewZealandEarningsTypes.SchedularPayment, amount)
     {
-        Type = NewZealandEarningsTypes.SchedularPayment,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -696,10 +726,8 @@ public sealed class NewZealandPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(NewZealandEarningsTypes.DirectorsFees, amount)
     {
-        Type = NewZealandEarningsTypes.DirectorsFees,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -714,10 +742,8 @@ public sealed class NewZealandPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(NewZealandEarningsTypes.PayAsYouGoHolidayPay, amount)
     {
-        Type = NewZealandEarningsTypes.PayAsYouGoHolidayPay,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -732,10 +758,8 @@ public sealed class NewZealandPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(NewZealandEarningsTypes.LeaveCompensationPayment, amount)
     {
-        Type = NewZealandEarningsTypes.LeaveCompensationPayment,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -750,10 +774,8 @@ public sealed class NewZealandPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(NewZealandEarningsTypes.AnnualHolidayCashOut, amount)
     {
-        Type = NewZealandEarningsTypes.AnnualHolidayCashOut,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -768,10 +790,8 @@ public sealed class NewZealandPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(NewZealandEarningsTypes.AlternativeHolidayCashOut, amount)
     {
-        Type = NewZealandEarningsTypes.AlternativeHolidayCashOut,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -786,10 +806,8 @@ public sealed class NewZealandPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(NewZealandEarningsTypes.HolidayPayOnTermination, amount)
     {
-        Type = NewZealandEarningsTypes.HolidayPayOnTermination,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -804,10 +822,8 @@ public sealed class NewZealandPayslipV2EarningsItem
         decimal amount,
         decimal? units = null,
         decimal? rate = null,
-        decimal? ytdAmount = null) => new()
+        decimal? ytdAmount = null) => new(NewZealandEarningsTypes.Other, amount)
     {
-        Type = NewZealandEarningsTypes.Other,
-        Amount = amount,
         Units = units,
         Rate = rate,
         YtdAmount = ytdAmount,
@@ -815,35 +831,35 @@ public sealed class NewZealandPayslipV2EarningsItem
 
     /// <summary>Wire field <c>type</c>; see <see cref="NewZealandEarningsTypes"/>.</summary>
     [JsonPropertyName("type")]
-    public required string Type { get; init; }
+    public string Type { get; }
 
     /// <summary>Wire field <c>leave_type</c>; see <see cref="NewZealandPaidLeaveTypes"/>.</summary>
     [JsonPropertyName("leave_type")]
-    public string? LeaveType { get; init; }
+    public string? LeaveType { get; internal init; }
 
     /// <summary>Wire field <c>amount</c>.</summary>
     [JsonPropertyName("amount")]
     [JsonConverter(typeof(PayslipDecimalConverter))]
-    public required decimal Amount { get; init; }
+    public decimal Amount { get; }
 
     /// <summary>Wire field <c>units</c>.</summary>
     [JsonPropertyName("units")]
     [JsonConverter(typeof(PayslipDecimalConverter))]
-    public decimal? Units { get; init; }
+    public decimal? Units { get; internal init; }
 
     /// <summary>Wire field <c>rate</c>.</summary>
     [JsonPropertyName("rate")]
     [JsonConverter(typeof(PayslipDecimalConverter))]
-    public decimal? Rate { get; init; }
+    public decimal? Rate { get; internal init; }
 
     /// <summary>Wire field <c>ytd_amount</c>.</summary>
     [JsonPropertyName("ytd_amount")]
     [JsonConverter(typeof(PayslipDecimalConverter))]
-    public decimal? YtdAmount { get; init; }
+    public decimal? YtdAmount { get; internal init; }
 
     /// <summary>Wire field <c>allowance_type</c>; see <see cref="NewZealandAllowanceTypes"/>.</summary>
     [JsonPropertyName("allowance_type")]
-    public string? AllowanceType { get; init; }
+    public string? AllowanceType { get; internal init; }
 }
 
 /// <summary>Generated AU/NZ v2 non-PII wire fields; the API validates values.</summary>
