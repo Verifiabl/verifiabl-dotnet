@@ -324,13 +324,7 @@ public class ClientRequestTests
                 Amount = 47.3684m,
                 Per = AustralianBaseRatePeriods.Hour,
             },
-            Earnings = [new AustralianPayslipV2EarningsItem
-            {
-                Type = "ordinary",
-                Units = -76.00m,
-                Rate = 0m,
-                Amount = 6000.00m,
-            }],
+            Earnings = [AustralianPayslipV2EarningsItem.Ordinary(6000.00m, units: -76.00m, rate: 0m)],
         });
 
         await client.RegisterNonPiiAsync(request);
@@ -1001,6 +995,28 @@ public class ClientRequestTests
         Assert.All(typeof(PayslipNonPii).GetProperties(), property => Assert.Null(property.GetSetMethod()));
     }
 
+    [Theory]
+    [InlineData(typeof(AustralianPayslipV2EarningsItem))]
+    [InlineData(typeof(NewZealandPayslipV2EarningsItem))]
+    public void EarningsLinesHaveNoPublicConstructorOrSetters(Type line)
+    {
+        // A lump sum line can only come from LumpSum(lumpSumType, ...), so it always carries its code.
+        Assert.Empty(line.GetConstructors());
+        Assert.All(line.GetProperties(), property => Assert.Null(property.GetSetMethod()));
+    }
+
+    [Fact]
+    public void EarningsFactoriesRejectANullRequiredCode()
+    {
+        // The serializer omits null members, so a null code would send a bare lump sum.
+        Assert.Equal("lumpSumType", Assert.Throws<ArgumentNullException>(
+            () => AustralianPayslipV2EarningsItem.LumpSum(null!, 100m)).ParamName);
+        Assert.Equal("etpType", Assert.Throws<ArgumentNullException>(
+            () => AustralianPayslipV2EarningsItem.Etp(null!, AustralianEtpComponents.Taxable, 100m)).ParamName);
+        Assert.Equal("leaveType", Assert.Throws<ArgumentNullException>(
+            () => NewZealandPayslipV2EarningsItem.PaidLeave(null!, 100m)).ParamName);
+    }
+
     [Fact]
     public async Task DeepCopiesFreeFormFieldsWhenTheyAreCreated()
     {
@@ -1017,7 +1033,7 @@ public class ClientRequestTests
         RegisterNonPiiRequest request = FutureSchemaRequest();
         request.PayslipNonPii = TestPayslips.FreeForm(fields);
         fields["total_hours"] = 1;
-        fields["employee_name"] = "Jane Citizen";
+        fields["employee_name"] = "Taylor Nguyen";
         allowances.Add("travel");
         employer["abn"] = "98765432109";
 

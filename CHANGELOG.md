@@ -6,6 +6,30 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-19
+
+First stable release. The public API now follows Semantic Versioning.
+
+### Changed
+
+- **Breaking:** `AustralianPayslipV2EarningsItem` and
+  `NewZealandPayslipV2EarningsItem` are factory-only. They have no public
+  constructor or setters, so an AU2 lump sum always carries its
+  `LumpSumType`. To migrate, replace an object initializer with the line's
+  factory, for example `AustralianPayslipV2EarningsItem.Ordinary(amount,
+  units: hours, rate: rate)` or `LumpSum(AustralianLumpSumTypes.B, amount)`.
+
+- `AustralianBaseRatePeriods` and `NewZealandBaseRatePeriods` both list every
+  period a payslip prints a rate in: `Hour`, `Day`, `Week`, `Fortnight`,
+  `Month` and `Year`.
+
+### Added
+
+- `AustralianSuperContributionTypes.Other`, for an employer super contribution
+  that is not SG, RESC or salary sacrifice, such as an award or agreement rate
+  above SG. `Resc` excludes salary sacrifice, which has its own
+  `SalarySacrifice` line.
+
 ## [0.17.0] - 2026-10-13
 
 ### Changed

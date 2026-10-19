@@ -73,14 +73,14 @@ export function check(packageDirectory = "artifacts") {
       join(output, runDirectory, group, id, "manifest.json"), "utf8"));
     for (const [id, schema, currency, gross, taxField, tax] of [
       ["PAY-1001", "au.payslip.v2", "AUD", "9000.00", "paygw", "2250.00"],
-      ["PAY-1002", "nz.payslip.v2", "NZD", "7600.00", "paye", "1710.00"],
+      ["PAY-1002", "nz.payslip.v2", "NZD", "9000.00", "paye", "2283.96"],
     ]) {
       const batch = manifest("batch", id);
       assert.equal(batch.verifiablReference, batch.registrationRequest.verifiablReference);
       assert.equal(readFileSync(
         join(output, runDirectory, "batch", id, "xmp-payload.txt"), "utf8",
       ).startsWith(`2|${batch.verifiablReference}|`), true);
-      assert.ok(!JSON.stringify(batch).includes(id === "PAY-1001" ? "Jane A. Doe" : "Zoë Nguyễn"));
+      assert.ok(!JSON.stringify(batch).includes("Ana Leota"));
       assert.equal(batch.registrationRequest.schema, schema);
       const fields = batch.registrationRequest.payslipNonPii;
       assert.deepEqual(fields, {
@@ -89,7 +89,7 @@ export function check(packageDirectory = "artifacts") {
         currency,
         gross,
         [taxField]: tax,
-        net: id === "PAY-1001" ? "6750.00" : "5890.00",
+        net: id === "PAY-1001" ? "6750.00" : "6716.04",
         ...(id === "PAY-1001" ? { pay_frequency: "monthly" } : {}),
         earnings: [{ type: "ordinary", amount: gross }],
       });

@@ -309,12 +309,16 @@ public static class AustralianSuperContributionTypes
     /// <summary>The <c>salary_sacrifice</c> code.</summary>
     public const string SalarySacrifice = "salary_sacrifice";
 
+    /// <summary>The <c>other</c> code.</summary>
+    public const string Other = "other";
+
     /// <summary>Every accepted value, in contract order.</summary>
     public static readonly IReadOnlyList<string> All = new ReadOnlyCollection<string>(
     [
         SuperannuationGuarantee,
         Resc,
         SalarySacrifice,
+        Other,
     ]);
 }
 
@@ -414,6 +418,15 @@ public static class AustralianBaseRatePeriods
     /// <summary>The <c>day</c> code.</summary>
     public const string Day = "day";
 
+    /// <summary>The <c>week</c> code.</summary>
+    public const string Week = "week";
+
+    /// <summary>The <c>fortnight</c> code.</summary>
+    public const string Fortnight = "fortnight";
+
+    /// <summary>The <c>month</c> code.</summary>
+    public const string Month = "month";
+
     /// <summary>The <c>year</c> code.</summary>
     public const string Year = "year";
 
@@ -422,6 +435,9 @@ public static class AustralianBaseRatePeriods
     [
         Hour,
         Day,
+        Week,
+        Fortnight,
+        Month,
         Year,
     ]);
 }
@@ -655,6 +671,12 @@ public static class NewZealandBaseRatePeriods
     /// <summary>The <c>week</c> code.</summary>
     public const string Week = "week";
 
+    /// <summary>The <c>fortnight</c> code.</summary>
+    public const string Fortnight = "fortnight";
+
+    /// <summary>The <c>month</c> code.</summary>
+    public const string Month = "month";
+
     /// <summary>The <c>year</c> code.</summary>
     public const string Year = "year";
 
@@ -664,6 +686,8 @@ public static class NewZealandBaseRatePeriods
         Hour,
         Day,
         Week,
+        Fortnight,
+        Month,
         Year,
     ]);
 }

@@ -15,13 +15,13 @@ public class SvgBarcodeTests
     {
         string pii = Pii.FormatAustralian(new AustralianPiiFields
         {
-            EmployeeName = "Jane A. Doe",
+            EmployeeName = "Ana Leota",
             Position = "Senior Developer",
             Department = "Engineering",
             EmployerAbn = "12345678901",
             Bsb = "062-000",
             AccountNumber = "12345678",
-            AccountName = "Jane A Doe",
+            AccountName = "A Leota",
         });
         // Deterministic bytes with the exact length EncryptPii would emit (GCM
         // ciphertext length equals plaintext length). EncryptPii's random IV made

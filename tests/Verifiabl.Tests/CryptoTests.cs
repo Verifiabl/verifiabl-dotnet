@@ -18,7 +18,7 @@ public class CryptoTests
     public void ProducesTheVerifiablCiphertextShape()
     {
         byte[] key = NewKey();
-        string plaintext = Pii.FormatAustralian(new AustralianPiiFields { EmployeeName = "Jane A. Doe" });
+        string plaintext = Pii.FormatAustralian(new AustralianPiiFields { EmployeeName = "Taylor Nguyen" });
 
         EncryptedPii encrypted = VerifiablCrypto.EncryptPii(plaintext, key);
 
@@ -33,7 +33,7 @@ public class CryptoTests
         byte[] key = NewKey();
         string plaintext = Pii.FormatAustralian(new AustralianPiiFields
         {
-            EmployeeName = "Jane A. Doe",
+            EmployeeName = "Taylor Nguyen",
             Bsb = "062-000",
             AccountNumber = "12345678",
         });
@@ -55,7 +55,7 @@ public class CryptoTests
     public void TamperedCiphertextFailsAuthentication()
     {
         byte[] key = NewKey();
-        EncryptedPii encrypted = VerifiablCrypto.EncryptPii("AU2|Jane|||||||", key);
+        EncryptedPii encrypted = VerifiablCrypto.EncryptPii("AU2|Taylor Nguyen|||||||", key);
 
         encrypted.Ciphertext[0] ^= 0xFF;
         byte[] decrypted = new byte[encrypted.Ciphertext.Length];
@@ -73,8 +73,8 @@ public class CryptoTests
     {
         byte[] key = NewKey();
 
-        EncryptedPii first = VerifiablCrypto.EncryptPii("AU2|Jane|||||||", key);
-        EncryptedPii second = VerifiablCrypto.EncryptPii("AU2|Jane|||||||", key);
+        EncryptedPii first = VerifiablCrypto.EncryptPii("AU2|Taylor Nguyen|||||||", key);
+        EncryptedPii second = VerifiablCrypto.EncryptPii("AU2|Taylor Nguyen|||||||", key);
 
         Assert.False(first.Metadata.Iv.SequenceEqual(second.Metadata.Iv));
         Assert.False(first.Ciphertext.SequenceEqual(second.Ciphertext));

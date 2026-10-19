@@ -12,11 +12,9 @@ internal static class GeneratedPayslipCopies
         Per = source.Per,
     };
 
-    internal static AustralianPayslipV2EarningsItem Copy(AustralianPayslipV2EarningsItem source) => new()
+    internal static AustralianPayslipV2EarningsItem Copy(AustralianPayslipV2EarningsItem source) => new(source.Type, source.Amount)
     {
-        Type = source.Type,
         LeaveType = source.LeaveType,
-        Amount = source.Amount,
         Units = source.Units,
         Rate = source.Rate,
         YtdAmount = source.YtdAmount,
@@ -91,11 +89,9 @@ internal static class GeneratedPayslipCopies
         Per = source.Per,
     };
 
-    internal static NewZealandPayslipV2EarningsItem Copy(NewZealandPayslipV2EarningsItem source) => new()
+    internal static NewZealandPayslipV2EarningsItem Copy(NewZealandPayslipV2EarningsItem source) => new(source.Type, source.Amount)
     {
-        Type = source.Type,
         LeaveType = source.LeaveType,
-        Amount = source.Amount,
         Units = source.Units,
         Rate = source.Rate,
         YtdAmount = source.YtdAmount,

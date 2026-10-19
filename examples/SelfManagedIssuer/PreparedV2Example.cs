@@ -8,7 +8,7 @@ internal static class PreparedV2Example
         IVerifiablClient client, byte[] providerKey)
     {
         PreparedV2Payslip au = V2Issuance.PrepareAustralian(
-            pii: new AustralianPiiFields { EmployeeName = "Example Employee", EmployerName = "Example Pty Ltd" },
+            pii: new AustralianPiiFields { EmployeeName = "Example Employee", EmployerName = "Example Software Pty Ltd" },
             payslip: new AustralianPayslipV2 { PeriodEnd = new DateOnly(2026, 8, 31), PaymentDate = new DateOnly(2026, 9, 4), Currency = PayslipCurrencies.Aud, Gross = 9000m, Paygw = 2250m, Net = 6750m },
             issuedAt: DateTimeOffset.UtcNow, key: providerKey);
         // Atomically persist au.Registration and
@@ -19,7 +19,7 @@ internal static class PreparedV2Example
         BarcodeSvgResult svg = VerifiablBarcode.CreateSvg(parts, new BarcodeSvgOptions { Environment = VerifiablEnvironment.Sandbox });
 
         PreparedV2Payslip nz = V2Issuance.PrepareNewZealand(
-            pii: new NewZealandPiiFields { EmployeeName = "Example Employee", EmployerName = "Example NZ Ltd" },
+            pii: new NewZealandPiiFields { EmployeeName = "Example Employee", EmployerName = "Example Software Limited" },
             payslip: new NewZealandPayslipV2 { PeriodEnd = new DateOnly(2026, 8, 31), PaymentDate = new DateOnly(2026, 9, 4), Currency = PayslipCurrencies.Nzd, Gross = 7600m, Paye = 1710m, Net = 5890m },
             issuedAt: DateTimeOffset.UtcNow, key: providerKey);
         // No reference in this request: the API assigns one. Ambiguous failures

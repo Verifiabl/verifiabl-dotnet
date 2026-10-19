@@ -81,7 +81,7 @@ byte[] key = Convert.FromBase64String(
 PreparedV2Payslip prepared = V2Issuance.PrepareAustralian(
     pii: new AustralianPiiFields
     {
-        EmployeeName = "Jane A. Doe", EmployerName = "Example Payroll Pty Ltd",
+        EmployeeName = "Ana Leota", EmployerName = "Example Software Pty Ltd",
         EmployerAbn = "12 345 678 901",
     },
     payslip: new AustralianPayslipV2
@@ -120,12 +120,12 @@ ambiguous failure.
 
 ```csharp
 PreparedV2Payslip nzPrepared = V2Issuance.PrepareNewZealand(
-    pii: new NewZealandPiiFields { EmployeeName = "Zoë Nguyễn", IrdNumber = "***-***-***" },
+    pii: new NewZealandPiiFields { EmployeeName = "Ana Leota", IrdNumber = "***-***-***" },
     payslip: new NewZealandPayslipV2
     {
         PeriodEnd = new DateOnly(2026, 5, 31), PaymentDate = new DateOnly(2026, 6, 4),
         Currency = PayslipCurrencies.Nzd,
-        Gross = 7600.00m, Paye = 1710.00m, Net = 5890.00m,
+        Gross = 9000.00m, Paye = 2283.96m, Net = 6716.04m,
     },
     issuedAt: DateTimeOffset.UtcNow, key: key);
 // Alternative API-managed flow: the API returns a PNG and its own reference.
@@ -145,7 +145,8 @@ Each field with a fixed set of values has a constants class, for example
 `string`, so you can send a code that the API accepts before you upgrade the
 SDK. Printed-text fields such as `Award` and the NZ `TaxCode` have no constants.
 
-Use the earnings line factories to set only the fields of one line type:
+Create earnings lines with their factories. Each factory sets only the fields
+of its line type, and a line has no public constructor or setters:
 
 ```csharp
 Earnings =
@@ -210,8 +211,8 @@ encrypt it with `VerifiablCrypto.EncryptPii`:
 ```csharp
 string plaintext = Pii.FormatAustralian(new AustralianPiiFields
 {
-    EmployeeName = "Zoë Nguyễn",
-    Position = "Ingénieure",
+    EmployeeName = "Ana Leota",
+    Position = "Senior Developer",
     EmployerAbn = "12 345 678 901",
     Address = new AustralianAddress
     {

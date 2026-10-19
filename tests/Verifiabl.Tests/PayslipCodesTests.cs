@@ -22,11 +22,13 @@ public class PayslipCodesTests
         typeof(AustralianPayFrequencies),
         typeof(AustralianEmploymentBases),
         typeof(AustralianEngagementTypes),
+        typeof(AustralianBaseRatePeriods),
         typeof(NewZealandEarningsTypes),
         typeof(NewZealandPaidLeaveTypes),
         typeof(NewZealandAllowanceTypes),
         typeof(NewZealandDeductionTypes),
         typeof(NewZealandLeaveBalanceUnits),
+        typeof(NewZealandBaseRatePeriods),
     ];
 
     [Theory]
@@ -99,6 +101,23 @@ public class PayslipCodesTests
             },
             AustralianEtpTypes.All);
         Assert.Equal(new[] { "taxable", "tax_free" }, AustralianEtpComponents.All);
+    }
+
+    [Fact]
+    public void AustralianSuperContributionTypesIncludeOther()
+    {
+        Assert.Equal(
+            new[] { "superannuation_guarantee", "resc", "salary_sacrifice", "other" },
+            AustralianSuperContributionTypes.All);
+    }
+
+    [Fact]
+    public void BothCountriesTakeEveryBaseRatePeriod()
+    {
+        string[] periods = ["hour", "day", "week", "fortnight", "month", "year"];
+
+        Assert.Equal(periods, AustralianBaseRatePeriods.All);
+        Assert.Equal(periods, NewZealandBaseRatePeriods.All);
     }
 
     [Fact]

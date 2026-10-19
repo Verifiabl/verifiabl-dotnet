@@ -154,7 +154,7 @@ public class PiiTests
     {
         foreach (Func<string, string> format in Formatters)
         {
-            Assert.Throws<ArgumentException>(() => format("Jane" + formatCharacter));
+            Assert.Throws<ArgumentException>(() => format("Taylor Nguyen" + formatCharacter));
         }
     }
 
