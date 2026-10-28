@@ -10,8 +10,10 @@ name: Release
 #     Repository: verifiabl-dotnet
 #     Workflow File: release.yml
 #     Environment: nuget-publish
-# Configure Trusted Publishing for both package ids before the first renamed
-# release: Verifiabl.Issuer and Verifiabl.Issuer.Extensions.DependencyInjection.
+# Configure Trusted Publishing for each package id before its first release:
+# Verifiabl.Issuer, Verifiabl.Issuer.Extensions.DependencyInjection and
+# Verifiabl.Verifier. A release publishes only its tag's target: issuer/v* or
+# verifier/v*.
 # The NUGET_USER repository secret holds the nuget.org profile name that owns
 # the trusted publishing policy (the profile name, not an email address).
 #
@@ -35,7 +37,8 @@ jobs:
     environment: nuget-publish
     permissions:
       contents: read
-      id-token: write # OIDC token for NuGet trusted publishing
+      id-token: write # OIDC token for NuGet trusted publishing and build provenance
+      attestations: write # Sigstore build-provenance attestation
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -64,6 +67,11 @@ jobs:
       - run: node .github/scripts/release-tool.mjs pack "$RELEASE_TARGET_ID" "$VERSION"
         env:
           NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+      # Attest before NuGet login so a failed attestation blocks publication.
+      - name: Attest build provenance for the packed packages
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: artifacts/*.nupkg
       - name: NuGet login (OIDC → temp API key)
         uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
         id: login
@@ -74,3 +82,74 @@ jobs:
         env:
           NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
         run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
+
+  # NuGet.org repository-signs packages after upload, so this job links each
+  # signed package to its attested build and attests that link. It holds no
+  # NuGet credential, and its OIDC token cannot satisfy the nuget-publish
+  # trusted-publishing policy, so rerunning only this failed job never pushes.
+  verify-registry:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    permissions:
+      contents: read
+      id-token: write # OIDC token for Sigstore attestation signing
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+      - name: Resolve and validate the release target
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: node .github/scripts/release-tool.mjs validate-checkout "$TAG"
+      - name: Download the repository-signed packages from NuGet.org
+        run: |
+          set -euo pipefail
+          mkdir signed
+          version="${VERSION,,}"
+          jq -r --arg id "$RELEASE_TARGET_ID" '.targets[] | select(.id == $id) | .packages[].id | ascii_downcase' .github/release-target.json \
+            | while read -r id; do
+                file="$id.$version.nupkg"
+                curl -fsSL --retry 120 --retry-delay 30 --retry-all-errors -o "signed/$file" \
+                  "https://api.nuget.org/v3-flatcontainer/$id/$version/$file" \
+                  || { echo "::error::$file was not available from NuGet.org; rerun this job once it is"; exit 1; }
+              done
+      # Also fails if a package changed after NuGet.org signed it. Without a
+      # fingerprint, any valid signer would pass, hence the count check.
+      - name: Verify the NuGet.org repository signatures
+        run: |
+          set -euo pipefail
+          fingerprint_arguments=()
+          while read -r fingerprint; do
+            fingerprint_arguments+=(--certificate-fingerprint "$fingerprint")
+          done < <(curl -fsSL https://api.nuget.org/v3-index/repository-signatures/5.0.0/index.json \
+            | jq -r '.signingCertificates[].fingerprints["2.16.840.1.101.3.4.2.1"] // empty')
+          test "${#fingerprint_arguments[@]}" -gt 0
+          dotnet nuget verify signed/*.nupkg "${fingerprint_arguments[@]}"
+      # Deleting the signature entry restores the uploaded bytes exactly; if it
+      # ever did not, the attestation check would fail.
+      - name: Verify each signed package contains an attested build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cp -R signed unsigned
+          for package in unsigned/*.nupkg; do
+            zip -dq "$package" .signature.p7s
+            gh attestation verify "$package" \
+              --repo Verifiabl/verifiabl-dotnet \
+              --signer-workflow Verifiabl/verifiabl-dotnet/.github/workflows/release.yml \
+              --source-ref "$GITHUB_REF" \
+              --source-digest "$GITHUB_SHA" \
+              --deny-self-hosted-runners
+          done
+          (cd unsigned && sha256sum -- *.nupkg) \
+            | jq -nR '{packages: [inputs | split("  ") | {name: .[1], unsignedSha256: .[0]}]}' >predicate.json
+      - name: Attest the link from signed packages to attested builds
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: signed/*.nupkg
+          predicate-type: https://verifiabl.io/attestations/nuget-repository-signature/v1
+          predicate-path: predicate.json

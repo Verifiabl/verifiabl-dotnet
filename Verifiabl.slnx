@@ -1,9 +1,14 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/Verifiabl/Verifiabl.csproj" />
-    <Project Path="src/Verifiabl.Extensions.DependencyInjection/Verifiabl.Extensions.DependencyInjection.csproj" />
+  <Folder Name="/Verifiabl.Issuer/">
+    <Project Path="packages/Verifiabl.Issuer/src/Verifiabl.csproj" />
+    <Project Path="packages/Verifiabl.Issuer/tests/Verifiabl.Tests.csproj" />
   </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/Verifiabl.Tests/Verifiabl.Tests.csproj" />
+  <Folder Name="/Verifiabl.Issuer.Extensions.DependencyInjection/">
+    <Project Path="packages/Verifiabl.Issuer.Extensions.DependencyInjection/src/Verifiabl.Extensions.DependencyInjection.csproj" />
+  </Folder>
+  <Folder Name="/Verifiabl.Verifier/">
+    <Project Path="packages/Verifiabl.Verifier/src/Verifiabl.Verifier.csproj" />
+    <Project Path="packages/Verifiabl.Verifier/tests/Verifiabl.Verifier.Tests.csproj" />
+    <Project Path="packages/Verifiabl.Verifier/consumer-tests/Verifiabl.Verifier.Consumer.Tests.csproj" />
   </Folder>
 </Solution>

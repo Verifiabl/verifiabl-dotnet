@@ -10,7 +10,7 @@
       "ecosystem": "dotnet",
       "role": "issuer",
       "publicRepository": "Verifiabl/verifiabl-dotnet",
-      "changelog": "CHANGELOG.md",
+      "changelog": "packages/Verifiabl.Issuer/CHANGELOG.md",
       "tags": {
         "privatePrefix": "dotnet/issuer/v",
         "publicPrefix": "issuer/v"
@@ -20,7 +20,7 @@
           "id": "Verifiabl.Issuer",
           "versionSource": {
             "kind": "xml",
-            "path": "src/Verifiabl/Verifiabl.csproj",
+            "path": "packages/Verifiabl.Issuer/src/Verifiabl.csproj",
             "versionElement": "Version",
             "packageIdElement": "PackageId"
           }
@@ -29,7 +29,7 @@
           "id": "Verifiabl.Issuer.Extensions.DependencyInjection",
           "versionSource": {
             "kind": "xml",
-            "path": "src/Verifiabl.Extensions.DependencyInjection/Verifiabl.Extensions.DependencyInjection.csproj",
+            "path": "packages/Verifiabl.Issuer.Extensions.DependencyInjection/src/Verifiabl.Extensions.DependencyInjection.csproj",
             "versionElement": "Version",
             "packageIdElement": "PackageId"
           }
@@ -46,7 +46,7 @@
           "run": [
             "dotnet",
             "pack",
-            "src/Verifiabl/Verifiabl.csproj",
+            "packages/Verifiabl.Issuer/src/Verifiabl.csproj",
             "--configuration",
             "Release",
             "--no-build",
@@ -59,7 +59,45 @@
           "run": [
             "dotnet",
             "pack",
-            "src/Verifiabl.Extensions.DependencyInjection/Verifiabl.Extensions.DependencyInjection.csproj",
+            "packages/Verifiabl.Issuer.Extensions.DependencyInjection/src/Verifiabl.Extensions.DependencyInjection.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--output",
+            "artifacts",
+            "-p:Version={version}"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dotnet/verifier",
+      "ecosystem": "dotnet",
+      "role": "verifier",
+      "publicRepository": "Verifiabl/verifiabl-dotnet",
+      "changelog": "packages/Verifiabl.Verifier/CHANGELOG.md",
+      "tags": {
+        "privatePrefix": "dotnet/verifier/v",
+        "publicPrefix": "verifier/v"
+      },
+      "packages": [
+        {
+          "id": "Verifiabl.Verifier",
+          "versionSource": {
+            "kind": "xml",
+            "path": "packages/Verifiabl.Verifier/src/Verifiabl.Verifier.csproj",
+            "versionElement": "Version",
+            "packageIdElement": "PackageId"
+          }
+        }
+      ],
+      "coupledVersionGroups": [],
+      "packCommands": [
+        {
+          "run": [
+            "dotnet",
+            "pack",
+            "packages/Verifiabl.Verifier/src/Verifiabl.Verifier.csproj",
             "--configuration",
             "Release",
             "--no-build",

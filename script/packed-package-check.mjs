@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
-export function issuerVersion(project) {
+export function packageVersion(project) {
   const version = readFileSync(project, "utf8").match(/<Version>([^<]+)<\/Version>/)?.[1];
   if (!version) throw new Error(`Could not read Version from ${project}`);
   return version;
@@ -44,16 +44,74 @@ function run(...arguments_) {
   runWithEnvironment(process.env, ...arguments_);
 }
 
+function capture(environment, input, ...arguments_) {
+  const result = spawnSync("dotnet", arguments_, {
+    cwd: root,
+    env: environment,
+    input,
+    encoding: "utf8",
+  });
+  if (result.error) throw result.error;
+  return result;
+}
+
+function restoreAndBuild(project, config, packages, versionProperty) {
+  run("restore", project, "--configfile", config, "--packages", packages, versionProperty);
+  run("build", project, "--configuration", "Release", "--no-restore", versionProperty);
+}
+
+/** Exit codes and messages of the lender example's offline paths. No request is sent. */
+function checkVerifierExample(config, temporary) {
+  const project = "examples/verifier/LenderVerifier/LenderVerifier.csproj";
+  const version = packageVersion(join(root, "packages/Verifiabl.Verifier/src/Verifiabl.Verifier.csproj"));
+  const versionProperty = `--property:VerifiablVerifierVersion=${version}`;
+  restoreAndBuild(project, config, join(temporary, "verifier-packages"), versionProperty);
+
+  const withoutCredentials = { ...process.env };
+  delete withoutCredentials.VERIFIABL_CLIENT_ID;
+  delete withoutCredentials.VERIFIABL_CLIENT_SECRET;
+  const withCredentials = {
+    ...withoutCredentials,
+    VERIFIABL_CLIENT_ID: "package-check-client",
+    VERIFIABL_CLIENT_SECRET: "package-check-secret",
+  };
+  const example = (environment, input, ...arguments_) => capture(
+    environment,
+    input,
+    "run",
+    "--project",
+    project,
+    "--configuration",
+    "Release",
+    "--no-build",
+    versionProperty,
+    ...(arguments_.length > 0 ? ["--", ...arguments_] : []),
+  );
+
+  const argv = example(withCredentials, "", "payload-in-argv");
+  assert.equal(argv.status, 2, "A payload in argv must be refused");
+  assert.match(argv.stderr, /Usage: dotnet run < payload\.txt/);
+
+  const missing = example(withoutCredentials, "2|payload\n");
+  assert.equal(missing.status, 2, "Missing credentials must be a usage error");
+  assert.match(missing.stderr, /VERIFIABL_CLIENT_ID/);
+
+  // An empty payload is rejected before any token or verification request.
+  const empty = example(withCredentials, "\r\n");
+  assert.equal(empty.status, 1, "An empty payload must be rejected");
+  assert.match(empty.stderr, /Not verified \(VALIDATION_FAILED\)/);
+  assert.doesNotMatch(empty.stderr, /package-check-secret/);
+}
+
 export function check(packageDirectory = "artifacts") {
   const packages = resolve(root, packageDirectory);
-  const project = "examples/SelfManagedIssuer/SelfManagedIssuer.csproj";
-  const version = issuerVersion(join(root, "src/Verifiabl/Verifiabl.csproj"));
+  const project = "examples/issuer/SelfManagedIssuer/SelfManagedIssuer.csproj";
+  const version = packageVersion(join(root, "packages/Verifiabl.Issuer/src/Verifiabl.csproj"));
   const temporary = mkdtempSync(join(tmpdir(), "verifiabl-dotnet-package-check-"));
   try {
     const config = join(temporary, "NuGet.config");
     writeFileSync(config, packageSourceConfig(packages));
-    run("restore", project, "--configfile", config, "--packages", join(temporary, "packages"), `--property:VerifiablIssuerVersion=${version}`);
-    run("build", project, "--configuration", "Release", "--no-restore", `--property:VerifiablIssuerVersion=${version}`);
+    restoreAndBuild(project, config, join(temporary, "packages"), `--property:VerifiablIssuerVersion=${version}`);
     const output = join(temporary, "output");
     runWithEnvironment(
       { ...process.env, VERIFIABL_EXAMPLE_OUTPUT_DIR: output },
@@ -98,6 +156,7 @@ export function check(packageDirectory = "artifacts") {
     assert.equal(single.schema, "au.payslip.v2");
     assert.deepEqual(single.payslipNonPii, manifest("batch", "PAY-1001").registrationRequest.payslipNonPii);
     assert.notEqual(single.encryptionMetadata.iv, manifest("batch", "PAY-1001").registrationRequest.encryptionMetadata.iv);
+    checkVerifierExample(config, temporary);
   } finally {
     rmSync(temporary, { recursive: true, force: true });
   }

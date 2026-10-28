@@ -40,7 +40,7 @@ jobs:
       # Packing validates the NuGet metadata and package layout on every change.
       - run: dotnet pack --configuration Release --no-build --output artifacts
         if: runner.os == 'Linux'
-      - name: Build the issuer example against the packed package
+      - name: Build and run the examples against the packed packages
         if: runner.os == 'Linux'
         run: node script/packed-package-check.mjs artifacts
 
