@@ -6,6 +6,13 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-28
+
+### Added
+
+- Both packages carry a GitHub build-provenance attestation. See
+  [verifying a release](https://github.com/Verifiabl/verifiabl-dotnet#verifying-a-release).
+
 ### Changed
 
 - The README now links to the documentation at docs.verifiabl.io instead of
