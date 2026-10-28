@@ -33,7 +33,20 @@ jobs:
           key: nuget-${{ runner.os }}-${{ hashFiles('**/packages*.lock.json') }}
       - run: dotnet restore --locked-mode
       - run: dotnet build --configuration Release --no-restore
-      - run: dotnet test --configuration Release --no-build
+      # A hung test fails within the job timeout, names itself and leaves a dump.
+      - run: >-
+          dotnet test --configuration Release --no-build
+          --blame-hang-timeout 2m
+          --blame-hang-dump-type mini
+          --results-directory TestResults
+      - name: Upload hang dumps
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-results-${{ matrix.os }}
+          path: TestResults/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Check generated API reference
         if: runner.os == 'Linux'
         run: node script/api-reference.mjs --check
