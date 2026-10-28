@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Same targets as Verifiabl.Issuer: .NET Framework 4.7.2+ and the current LTS runtimes. -->
+    <TargetFrameworks>net472;net8.0;net10.0</TargetFrameworks>
+    <PackageId>Verifiabl.Verifier</PackageId>
+    <Version>0.1.0-rc.1</Version>
+    <Description>Official Verifiabl .NET SDK for lenders: verify an already-extracted Verifiabl payload through the Verifiabl verification API.</Description>
+    <Authors>Verifiabl</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://verifiabl.io</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Verifiabl/verifiabl-dotnet</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>verifiabl;payslip;verifier;lender;sdk</PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EnablePackageValidation>true</EnablePackageValidation>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\..\icon.png" Pack="true" PackagePath="\" />
+    <InternalsVisibleTo Include="Verifiabl.Verifier.Tests" Key="$(VerifiablPublicKey)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+    <Reference Include="System.Net.Http" />
+    <!-- Keep the cross-platform lockfile identical when Windows uses installed reference assemblies. -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="System.Text.Json" Version="10.0.12" />
+  </ItemGroup>
+
+</Project>

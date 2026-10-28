@@ -4,8 +4,9 @@
       "src": [
         {
           "files": [
-            "src/Verifiabl/Verifiabl.csproj",
-            "src/Verifiabl.Extensions.DependencyInjection/Verifiabl.Extensions.DependencyInjection.csproj"
+            "packages/Verifiabl.Issuer/src/Verifiabl.csproj",
+            "packages/Verifiabl.Issuer.Extensions.DependencyInjection/src/Verifiabl.Extensions.DependencyInjection.csproj",
+            "packages/Verifiabl.Verifier/src/Verifiabl.Verifier.csproj"
           ],
           "src": ".."
         }

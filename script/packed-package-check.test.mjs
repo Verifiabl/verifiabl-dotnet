@@ -3,14 +3,14 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { issuerVersion, packageSourceConfig } from "./packed-package-check.mjs";
+import { packageVersion, packageSourceConfig } from "./packed-package-check.mjs";
 
-test("reads the package version from the issuer project", () => {
+test("reads the package version from a project", () => {
   const directory = mkdtempSync(join(tmpdir(), "verifiabl-version-test-"));
   try {
     const project = join(directory, "issuer.csproj");
     writeFileSync(project, "<Project><PropertyGroup><Version>1.2.3</Version></PropertyGroup></Project>\n");
-    assert.equal(issuerVersion(project), "1.2.3");
+    assert.equal(packageVersion(project), "1.2.3");
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

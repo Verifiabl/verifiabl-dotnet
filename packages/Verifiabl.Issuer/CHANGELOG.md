@@ -1,0 +1,484 @@
+# Changelog
+
+All notable changes to this package are documented here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to
+follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Changed
+
+- The README now links to the documentation at docs.verifiabl.io instead of
+  repeating it.
+
+## [1.0.0] - 2026-10-19
+
+First stable release. The public API now follows Semantic Versioning.
+
+### Changed
+
+- **Breaking:** `AustralianPayslipV2EarningsItem` and
+  `NewZealandPayslipV2EarningsItem` are factory-only. They have no public
+  constructor or setters, so an AU2 lump sum always carries its
+  `LumpSumType`. To migrate, replace an object initializer with the line's
+  factory, for example `AustralianPayslipV2EarningsItem.Ordinary(amount,
+  units: hours, rate: rate)` or `LumpSum(AustralianLumpSumTypes.B, amount)`.
+
+- `AustralianBaseRatePeriods` and `NewZealandBaseRatePeriods` both list every
+  period a payslip prints a rate in: `Hour`, `Day`, `Week`, `Fortnight`,
+  `Month` and `Year`.
+
+### Added
+
+- `AustralianSuperContributionTypes.Other`, for an employer super contribution
+  that is not SG, RESC or salary sacrifice, such as an award or agreement rate
+  above SG. `Resc` excludes salary sacrifice, which has its own
+  `SalarySacrifice` line.
+
+## [0.17.0] - 2026-10-13
+
+### Changed
+
+- **Breaking:** `AustralianPayslipV2` and `NewZealandPayslipV2` replace `Hourly`
+  and `AnnualRate` with `BaseRate`, the base rate the payslip prints apart from
+  the earnings lines. `AustralianPayslipV2BaseRate` and
+  `NewZealandPayslipV2BaseRate` take an `Amount` and a `Per` from the new
+  `AustralianBaseRatePeriods` (`Hour`, `Day`, `Year`) or
+  `NewZealandBaseRatePeriods` (`Hour`, `Day`, `Week`, `Year`).
+  To migrate, send the printed annual rate as `BaseRate` with `Per = Year`,
+  and a printed hourly rate as `BaseRate` with `Per = Hour`. Send hours and
+  amounts only on `ordinary` earnings lines. The API still accepts the old
+  fields from earlier SDK versions.
+
+## [0.16.0] - 2026-10-09
+
+### Changed
+
+- **Breaking:** `AustralianPayslipV2EarningsItem.LumpSum` now takes a required
+  `lumpSumType` first, one of the new `AustralianLumpSumTypes`: `ARedundancy`
+  (STP lump sum A type R), `AOther` (A type T), `B`, `D` or `E`. The SDK sends
+  it as `lump_sum_type`. Lump sum W stays `ReturnToWork`, and lump sum U stays
+  `PaidLeave` with `AustralianPaidLeaveTypes.UnusedOnTermination`. An object
+  initializer can still omit `LumpSumType`; the API accepts that line for now
+  and will require `lump_sum_type` before production, once every issuer is on
+  an SDK release with the lump sum codes.
+- **Breaking:** `PayslipNonPii` has no public constructor, and its
+  `PeriodStart`, `PeriodEnd` and `AdditionalData` properties are read-only.
+  Create v2 payloads with `PayslipNonPii.FromAustralianV2` or
+  `FromNewZealandV2`, or use `V2Issuance`. For a schema without a typed model,
+  replace `new PayslipNonPii { PeriodStart = ..., PeriodEnd = ...,
+  AdditionalData = ... }` with `PayslipNonPii.ForFutureSchema(periodStart,
+  periodEnd, additionalData)`. It takes any
+  `IEnumerable<KeyValuePair<string, object?>>`, and throws `ArgumentException`
+  naming the key for an unsupported value type when it is called, not when the
+  registration is sent. `AdditionalData` is now a read-only deep copy typed
+  `IReadOnlyDictionary<string, object?>`: nested objects are read-only
+  dictionaries and sequences are `IReadOnlyList<object?>`, so later changes to
+  your objects are not sent.
+  The v2 factories now copy their payload too, so later changes to it are not
+  sent. `PayslipNonPii`, and so `RegisterNonPiiRequest` and `BatchRecord`, can
+  no longer be deserialized from JSON; persist the wire fields and rebuild the
+  payload with a factory instead.
+- **Breaking:** `RegisterNonPiiBatchAsync` now throws `ArgumentException` and
+  sends nothing when a record's `PayslipNonPii` was not created for its
+  `Schema` or is null, as `RegisterNonPiiAsync` does. Before, the record came
+  back as a local `VALIDATION_FAILED` result that read like an API rejection.
+  Invalid payslip data, such as an unsupported currency, still comes back as
+  that record's result.
+
+### Added
+
+- Add `AustralianEarningsTypes.Etp` and the
+  `AustralianPayslipV2EarningsItem.Etp` factory for an employment termination
+  payment. It takes a required `etpType`, one of the new `AustralianEtpTypes`:
+  `Redundancy` (ETP code R), `Other` (O), `RedundancySplit` (S), `OtherSplit`
+  (P), `DeathDependant` (D), `DeathNonDependant` (N), `DeathNonDependantSplit`
+  (B) or `DeathTrustee` (T), then a required `etpComponent`, one of the new
+  `AustralianEtpComponents`: `Taxable` or `TaxFree`. The SDK sends them as
+  `etp_type` and `etp_component`. Send the taxable and tax-free components as
+  separate lines. Tax withheld from an ETP is part of `Paygw`.
+- Add the `LumpSumType`, `EtpType` and `EtpComponent` properties to
+  `AustralianPayslipV2EarningsItem`.
+
+### Removed
+
+- **Breaking:** removed `PayslipSchemas.AustralianV1` and
+  `PayslipSchemas.NewZealandV1`. The issuer API no longer registers
+  `au.payslip.v1` or `nz.payslip.v1`. The SDK sends those identifiers like any
+  other schema without a typed model, and the API rejects them. Send
+  `au.payslip.v2` instead, for example with `V2Issuance.PrepareAustralian`.
+- **Breaking:** removed the P2 PII writer and the P1/P2 parser: `Pii.Format`,
+  `Pii.Parse` and the `PiiFields` type. Verifiabl now accepts only the AU2 and
+  NZ2 PII formats from issuers. Use `V2Issuance.PrepareAustralian` or
+  `V2Issuance.PrepareNewZealand`, or for low-level use `Pii.FormatAustralian`
+  or `Pii.FormatNewZealand` with `VerifiablCrypto.EncryptPii`. Payslips already
+  issued with P1 or P2 still verify.
+
+## [0.15.0] - 2026-10-04
+
+### Added
+
+- Add `AustralianEarningsTypes.Other`, `NewZealandEarningsTypes.Other` and the
+  matching `Other` earnings-line factories, for a pay code that fits no other
+  earnings type.
+
+## [0.14.0] - 2026-10-04
+
+### Added
+
+- Add `AustralianPayFrequencies.FourWeekly` and
+  `AustralianPayFrequencies.SemiMonthly`.
+- Add a horizontal badge layout: set `BarcodeSvgOptions.Layout` to
+  `BarcodeLayout.Horizontal` to put a white gap and a light-tinted "Secured by
+  Verifiabl" frame to the right of the QR code. It renders the QR code at the
+  same size as the vertical badge. Its minimum SVG width is 940, and its PNG
+  widths are 940, 1410, 1880 and 2820. The vertical layout remains the default
+  and its output is unchanged.
+
+### Changed
+
+- `BarcodeSvgOptions.Width` now defaults to the layout's minimum: 480 for the
+  vertical layout, as before, and 940 for the horizontal layout.
+- `VerifiablBarcode.CreatePng` now defaults `pixelWidth` to 0, which selects
+  720 for the vertical layout, as before, and 1410 for the horizontal layout.
+  Passing 0 explicitly no longer throws.
+
+## [0.13.0] - 2026-09-30
+
+### Added
+
+- Add generated constants classes for every fixed AU2 and NZ2 code set, for
+  example `AustralianPayFrequencies`, `AustralianEarningsTypes` and
+  `NewZealandLeaveBalanceUnits`, each with an `All` list. Properties stay
+  `string`.
+- Add earnings line factories, for example
+  `AustralianPayslipV2EarningsItem.PaidLeave` and
+  `NewZealandPayslipV2EarningsItem.Ordinary`, that set the line `type` and only
+  that type's fields. An AU allowance of type `other` uses `OtherAllowance`,
+  which requires its category; `Allowance` rejects the `other` type.
+
+### Changed
+
+- **Breaking:** on `net8.0` and `net10.0`, the generated AU2 and NZ2
+  `PeriodStart`, `PeriodEnd` and `PaymentDate` properties are `DateOnly`
+  (`DateOnly?` for `PeriodStart`) instead of `string`. The SDK sends them as
+  `YYYY-MM-DD`, and reject a date left at `default(DateOnly)` before sending.
+  The `net472` build keeps `string`. The wire format is unchanged.
+- Clarify that structured AU2 and NZ2 verification currently requires the
+  exact `au.payslip.v2` and `nz.payslip.v2` record schemas. Future schema
+  versions need an explicit verifier reader update before issuance.
+
+## [0.12.0] - 2026-09-29
+
+### Added
+
+- Add `V2Issuance.PrepareAustralian` and `PrepareNewZealand` to pair the
+  jurisdictional PII profile with its v2 non-PII payload. Prepared registrations
+  retain a stable reference and independent payload, metadata and ciphertext
+  copies for self-managed retries and barcode rendering; API-managed requests
+  omit the caller reference.
+
+### Fixed
+
+- Cancel response body reads with the caller deadline on .NET 8+ and refresh
+  pooled DNS connections on .NET Framework for the shared transport.
+- Use thread-safe retry jitter on modern targets and document the strong-name
+  identity and supported free-form payload values.
+
+## [0.11.0] - 2026-09-28
+
+### Changed
+
+- **Breaking:** generated AU2 and NZ2 amount, rate and quantity properties are
+  now `decimal` (`decimal?` when optional) instead of `PayslipNumber`. The SDK
+  sends each one as a plain decimal JSON string that keeps the value's scale,
+  so `1.50m` is sent as `"1.50"`, and it never rounds. `display` is removed.
+- **Breaking:** `Currency` is required on `AustralianPayslipV2` and
+  `NewZealandPayslipV2`, and the SDK rejects a code outside
+  `PayslipCurrencies.All` before it sends the record. `PayslipCurrencies.All`
+  now lists the 155 current ISO 4217 currency codes, excluding fund codes and
+  codes with no minor unit (for example `XAU`, `XTS`, `XXX`); the named
+  constants are unchanged. v1 schemas are unchanged.
+
+### Removed
+
+- **Breaking:** removed `PayslipNumber`.
+
+## [0.10.0] - 2026-09-28
+
+### Added
+
+- Added AU2 and NZ2 encrypted PII writers through `Pii.FormatAustralian` and
+  `Pii.FormatNewZealand`, with jurisdiction-specific field models, structured
+  address inputs, fixed eight-position output, and the shared 1024-byte limit.
+- Added `PayslipNumber` for exact v2 `{ value, display? }` amounts, rates and
+  quantities, including a `decimal` constructor that preserves decimal scale.
+- Added `PayslipSchemas` constants for the four supported AU and NZ schema ids.
+- Added `PayslipCurrencies` constants for the optional ten-code AU2/NZ2
+  currency allow-list.
+
+### Changed
+
+- Generate typed AU/NZ v2 payslip payloads from the Node Zod wire shapes. Use
+  `PayslipNonPii.FromAustralianV2` or `FromNewZealandV2`; free-form `AdditionalData`
+  is not supported for these profiles. The API validates payslip values and
+  batch records; legacy and future schemas retain free-form pass-through.
+- `PayslipNonPii.PeriodStart` is optional for `au.payslip.v2` and
+  `nz.payslip.v2`. It remains required for both frozen v1 schemas.
+
+### Removed
+
+- **Breaking:** removed legacy P1/v1 issuer output. `Pii.FormatV1`,
+  `BarcodePayloadFormat`, barcode format options, and legacy scan-host selection
+  are no longer available; PII and barcode writers now generate only P2/v2.
+  `Pii.Parse` still reads P1 plaintext from existing documents.
+- **Breaking:** removed low-level Base32, PII-profile metadata, and P2
+  compatibility aliases. `VerifiablEndpoints` and `Pii.Parse` remain available
+  for environment configuration, migrations, and integration tests. Use
+  `VerifiablBarcode.BuildPayload`, `CreateSvg`, or `CreatePng` instead of
+  `VerifiablBase32`, and replace `Pii.FormatV2(PiiV2Fields)` with
+  `Pii.Format(PiiFields)`.
+
+## [0.9.0]
+
+### Removed
+
+- **Breaking:** Removed the obsolete `Pii.AddressMaxBytes` constant. P2 has no
+  address-specific byte limit; `Pii.PayloadMaxBytes` defines the 1024 UTF-8 byte
+  limit for the complete newly written P2 plaintext, including framing and
+  delimiters.
+- **Breaking:** removed `VerifiablAuth.ApiKey`. Issuer API authentication now
+  requires OAuth client credentials so access tokens are refreshed automatically.
+
+## [0.8.0]
+
+### Changed
+
+- **Breaking:** ciphertext, AES-GCM IV, and authentication tag values are now
+  exposed and accepted as `byte[]` throughout the public API. The SDK applies
+  base64url encoding only when sending the issuer API or building legacy v1
+  output, and Base32 encoding when building v2 barcode and XMP output. This
+  allows integrations to persist the values directly in binary database columns
+  without decoding and re-encoding SDK strings.
+
+## [0.7.1]
+
+### Fixed
+
+- Corrected `PiiFields.Address` IntelliSense to describe the complete 1024-byte
+  P2 plaintext limit instead of the retired 320-byte address-specific limit.
+  The deprecated `Pii.AddressMaxBytes` compatibility constant remains available
+  but is not enforced for P2.
+- Corrected the 0.7.0 badge parity note to identify Node issuer 0.23.0 as the
+  matching implementation.
+
+## [0.7.0]
+
+### Changed
+
+- P2 PII text validation now follows the versioned Unicode 17.0 profile: it
+  rejects Cc, Cf, Zl, and Zp characters, limits newly written complete plaintext
+  to 1024 UTF-8 bytes, accepts legacy oversized P2 plaintext when reading, and
+  shares conformance vectors with the Node SDK and verifier.
+- The badge no longer has a grey border or side gutters. It is the navy
+  header and the QR code on a white ground, and the QR code spans the full
+  badge width, so each QR module is about 24% larger at the same badge width.
+  The badge carries no quiet zone on the left, right and bottom: keep a clear
+  light margin of at least a tenth of the badge width on those three sides.
+  The viewBox is now 96 x 150 and PNG heights are 750, 1125, 1500 and 2250
+  pixels for the four supported widths. Byte-identical with the Node SDK
+  0.23.0 badge.
+
+### Removed
+
+- The repository-only `Verifiabl.ScannerPack` development utility and its CI
+  artifact. Neither was included in the NuGet packages or part of the supported
+  SDK API; QR rendering remains covered by the standalone test suite.
+
+## [0.6.0]
+
+### Changed
+
+- The DI extension methods moved out of the
+  `Microsoft.Extensions.DependencyInjection` namespace into
+  `Verifiabl.Extensions.DependencyInjection`, following Microsoft guidance for
+  third-party library authors; consumers now add that `using` before calling
+  `AddVerifiablClient`.
+- The DI extension package now registers `VerifiablClientOptions` through the
+  Microsoft options pipeline with startup validation, so common misconfiguration
+  fails during host startup rather than on the first client resolve.
+- Repeated `AddVerifiablClient` calls are now fully first-wins: later calls do
+  not reconfigure either the client options or the named `HttpClient`.
+- `BarcodeSvgOptions.MaxErrorCorrection` now accepts
+  `BarcodeErrorCorrectionLevel.Low` as an intentional ceiling for dense-payload
+  experiments.
+
+### Added
+
+- A dense-address QR error-correction and badge-size matrix page in the synthetic
+  scanner pack, while preserving the stable baseline fixtures.
+
+### Fixed
+
+- `net472` DI registrations now apply .NET Framework connection recycling via
+  `ServicePoint.ConnectionLeaseTimeout` for the selected issuer API and OAuth
+  origins when the DI package creates the transport, matching the long-lived
+  singleton client mitigation used by modern targets without changing
+  caller-supplied clients or process-wide `ServicePointManager` DNS policy.
+- The release workflow now checks out the published tag and skips duplicate
+  NuGet pushes, making publish recovery safer.
+
+## [0.5.0]
+
+### Changed
+
+- **Package ids renamed**: `Verifiabl` is now `Verifiabl.Issuer`, and
+  `Verifiabl.Extensions.DependencyInjection` is now
+  `Verifiabl.Issuer.Extensions.DependencyInjection`. Issuer is the role this
+  SDK serves, matching the Node SDK's `@verifiabl/issuer`; the .NET spelling
+  follows NuGet's PascalCase dotted convention. The old ids stay on nuget.org
+  through 0.4.0 and receive no further releases; they are to be deprecated on
+  nuget.org in favour of the new ids. Assembly names and namespaces are
+  unchanged for the core package: code still uses `using Verifiabl;` and
+  `using Verifiabl.Client;`.
+
+### Added
+
+- V2 barcode and XMP writers are now the default, with canonical uppercase
+  unpadded RFC 4648 Base32, short-host scan URLs, and explicit QR byte/alphanumeric
+  segments. Select `BarcodePayloadFormat.V1` explicitly only for rollback.
+- `Pii.Format` now emits P2 by default and `PiiFields.Address` carries the optional
+  unstructured address with a 320-byte UTF-8 ceiling. `Pii.FormatV1` retains the
+  permanent legacy writer. P2 rejects delimiters, controls, Unicode format
+  characters, and malformed UTF-16 before encryption.
+- QR version reporting and cross-SDK v2 raster parity fixtures.
+- A synthetic scanner pack generator for screen, print, fold, photocopy, camera,
+  and hardware-scanner testing.
+- A pinned Nix development shell with .NET 8 and .NET 10 tooling.
+- Embedded package icon, so the NuGet listing carries the Verifiabl mark.
+- `VerifiablIvReuseException`, thrown when a single registration is rejected
+  because the record's encryption IV is already registered to your issuer. It
+  derives from `VerifiablApiException`, so existing handling still catches it,
+  and its message carries the remedy: encrypt again for a fresh IV, resend, and
+  rebuild any barcode already rendered from the previous ciphertext. The SDK
+  does not re-encrypt and retry for you, because `VerifiablCrypto.EncryptPii`
+  already draws a fresh IV on every call, so a collision means encryption
+  metadata was replayed and hiding that would mask a broken integration.
+- `BatchRecordResult.IsIvReused`, matching the batch error result for the same
+  rejection. It covers both cases the API reports, a collision with a stored
+  record and a repeat within the same batch, which differ only in `Detail`.
+- `VerifiablErrorCodes.IvReused` and `VerifiablErrorCodes.Conflict`. `CONFLICT`
+  was already returned for a Verifiabl reference registered with different data
+  but was missing from the list.
+
+## [0.3.0]
+
+A breaking change to the encryption helper: the key version is retired.
+
+Upgrading is optional and can wait. The API still accepts `key_version` from
+0.1.0 and 0.2.0 and discards it, so an existing integration keeps registering
+successfully and only meets the new signature when it chooses to upgrade. No
+migration shim is provided; recompile against the two-argument call instead.
+
+### Removed
+
+- `EncryptionMetadata.KeyVersion` and the `keyVersion` parameter of
+  `VerifiablCrypto.EncryptPii`, which is now `EncryptPii(plaintext, key)`.
+  Verifiabl resolves the decryption key at verification time by testing the
+  provider's active keys against the GCM authentication tag, so the value this
+  SDK collected, validated, and sent was discarded server-side.
+  `KEY_VERSION_UNAVAILABLE` remains in the error codes: the verification API
+  still returns it.
+
+### Added
+
+- `VerifiablBarcode.CreatePng`: local branded-badge PNG rendering at pixel
+  widths 480/720/960/1440, composited deterministically (pre-rasterised frame +
+  exact pixel-aligned QR modules) with no native dependencies. The raster is
+  byte-identical to the Node SDK's for the same record, enforced by fixture
+  parity tests.
+
+## [0.2.0]
+
+A breaking rework of the public API surface in response to a .NET ergonomics
+review, plus a retry-safety fix verified against the Verifiabl API source. The
+package had no published consumers, so no migration shim is provided.
+
+### Fixed
+
+- Single-record registration could double-register a payslip: the SDK retried
+  `503` on the assumption the request was never processed, but the API can
+  emit `503` after the row commits (a database connection lost in the
+  commit-acknowledgement window, or a platform `503` around a completed
+  request). `RegisterNonPiiAsync` now mints a client-side
+  `verifiabl_reference` (or uses `RegisterNonPiiRequest.VerifiablReference`
+  when set), which puts the API on its idempotent path — an identical resend
+  returns the stored record as a duplicate — and retries broadly like batch.
+  `RegisterAndBuildBarcodeAsync`, whose reference is server-minted, now
+  retries only `429`, which the API enforces before any processing.
+
+### Added
+
+- Optional `RegisterNonPiiRequest.VerifiablReference` for callers who want to
+  pin the registration's idempotency key themselves.
+- New package `Verifiabl.Extensions.DependencyInjection` (renamed to
+  `Verifiabl.Issuer.Extensions.DependencyInjection` in a later release), with
+  `IServiceCollection.AddVerifiablClient(...)` overloads that register
+  `IVerifiablClient` as a singleton wired to `IHttpClientFactory`. The core
+  package stays free of `Microsoft.Extensions.*` dependencies.
+- `IVerifiablClient`, the interface to depend on and to substitute in tests.
+- `VerifiablException`, the abstract base every API failure now derives from, so
+  a single `catch (VerifiablException)` covers the client.
+- `VerifiablTimeoutException` (carrying the configured `Timeout`) and
+  `VerifiablTransportException` (carrying the network fault as
+  `InnerException`).
+
+### Changed
+
+- **Namespaces split in two.** Everything offline stays in `Verifiabl` (`Pii`,
+  `VerifiablCrypto`, `VerifiablBarcode`, `VerifiablReference`,
+  `EncryptionMetadata`, `VerifiablEndpoints`, ...); everything that talks to the
+  API moved to `Verifiabl.Client` (`VerifiablClient`, `VerifiablClientOptions`,
+  `VerifiablAuth`, the request/response types, the API exceptions and error
+  codes). The assembly and package id are unchanged.
+- **Mandatory request properties are now `required` and non-nullable**:
+  `Schema`, `IssuedAt`, `PayslipNonPii`, and `EncryptionMetadata` on both
+  registration requests, `EncryptedPii` on `RegisterAndBuildBarcodeRequest`,
+  `VerifiablReference` on `BatchRecord`, `PeriodStart`/`PeriodEnd` on
+  `PayslipNonPii`, and `Iv`/`Tag`/`KeyVersion` on `EncryptionMetadata`. Runtime
+  validation is unchanged.
+- **`VerifiablClient` is `sealed`** and implements `IVerifiablClient`; its
+  methods are no longer `virtual`. Use the interface as the mocking seam.
+- **`PayslipNonPii.AdditionalData` is now `IDictionary<string, object?>`**
+  instead of `System.Text.Json.Nodes.JsonObject`, so the extension point needs no
+  JSON library types. Strings, booleans, numbers, nested dictionaries, and
+  sequences are mapped onto the wire body; anything else throws an
+  `ArgumentException` naming the key.
+- Failures that used to escape as `TimeoutException`, `HttpRequestException`, or
+  `FormatException` now throw `VerifiablTimeoutException` and
+  `VerifiablTransportException`. `VerifiablApiException` and
+  `VerifiablAuthException` keep their shape and now derive from
+  `VerifiablException`. Cancelling your own `CancellationToken` still throws
+  `OperationCanceledException`, and caller mistakes still throw
+  `ArgumentException` before anything is sent.
+
+## [0.1.0] - 2026-07-21
+
+### Added
+
+- Initial release of the Verifiabl .NET SDK.
+- `VerifiablClient` for the issuer API: `RegisterNonPiiAsync`, `RegisterAndBuildBarcodeAsync`,
+  and `RegisterNonPiiBatchAsync` (up to 1000 records).
+- OAuth2 client-credentials auth with token caching, single-flight refresh, and a
+  transparent retry on `401`.
+- Automatic, idempotency-aware retries with exponential backoff, jitter, and
+  `Retry-After` support (`VerifiablClientOptions.MaxRetries`, default 2). Batch
+  registration retries on throttling, timeouts, `5xx`, and network faults; the
+  single-record endpoints retry only failures that leave the request unprocessed
+  (`429`, `503`), so a retry cannot create a duplicate record.
+- A `User-Agent` header carrying the SDK version, with no usage telemetry.
+- `VerifiablCrypto.EncryptPii` (AES-256-GCM), `Pii.Format`/`Pii.Parse`, and
+  `VerifiablReference.Generate`.
+- `VerifiablBarcode` payload and scan-URL builders, PDF XMP metadata constants, and
+  the branded "Secured by Verifiabl" SVG badge renderer.
+- Targets `net472`, `net8.0`, and `net10.0`. Strong-named assembly.
