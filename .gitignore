@@ -7,3 +7,4 @@ artifacts/
 .vs/
 .idea/
 *.DotSettings.user
+TestResults/

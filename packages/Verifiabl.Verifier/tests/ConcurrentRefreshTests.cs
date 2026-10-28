@@ -6,6 +6,8 @@ namespace Verifiabl.Verifier.Tests;
 
 public class ConcurrentRefreshTests
 {
+    private static readonly TimeSpan StepTimeout = TimeSpan.FromSeconds(5);
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -22,23 +24,23 @@ public class ConcurrentRefreshTests
 
         try
         {
-            Task<VerificationResult> first = client.VerifyAsync("first", cancellation.Token);
-            Task<VerificationResult> second = client.VerifyAsync("second", cancellation.Token);
-            await AwaitSignal(exchange.BothOldRequests.Task);
+            Task<VerificationResult> first = client.VerifyAsync(RefreshExchange.FirstBarcode, cancellation.Token);
+            Task<VerificationResult> second = client.VerifyAsync(RefreshExchange.SecondBarcode, cancellation.Token);
+            await WithinStep(exchange.BothOldRequests.Task);
 
             exchange.FirstRejection.SetResult(true);
-            await AwaitSignal(exchange.RefreshStarted.Task);
+            await WithinStep(exchange.RefreshStarted.Task);
             if (refreshCompleted)
             {
                 exchange.FinishRefresh.SetResult(true);
-                await first;
+                await WithinStep(first);
             }
 
             exchange.SecondRejection.SetResult(true);
-            await AwaitSignal(exchange.SecondRejected.Task);
+            await WithinStep(exchange.SecondRejected.Task);
             exchange.FinishRefresh.TrySetResult(true);
-            await Task.WhenAll(first, second);
-            await client.VerifyAsync("cached", cancellation.Token);
+            await WithinStep(Task.WhenAll(first, second));
+            await WithinStep(client.VerifyAsync("cached", cancellation.Token));
 
             Assert.Equal(2, exchange.TokenRequests);
             Assert.Equal(3, exchange.FreshTokenRequests);
@@ -52,14 +54,17 @@ public class ConcurrentRefreshTests
         }
     }
 
-    private static async Task AwaitSignal(Task signal)
+    // Fails the step instead of hanging the test host when a signal never arrives.
+    private static async Task WithinStep(Task step)
     {
-        Assert.Same(signal, await Task.WhenAny(signal, Task.Delay(TimeSpan.FromSeconds(5))));
-        await signal;
+        Assert.Same(step, await Task.WhenAny(step, Task.Delay(StepTimeout)));
+        await step;
     }
 
     private sealed class RefreshExchange
     {
+        internal const string FirstBarcode = "first";
+        internal const string SecondBarcode = "second";
         private const string VerifiedJson = """{"verified":true,"verifiabl_reference":"n5waC35dPCoRtMXW5_gJqw","employee":{},"payslip":{},"decrypted_at":"2026-06-09T09:10:11Z"}""";
         private int _tokenRequests;
         private int _oldRequests;
@@ -82,7 +87,7 @@ public class ConcurrentRefreshTests
                 if (number == 2)
                 {
                     RefreshStarted.SetResult(true);
-                    await FinishRefresh.Task;
+                    await WaitAsync(FinishRefresh.Task, cancellationToken);
                 }
 
                 return FakeHttpHandler.Token($"token-{number}");
@@ -95,24 +100,38 @@ public class ConcurrentRefreshTests
                 return FakeHttpHandler.Json(HttpStatusCode.OK, VerifiedJson);
             }
 
-            return await RejectOldTokenAsync();
+            return await RejectOldTokenAsync(body, cancellationToken);
         }
 
-        private async Task<HttpResponseMessage> RejectOldTokenAsync()
+        // Keyed by barcode, not arrival order: the two calls can reach the
+        // handler in either order, and the test awaits them by name.
+        private async Task<HttpResponseMessage> RejectOldTokenAsync(string body, CancellationToken cancellationToken)
         {
-            int number = Interlocked.Increment(ref _oldRequests);
-            if (number == 2)
+            if (Interlocked.Increment(ref _oldRequests) == 2)
             {
                 BothOldRequests.SetResult(true);
-                await SecondRejection.Task;
+            }
+
+            if (body.Contains(SecondBarcode))
+            {
+                await WaitAsync(SecondRejection.Task, cancellationToken);
                 SecondRejected.SetResult(true);
             }
             else
             {
-                await FirstRejection.Task;
+                await WaitAsync(FirstRejection.Task, cancellationToken);
             }
 
             return FakeHttpHandler.Json(HttpStatusCode.Unauthorized, """{"error":"Unauthorized","code":"UNAUTHORIZED"}""");
+        }
+
+        // net472 has no Task.WaitAsync. Honouring the token lets the client's
+        // deadline end a request whose signal never arrives.
+        private static async Task WaitAsync(Task signal, CancellationToken cancellationToken)
+        {
+            await Task.WhenAny(signal, Task.Delay(Timeout.Infinite, cancellationToken));
+            cancellationToken.ThrowIfCancellationRequested();
+            await signal;
         }
 
         private static TaskCompletionSource<bool> Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
