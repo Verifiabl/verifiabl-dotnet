@@ -56,7 +56,7 @@ public class ClientRequestTests
         using JsonDocument vectors = JsonDocument.Parse(File.ReadAllText(path));
         Assert.Equal("verifiabl-v2-wire-vectors-v1", vectors.RootElement.GetProperty("format").GetString());
         JsonElement cases = vectors.RootElement.GetProperty("cases");
-        Assert.Equal(3, cases.GetArrayLength());
+        Assert.Equal(4, cases.GetArrayLength());
         var seen = new HashSet<string>();
         foreach (JsonElement item in cases.EnumerateArray())
         {
@@ -94,6 +94,27 @@ public class ClientRequestTests
                         AustralianPayslipV2EarningsItem.LumpSum(AustralianLumpSumTypes.D, 20000.00m, ytdAmount: 20000.00m),
                         AustralianPayslipV2EarningsItem.Etp(AustralianEtpTypes.RedundancySplit, AustralianEtpComponents.Taxable, 12000.00m, units: 8m, rate: 1500.00m)],
                 }),
+                "au-leave-balances" => PayslipNonPii.FromAustralianV2(new AustralianPayslipV2
+                {
+                    PeriodStart = PayslipDate("2026-08-01"),
+                    PeriodEnd = PayslipDate("2026-08-14"),
+                    PaymentDate = PayslipDate("2026-08-18"),
+                    Currency = PayslipCurrencies.Aud,
+                    Gross = 3100.00m,
+                    Paygw = 620.00m,
+                    Net = 2480.00m,
+                    PayFrequency = AustralianPayFrequencies.Fortnightly,
+                    Earnings = [AustralianPayslipV2EarningsItem.Ordinary(3100.00m)],
+                    LeaveBalances = new AustralianPayslipV2LeaveBalances
+                    {
+                        Annual = new AustralianPayslipV2LeaveBalancesAnnual { Amount = 98.50m, Unit = AustralianLeaveBalanceUnits.Hours },
+                        AnnualAccruedThisPeriod = new AustralianPayslipV2LeaveBalancesAnnualAccruedThisPeriod { Amount = 5.85m, Unit = AustralianLeaveBalanceUnits.Hours },
+                        Personal = new AustralianPayslipV2LeaveBalancesPersonal { Amount = -4.00m, Unit = AustralianLeaveBalanceUnits.Hours },
+                        PersonalAccruedThisPeriod = new AustralianPayslipV2LeaveBalancesPersonalAccruedThisPeriod { Amount = 2.92m, Unit = AustralianLeaveBalanceUnits.Hours },
+                        LongService = new AustralianPayslipV2LeaveBalancesLongService { Amount = 1.5m, Unit = AustralianLeaveBalanceUnits.Weeks },
+                        LongServiceAccruedThisPeriod = new AustralianPayslipV2LeaveBalancesLongServiceAccruedThisPeriod { Amount = 0.03m, Unit = AustralianLeaveBalanceUnits.Weeks },
+                    },
+                }),
                 "nz-leave-and-dates" => PayslipNonPii.FromNewZealandV2(new NewZealandPayslipV2
                 {
                     PeriodEnd = PayslipDate("2026-08-31"),
@@ -118,7 +139,7 @@ public class ClientRequestTests
             JsonNode actual = JsonNode.Parse(body.RootElement.GetProperty("payslip_non_pii").GetRawText())!;
             Assert.True(JsonNode.DeepEquals(expected, actual), $"Wire mismatch for {id}: {actual}");
         }
-        Assert.Equal(new[] { "au-codes-and-earnings", "au-lump-sum-and-etp", "nz-leave-and-dates" }, seen.OrderBy(id => id));
+        Assert.Equal(new[] { "au-codes-and-earnings", "au-leave-balances", "au-lump-sum-and-etp", "nz-leave-and-dates" }, seen.OrderBy(id => id, StringComparer.Ordinal));
     }
 
     private static VerifiablClient Client(

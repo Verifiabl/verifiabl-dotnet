@@ -4,7 +4,14 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.0] - 2026-11-03
+
+### Added
+
+- `AustralianPayslipV2.LeaveBalances`: `Annual`, `Personal` and `LongService`,
+  each with its accrual this period, as an amount and a unit from
+  `AustralianLeaveBalanceUnits` (`hours`, `days` or `weeks`). Needs an API
+  that accepts AU2 leave balances.
 
 ## [1.0.1] - 2026-10-28
 

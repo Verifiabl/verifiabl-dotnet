@@ -10,6 +10,13 @@ Each NuGet package lives in `packages/<PackageId>/`, with its project in `src/`,
 - Preserve public APIs, strong naming, target frameworks and thread-safe client/token reuse.
 - `Verifiabl.Verifier` holds no keys and never decrypts. It sends barcode text to the API unchanged and leaves parsing to the API. It does not depend on `Verifiabl.Issuer`; its transport is a copy of the issuer client's, so keep token and retry behaviour in step.
 - Keep the verifier core limited to already-extracted payloads. Optional PDF/image extraction composes with `IVerifierClient.VerifyAsync`; lender-specific mapping runs after verification in application-owned adapters. Verification authenticates payload data, not a document's visible contents.
+- `IVerifierClient` keeps one method. Add per-verification inputs as init-only properties on `VerificationRequest`, and add only fields the API accepts.
+- Extraction add-ons (`Verifiabl.Verifier.<Format>`) follow the [extraction package contract](packages/Verifiabl.Verifier/README.md#extraction-packages), and also:
+  - Use only the core's public API: no `InternalsVisibleTo`, and no checks for `VerifierClient`, so fakes and decorators work.
+  - Report "no single payload" with the core's `PayloadExtractionException`. Do not add `VerifierException` subtypes or wrap verification failures. Add a `PayloadExtractionFailure` value in the core when no existing one fits.
+  - Keep shared managed code, such as QR decoding, in `Verifiabl.Verifier.Extraction`. Put native dependencies in their own add-on.
+  - Give results and payload holders a public constructor for fakes and a `ToString()` without payload text.
+  - Version with `Verifiabl.Verifier` in the `dotnet/verifier` release target, with consumer and packed-package checks like the core's.
 - Keep PII out of non-PII fields, logs and errors. Use synthetic fixtures. Never commit live credentials or keys.
 - Preserve generated v2 models and decimal-string wire values. The API owns full non-PII value validation. Do not copy another SDK's full validator. Preserve unknown/future schema pass-through.
 - Regenerate models, profiles, fixtures and API references from source. Do not edit generated output.

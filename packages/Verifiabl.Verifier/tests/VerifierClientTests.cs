@@ -628,11 +628,27 @@ public class VerifierClientTests
     }
 
     [Fact]
-    public async Task NullBarcodesAreProgrammerErrors()
+    public async Task NullRequestsAndBarcodesAreProgrammerErrors()
     {
-        (VerifierClient client, _) = CreateClient(Respond((HttpStatusCode.OK, VerifiedJson)));
+        (VerifierClient client, FakeHttpHandler handler) = CreateClient(Respond((HttpStatusCode.OK, VerifiedJson)));
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() => client.VerifyAsync(null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => client.VerifyAsync((VerificationRequest)null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => client.VerifyAsync(barcode: null!));
+        Assert.Throws<ArgumentNullException>(() => new VerificationRequest(null!));
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task RequestsAreSentAsGivenAndOmitTheBarcodeFromToString()
+    {
+        (VerifierClient client, FakeHttpHandler handler) = CreateClient(Respond((HttpStatusCode.OK, VerifiedJson)));
+        var request = new VerificationRequest(Barcode);
+
+        await client.VerifyAsync(request);
+
+        using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.ApiRequests).Body);
+        Assert.Equal(Barcode, body.RootElement.GetProperty("barcode").GetString());
+        Assert.DoesNotContain(Barcode, request.ToString());
     }
 
     [Fact]

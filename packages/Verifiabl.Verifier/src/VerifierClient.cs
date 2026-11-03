@@ -39,12 +39,14 @@ public sealed class VerifierClient : IVerifierClient
     }
 
     /// <inheritdoc />
-    public Task<VerificationResult> VerifyAsync(string barcode, CancellationToken cancellationToken = default)
+    public Task<VerificationResult> VerifyAsync(VerificationRequest request, CancellationToken cancellationToken = default)
     {
-        if (barcode is null)
+        if (request is null)
         {
-            throw new ArgumentNullException(nameof(barcode));
+            throw new ArgumentNullException(nameof(request));
         }
+
+        string barcode = request.Barcode;
 
         // The API parses the barcode, so the SDK accepts every format it does.
         // Extracted text is untrusted input, so a bad length is a rejection in

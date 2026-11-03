@@ -35,6 +35,8 @@ VerificationResult verified = await verifier.VerifyAsync(extractedPayload, cance
 
 Pass supported bare payloads (`1|…|…` or `2|…|…`) or scan URLs unchanged. Your existing document pipeline extracts the text; the API owns payload parsing and validation.
 
+`VerifyAsync(string)` is shorthand for `VerifyAsync(new VerificationRequest(text))`. Build the request yourself when you queue verifications: later versions add optional per-verification fields, such as an idempotency key, to `VerificationRequest`, and replaying the same instance keeps them.
+
 `verified.Payslip` holds the registered record and `verified.Employee` the decrypted employee details. JSON fields and unknown schemas are preserved; money values remain decimal strings.
 
 **Success authenticates the payload's data, not the document's current visible contents.** Your integration decides whether to use the returned data directly or compare it with the document. Matching copies of a payload do not authenticate the printed text.
@@ -93,6 +95,8 @@ This example preserves the exact monetary string and fails on missing fields or 
 
 A barcode that fails verification throws `VerifierRejectedException`: it is not a Verifiabl payload, was altered, or has no registered payslip. Empty or over-long text is rejected the same way, without a request. Treat the document as unverified; its `Code` says why.
 
+`PayloadExtractionException` comes from the optional extraction packages: no single payload could be read from a document, so nothing was sent to Verifiabl. The document is neither verified nor rejected; its `Failure` says whether to ask for a clearer copy.
+
 Every other failure is operational and derives from `VerifierException`:
 
 - `VerifierAuthException`: authentication could not be completed. Token-endpoint outages can be retryable; for non-retryable failures, check the client ID, secret, permissions and environment.
@@ -113,6 +117,11 @@ catch (VerifierRejectedException rejected)
 catch (VerifierException failure) when (failure.IsRetryable)
 {
     // Verifiabl is unreachable or busy. Try again later.
+}
+catch (PayloadExtractionException unread)
+{
+    // Extraction packages only: no payload was read, so nothing was verified.
+    // Ask for a clearer copy according to unread.Failure.
 }
 catch (VerifierAuthException)
 {
@@ -148,12 +157,13 @@ For application-owned retries, construct the client with `MaxRetries = 0` to
 avoid multiplying transient attempts. The one-time 401 token refresh still
 applies. This helper permits only one additional call, honours a longer
 `RetryAfter` without shortening it, and bounds both calls and the wait with a
-shared deadline:
+shared deadline. It replays the same request instance, so per-verification
+fields added in later versions are sent unchanged:
 
 ```csharp
 static async Task<VerificationResult> VerifyWithOneRetryAsync(
     IVerifierClient verifier,
-    string payload,
+    VerificationRequest request,
     CancellationToken cancellationToken)
 {
     using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -161,7 +171,7 @@ static async Task<VerificationResult> VerifyWithOneRetryAsync(
 
     try
     {
-        return await verifier.VerifyAsync(payload, deadline.Token);
+        return await verifier.VerifyAsync(request, deadline.Token);
     }
     catch (VerifierException failure) when (failure.IsRetryable)
     {
@@ -173,7 +183,7 @@ static async Task<VerificationResult> VerifyWithOneRetryAsync(
         }
 
         await Task.Delay(delay, deadline.Token);
-        return await verifier.VerifyAsync(payload, deadline.Token);
+        return await verifier.VerifyAsync(request, deadline.Token);
     }
 }
 ```
@@ -187,7 +197,7 @@ outside the retry helper so mapping failures never repeat verification.
 
 ## Testing and extension boundaries
 
-Depend on `IVerifierClient` to fake or decorate verification. Public result and exception constructors support consumer tests without a live API. Exception constructors take only the defining values; set diagnostics with an object initializer:
+Depend on `IVerifierClient` to fake or decorate verification. It has one method, `VerifyAsync(VerificationRequest, CancellationToken)`; the string overload is an extension method, so fakes implement only the request form. Public result and exception constructors support consumer tests without a live API. Exception constructors take only the defining values; set diagnostics with an object initializer:
 
 ```csharp
 var failure = new VerifierServiceException(503, VerifierErrorCodes.ServiceUnavailable, "Unavailable")
@@ -199,7 +209,17 @@ var failure = new VerifierServiceException(503, VerifierErrorCodes.ServiceUnavai
 
 Constructing a `VerificationResult` does not perform verification; its JSON inputs are cloned so they outlive their source documents.
 
-Future PDF/image extraction belongs in optional packages that compose with `VerifyAsync`, not additional methods required of every `IVerifierClient` implementation. Extraction owns its limits and provenance; lender mapping remains a separate projection of verified data.
+### Extraction packages
+
+PDF and image extraction live in optional packages that read a document and pass one payload to `IVerifierClient.VerifyAsync`. They work with any `IVerifierClient`, including your fakes and decorators, and follow the same contract:
+
+- **Failures.** A document with no single readable payload throws `PayloadExtractionException`, never `VerifierRejectedException`: only Verifiabl rejects a payload. Verification failures pass through unchanged, so the catch sequence above covers extraction too.
+- **One verification per document.** Every verification can be billed. When a document carries several copies of its payload, such as a PDF's QR code and metadata, the package compares them locally and verifies one.
+- **Provenance.** Results wrap `VerificationResult` and report which copy was verified and how the copies compared. A mismatch means the document was altered even though the verified copy is genuine.
+- **Bounds.** Input size, decoding work and time are limited separately from `VerifierClientOptions.Timeout`, and cancellation is honoured.
+- **Privacy.** Payload text and document images never appear in messages, logs or `ToString()`.
+
+Lender mapping remains a separate projection of verified data and runs after any extraction package.
 
 ## Support
 
