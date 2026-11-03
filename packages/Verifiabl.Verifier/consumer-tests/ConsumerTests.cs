@@ -165,8 +165,29 @@ public class ConsumerTests
     [Fact]
     public async Task DocumentedCatchSequenceHandlesMalformedResponses()
     {
-        IVerifierClient client = new FakeVerifier(
-            new VerifierTransportException("Malformed response", null, isRetryable: false));
+        string outcome = await OutcomeOf(new VerifierTransportException("Malformed response", null, isRetryable: false));
+
+        Assert.Equal("could-not-complete", outcome);
+    }
+
+    [Theory]
+    [InlineData(PayloadExtractionFailure.NotFound, "no-payload")]
+    [InlineData(PayloadExtractionFailure.Unreadable, "no-payload")]
+    [InlineData(PayloadExtractionFailure.TimedOut, "retry-later")]
+    public async Task DocumentedCatchSequenceSeparatesExtractionFailuresFromRejections(
+        PayloadExtractionFailure failure,
+        string expected)
+    {
+        var extraction = new PayloadExtractionException(failure, "No payload could be read.");
+
+        Assert.Equal(expected, await OutcomeOf(extraction));
+        Assert.Null(extraction.RequestId);
+    }
+
+    // The catch sequence from the README, in order.
+    private static async Task<string> OutcomeOf(VerifierException failure)
+    {
+        IVerifierClient client = new FakeVerifier(failure);
 
         string outcome;
         try
@@ -178,9 +199,13 @@ public class ConsumerTests
         {
             outcome = "rejected";
         }
-        catch (VerifierException failure) when (failure.IsRetryable)
+        catch (VerifierException retryable) when (retryable.IsRetryable)
         {
             outcome = "retry-later";
+        }
+        catch (PayloadExtractionException)
+        {
+            outcome = "no-payload";
         }
         catch (VerifierAuthException)
         {
@@ -195,7 +220,7 @@ public class ConsumerTests
             outcome = "could-not-complete";
         }
 
-        Assert.Equal("could-not-complete", outcome);
+        return outcome;
     }
 
     private static VerificationResult Result(string schema)
@@ -243,7 +268,7 @@ public class ConsumerTests
 
         internal FakeVerifier(VerifierException failure) => _failure = failure;
 
-        public Task<VerificationResult> VerifyAsync(string barcode, CancellationToken cancellationToken = default)
+        public Task<VerificationResult> VerifyAsync(VerificationRequest request, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             return _failure is null

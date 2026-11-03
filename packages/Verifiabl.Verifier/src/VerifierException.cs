@@ -1,17 +1,23 @@
 namespace Verifiabl.Verifier;
 
 /// <summary>
-/// Base type for every failure a <see cref="VerifierClient"/> reports, so one
-/// <c>catch (VerifierException)</c> covers them all.
+/// Base type for every failure a <see cref="VerifierClient"/> or a Verifiabl
+/// extraction package reports, so one <c>catch (VerifierException)</c> covers them all.
 /// </summary>
 /// <remarks>
 /// <para>
 /// <see cref="VerifierRejectedException"/> means the barcode itself failed
-/// verification. Every other subtype is an operational failure; check
-/// <see cref="IsRetryable"/> to decide whether to try again later. Do not put
-/// payloads, payslip data or credentials in custom messages or causes. A null
-/// barcode throws <see cref="ArgumentNullException"/>, and a cancellation you
-/// requested throws <see cref="OperationCanceledException"/>.
+/// verification. <see cref="PayloadExtractionException"/> means no payload could
+/// be read from a document, so nothing was verified. Every other subtype is an
+/// operational failure; check <see cref="IsRetryable"/> to decide whether to try
+/// again later. Do not put payloads, payslip data or credentials in custom
+/// messages or causes. A null request throws <see cref="ArgumentNullException"/>,
+/// and a cancellation you requested throws <see cref="OperationCanceledException"/>.
+/// </para>
+/// <para>
+/// The set of subtypes is closed: extraction packages throw
+/// <see cref="PayloadExtractionException"/> rather than defining their own, so
+/// the catch sequence in the README stays complete.
 /// </para>
 /// <para>
 /// Public constructors take only the values that define a failure. Set optional

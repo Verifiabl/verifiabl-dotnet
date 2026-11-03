@@ -48,6 +48,52 @@ internal static class GeneratedPayslipCopies
         Usi = source.Usi,
     };
 
+    internal static AustralianPayslipV2LeaveBalancesAnnual Copy(AustralianPayslipV2LeaveBalancesAnnual source) => new()
+    {
+        Amount = source.Amount,
+        Unit = source.Unit,
+    };
+
+    internal static AustralianPayslipV2LeaveBalancesAnnualAccruedThisPeriod Copy(AustralianPayslipV2LeaveBalancesAnnualAccruedThisPeriod source) => new()
+    {
+        Amount = source.Amount,
+        Unit = source.Unit,
+    };
+
+    internal static AustralianPayslipV2LeaveBalancesPersonal Copy(AustralianPayslipV2LeaveBalancesPersonal source) => new()
+    {
+        Amount = source.Amount,
+        Unit = source.Unit,
+    };
+
+    internal static AustralianPayslipV2LeaveBalancesPersonalAccruedThisPeriod Copy(AustralianPayslipV2LeaveBalancesPersonalAccruedThisPeriod source) => new()
+    {
+        Amount = source.Amount,
+        Unit = source.Unit,
+    };
+
+    internal static AustralianPayslipV2LeaveBalancesLongService Copy(AustralianPayslipV2LeaveBalancesLongService source) => new()
+    {
+        Amount = source.Amount,
+        Unit = source.Unit,
+    };
+
+    internal static AustralianPayslipV2LeaveBalancesLongServiceAccruedThisPeriod Copy(AustralianPayslipV2LeaveBalancesLongServiceAccruedThisPeriod source) => new()
+    {
+        Amount = source.Amount,
+        Unit = source.Unit,
+    };
+
+    internal static AustralianPayslipV2LeaveBalances Copy(AustralianPayslipV2LeaveBalances source) => new()
+    {
+        Annual = source.Annual is null ? null : Copy(source.Annual),
+        AnnualAccruedThisPeriod = source.AnnualAccruedThisPeriod is null ? null : Copy(source.AnnualAccruedThisPeriod),
+        Personal = source.Personal is null ? null : Copy(source.Personal),
+        PersonalAccruedThisPeriod = source.PersonalAccruedThisPeriod is null ? null : Copy(source.PersonalAccruedThisPeriod),
+        LongService = source.LongService is null ? null : Copy(source.LongService),
+        LongServiceAccruedThisPeriod = source.LongServiceAccruedThisPeriod is null ? null : Copy(source.LongServiceAccruedThisPeriod),
+    };
+
     internal static AustralianPayslipV2Ytd Copy(AustralianPayslipV2Ytd source) => new()
     {
         Taxable = source.Taxable,
@@ -80,6 +126,7 @@ internal static class GeneratedPayslipCopies
         Deductions = source.Deductions is null ? null : source.Deductions.Select(item => item is null ? null! : Copy(item)).ToList(),
         Superannuation = source.Superannuation is null ? null : source.Superannuation.Select(item => item is null ? null! : Copy(item)).ToList(),
         Reimbursements = source.Reimbursements,
+        LeaveBalances = source.LeaveBalances is null ? null : Copy(source.LeaveBalances),
         Ytd = source.Ytd is null ? null : Copy(source.Ytd),
     };
 

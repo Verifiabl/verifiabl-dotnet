@@ -4,20 +4,23 @@ namespace Verifiabl.Verifier;
 /// Verifies an already-extracted payload with the Verifiabl API. Depend on this
 /// interface to substitute a fake or decorate the client.
 /// </summary>
+/// <remarks>
+/// The interface has one method, so fakes and decorators stay small. Later
+/// versions add per-verification details to <see cref="VerificationRequest"/>,
+/// not new members here. Call
+/// <see cref="VerifierClientExtensions.VerifyAsync(IVerifierClient, string, CancellationToken)"/>
+/// to verify barcode text without building a request.
+/// </remarks>
 public interface IVerifierClient
 {
     /// <summary>Return issuer-authenticated payslip data for an extracted payload.</summary>
-    /// <param name="barcode">
-    /// Text already extracted from a QR code or PDF metadata: a scan link such as
-    /// <c>https://v.verifiabl.io/v/…#2.…</c>, or a bare payload such as <c>2|…|…</c>.
-    /// Pass it unchanged; do not trim, decode or fetch the link.
-    /// </param>
+    /// <param name="request">The extracted payload to verify.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
     /// <returns>
     /// The verified data, not an assessment of the document's visible contents.
     /// Your integration decides how to interpret, compare or map it.
     /// </returns>
-    /// <exception cref="ArgumentNullException"><paramref name="barcode"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="request"/> is null.</exception>
     /// <exception cref="VerifierRejectedException">
     /// The barcode failed verification, including empty or over-long text. Treat
     /// the document as unverified.
@@ -31,5 +34,5 @@ public interface IVerifierClient
     /// Any failure, including timeouts and transport faults. Check
     /// <see cref="VerifierException.IsRetryable"/>.
     /// </exception>
-    Task<VerificationResult> VerifyAsync(string barcode, CancellationToken cancellationToken = default);
+    Task<VerificationResult> VerifyAsync(VerificationRequest request, CancellationToken cancellationToken = default);
 }

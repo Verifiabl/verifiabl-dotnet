@@ -6,6 +6,19 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** `IVerifierClient.VerifyAsync` takes a `VerificationRequest`, so
+  per-verification fields such as an idempotency key can be added later without
+  changing the interface. `VerifyAsync(string)` remains as an extension method;
+  fakes and decorators implement the request form.
+
+### Added
+
+- `PayloadExtractionException` and `PayloadExtractionFailure`, the failure
+  extraction packages throw when no single payload can be read. It derives from
+  `VerifierException`, so one catch covers extraction and verification.
+
 ## [0.1.0-rc.1] - 2026-10-28
 
 First release candidate of the verifier SDK.

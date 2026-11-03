@@ -386,6 +386,112 @@ public sealed class AustralianPayslipV2SuperannuationItem
 }
 
 /// <summary>Generated AU/NZ v2 non-PII wire fields; the API validates values.</summary>
+public sealed class AustralianPayslipV2LeaveBalancesAnnual
+{
+    /// <summary>Wire field <c>amount</c>.</summary>
+    [JsonPropertyName("amount")]
+    [JsonConverter(typeof(PayslipDecimalConverter))]
+    public required decimal Amount { get; init; }
+
+    /// <summary>Wire field <c>unit</c>; see <see cref="AustralianLeaveBalanceUnits"/>.</summary>
+    [JsonPropertyName("unit")]
+    public required string Unit { get; init; }
+}
+
+/// <summary>Generated AU/NZ v2 non-PII wire fields; the API validates values.</summary>
+public sealed class AustralianPayslipV2LeaveBalancesAnnualAccruedThisPeriod
+{
+    /// <summary>Wire field <c>amount</c>.</summary>
+    [JsonPropertyName("amount")]
+    [JsonConverter(typeof(PayslipDecimalConverter))]
+    public required decimal Amount { get; init; }
+
+    /// <summary>Wire field <c>unit</c>; see <see cref="AustralianLeaveBalanceUnits"/>.</summary>
+    [JsonPropertyName("unit")]
+    public required string Unit { get; init; }
+}
+
+/// <summary>Generated AU/NZ v2 non-PII wire fields; the API validates values.</summary>
+public sealed class AustralianPayslipV2LeaveBalancesPersonal
+{
+    /// <summary>Wire field <c>amount</c>.</summary>
+    [JsonPropertyName("amount")]
+    [JsonConverter(typeof(PayslipDecimalConverter))]
+    public required decimal Amount { get; init; }
+
+    /// <summary>Wire field <c>unit</c>; see <see cref="AustralianLeaveBalanceUnits"/>.</summary>
+    [JsonPropertyName("unit")]
+    public required string Unit { get; init; }
+}
+
+/// <summary>Generated AU/NZ v2 non-PII wire fields; the API validates values.</summary>
+public sealed class AustralianPayslipV2LeaveBalancesPersonalAccruedThisPeriod
+{
+    /// <summary>Wire field <c>amount</c>.</summary>
+    [JsonPropertyName("amount")]
+    [JsonConverter(typeof(PayslipDecimalConverter))]
+    public required decimal Amount { get; init; }
+
+    /// <summary>Wire field <c>unit</c>; see <see cref="AustralianLeaveBalanceUnits"/>.</summary>
+    [JsonPropertyName("unit")]
+    public required string Unit { get; init; }
+}
+
+/// <summary>Generated AU/NZ v2 non-PII wire fields; the API validates values.</summary>
+public sealed class AustralianPayslipV2LeaveBalancesLongService
+{
+    /// <summary>Wire field <c>amount</c>.</summary>
+    [JsonPropertyName("amount")]
+    [JsonConverter(typeof(PayslipDecimalConverter))]
+    public required decimal Amount { get; init; }
+
+    /// <summary>Wire field <c>unit</c>; see <see cref="AustralianLeaveBalanceUnits"/>.</summary>
+    [JsonPropertyName("unit")]
+    public required string Unit { get; init; }
+}
+
+/// <summary>Generated AU/NZ v2 non-PII wire fields; the API validates values.</summary>
+public sealed class AustralianPayslipV2LeaveBalancesLongServiceAccruedThisPeriod
+{
+    /// <summary>Wire field <c>amount</c>.</summary>
+    [JsonPropertyName("amount")]
+    [JsonConverter(typeof(PayslipDecimalConverter))]
+    public required decimal Amount { get; init; }
+
+    /// <summary>Wire field <c>unit</c>; see <see cref="AustralianLeaveBalanceUnits"/>.</summary>
+    [JsonPropertyName("unit")]
+    public required string Unit { get; init; }
+}
+
+/// <summary>Generated AU/NZ v2 non-PII wire fields; the API validates values.</summary>
+public sealed class AustralianPayslipV2LeaveBalances
+{
+    /// <summary>Wire field <c>annual</c>.</summary>
+    [JsonPropertyName("annual")]
+    public AustralianPayslipV2LeaveBalancesAnnual? Annual { get; init; }
+
+    /// <summary>Wire field <c>annual_accrued_this_period</c>.</summary>
+    [JsonPropertyName("annual_accrued_this_period")]
+    public AustralianPayslipV2LeaveBalancesAnnualAccruedThisPeriod? AnnualAccruedThisPeriod { get; init; }
+
+    /// <summary>Wire field <c>personal</c>.</summary>
+    [JsonPropertyName("personal")]
+    public AustralianPayslipV2LeaveBalancesPersonal? Personal { get; init; }
+
+    /// <summary>Wire field <c>personal_accrued_this_period</c>.</summary>
+    [JsonPropertyName("personal_accrued_this_period")]
+    public AustralianPayslipV2LeaveBalancesPersonalAccruedThisPeriod? PersonalAccruedThisPeriod { get; init; }
+
+    /// <summary>Wire field <c>long_service</c>.</summary>
+    [JsonPropertyName("long_service")]
+    public AustralianPayslipV2LeaveBalancesLongService? LongService { get; init; }
+
+    /// <summary>Wire field <c>long_service_accrued_this_period</c>.</summary>
+    [JsonPropertyName("long_service_accrued_this_period")]
+    public AustralianPayslipV2LeaveBalancesLongServiceAccruedThisPeriod? LongServiceAccruedThisPeriod { get; init; }
+}
+
+/// <summary>Generated AU/NZ v2 non-PII wire fields; the API validates values.</summary>
 public sealed class AustralianPayslipV2Ytd
 {
     /// <summary>Wire field <c>taxable</c>.</summary>
@@ -523,6 +629,10 @@ public sealed class AustralianPayslipV2
     [JsonPropertyName("reimbursements")]
     [JsonConverter(typeof(PayslipDecimalConverter))]
     public decimal? Reimbursements { get; init; }
+
+    /// <summary>Wire field <c>leave_balances</c>.</summary>
+    [JsonPropertyName("leave_balances")]
+    public AustralianPayslipV2LeaveBalances? LeaveBalances { get; init; }
 
     /// <summary>Wire field <c>ytd</c>.</summary>
     [JsonPropertyName("ytd")]

@@ -442,6 +442,27 @@ public static class AustralianBaseRatePeriods
     ]);
 }
 
+/// <summary>Leave balance <c>unit</c> values for <c>au.payslip.v2</c>.</summary>
+public static class AustralianLeaveBalanceUnits
+{
+    /// <summary>The <c>hours</c> code.</summary>
+    public const string Hours = "hours";
+
+    /// <summary>The <c>days</c> code.</summary>
+    public const string Days = "days";
+
+    /// <summary>The <c>weeks</c> code.</summary>
+    public const string Weeks = "weeks";
+
+    /// <summary>Every accepted value, in contract order.</summary>
+    public static readonly IReadOnlyList<string> All = new ReadOnlyCollection<string>(
+    [
+        Hours,
+        Days,
+        Weeks,
+    ]);
+}
+
 /// <summary>Earnings line <c>type</c> values for <c>nz.payslip.v2</c>.</summary>
 public static class NewZealandEarningsTypes
 {
