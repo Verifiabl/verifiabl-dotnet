@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { accessSync, chmodSync, constants, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -60,9 +60,9 @@ function restoreAndBuild(project, config, packages, versionProperty) {
   run("build", project, "--configuration", "Release", "--no-restore", versionProperty);
 }
 
-/** Exit codes and messages of the lender example's offline paths. No request is sent. */
+/** Exit codes and messages of the payload verifier example's offline paths. No request is sent. */
 function checkVerifierExample(config, temporary) {
-  const project = "examples/verifier/LenderVerifier/LenderVerifier.csproj";
+  const project = "examples/verifier/PayloadVerifier/PayloadVerifier.csproj";
   const version = packageVersion(join(root, "packages/Verifiabl.Verifier/src/Verifiabl.Verifier.csproj"));
   const versionProperty = `--property:VerifiablVerifierVersion=${version}`;
   restoreAndBuild(project, config, join(temporary, "verifier-packages"), versionProperty);
@@ -99,8 +99,103 @@ function checkVerifierExample(config, temporary) {
   // An empty payload is rejected before any token or verification request.
   const empty = example(withCredentials, "\r\n");
   assert.equal(empty.status, 1, "An empty payload must be rejected");
-  assert.match(empty.stderr, /Not verified \(VALIDATION_FAILED\)/);
+  assert.match(empty.stderr, /Not verified \(NOT_VERIFIED\)/);
   assert.doesNotMatch(empty.stderr, /package-check-secret/);
+}
+
+/**
+ * A one-page PDF whose XMP metadata carries the payload, as an issuer's PDF
+ * tool writes the metadata copy. It has no images, so it reads as metadata only.
+ */
+export function metadataPdf(payload) {
+  const xmp = [
+    '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">',
+    `<rdf:Description rdf:about="" xmlns:verifiabl="https://verifiabl.io/ns/"><verifiabl:payload>${payload}</verifiabl:payload></rdf:Description>`,
+    "</rdf:RDF></x:xmpmeta>",
+  ].join("\n");
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R /Metadata 4 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>",
+    `<< /Type /Metadata /Subtype /XML /Length ${Buffer.byteLength(xmp)} >>\nstream\n${xmp}\nendstream`,
+  ];
+  let pdf = "%PDF-1.7\n";
+  const offsets = objects.map((object, index) => {
+    const offset = Buffer.byteLength(pdf);
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+    return offset;
+  });
+  const xref = Buffer.byteLength(pdf);
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  pdf += offsets.map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`).join("");
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(pdf, "utf8");
+}
+
+function isReadable(path) {
+  try {
+    accessSync(path, constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Exit codes and messages of the document example's offline paths. No request is sent. */
+function checkDocumentExample(config, temporary, xmpPayload) {
+  const project = "examples/verifier/DocumentVerifier/DocumentVerifier.csproj";
+  const version = packageVersion(join(root, "packages/Verifiabl.Verifier.Pdf/src/Verifiabl.Verifier.Pdf.csproj"));
+  const versionProperty = `--property:VerifiablVerifierVersion=${version}`;
+  restoreAndBuild(project, config, join(temporary, "document-packages"), versionProperty);
+
+  const environment = { ...process.env };
+  delete environment.VERIFIABL_CLIENT_ID;
+  delete environment.VERIFIABL_CLIENT_SECRET;
+  const example = (...arguments_) => capture(
+    environment,
+    "",
+    "run",
+    "--project",
+    project,
+    "--configuration",
+    "Release",
+    "--no-build",
+    versionProperty,
+    "--",
+    ...arguments_,
+  );
+  const pdf = join(temporary, "payslip.pdf");
+  writeFileSync(pdf, metadataPdf(xmpPayload));
+
+  const unknown = example("tiff", pdf);
+  assert.equal(unknown.status, 2, "An unknown command must be a usage error");
+  assert.match(unknown.stderr, /pdf\s+A payslip PDF/);
+
+  assert.equal(example("pdf", join(temporary, "missing.pdf")).status, 2, "A missing file must be a usage error");
+
+  // An existing file that cannot be opened. Root can read it anyway, so the check runs only when the mode applies.
+  const unreadable = join(temporary, "unreadable.pdf");
+  writeFileSync(unreadable, metadataPdf(xmpPayload));
+  chmodSync(unreadable, 0o000);
+  if (!isReadable(unreadable)) {
+    const locked = example("pdf", unreadable, "--read-only");
+    assert.equal(locked.status, 2, `An unreadable file must be reported, not crash: ${locked.stderr}`);
+    assert.match(locked.stderr, /Could not read/);
+  }
+
+  const missing = example("pdf", pdf);
+  assert.equal(missing.status, 2, "Verifying without credentials must be a usage error");
+  assert.match(missing.stderr, /--read-only/);
+
+  // The issuer example's real payload, read back from PDF metadata by the verifier add-on.
+  const read = example("pdf", pdf, "--read-only");
+  assert.equal(read.status, 0, `Read-only mode must read the metadata payload: ${read.stderr}`);
+  assert.match(read.stdout, /HasMetadata = True, HasQrCode = False, SkippedImages = 0/);
+  // The reference may be printed; the ciphertext must not be.
+  const output = read.stdout + read.stderr;
+  const ciphertext = xmpPayload.split("|").at(-1);
+  assert.ok(!output.includes(xmpPayload), "Read-only mode must not print the payload");
+  assert.ok(!output.includes(ciphertext), "Read-only mode must not print the ciphertext");
 }
 
 export function check(packageDirectory = "artifacts") {
@@ -157,6 +252,10 @@ export function check(packageDirectory = "artifacts") {
     assert.deepEqual(single.payslipNonPii, manifest("batch", "PAY-1001").registrationRequest.payslipNonPii);
     assert.notEqual(single.encryptionMetadata.iv, manifest("batch", "PAY-1001").registrationRequest.encryptionMetadata.iv);
     checkVerifierExample(config, temporary);
+    const xmpPayload = readFileSync(
+      join(output, runDirectory, "batch", "PAY-1001", "xmp-payload.txt"), "utf8",
+    ).trim();
+    checkDocumentExample(config, temporary, xmpPayload);
   } finally {
     rmSync(temporary, { recursive: true, force: true });
   }

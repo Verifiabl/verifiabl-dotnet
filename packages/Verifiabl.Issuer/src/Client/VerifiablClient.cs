@@ -265,6 +265,7 @@ public sealed class VerifiablClient : IVerifiablClient
         // 401 refresh, and every transient retry with its backoff.
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(_timeout);
+        var elapsed = Stopwatch.StartNew();
 
         try
         {
@@ -281,8 +282,14 @@ public sealed class VerifiablClient : IVerifiablClient
                 {
                     // A network fault before any response. Safe to retry only for
                     // idempotent calls, where a re-send cannot duplicate work.
+                    TimeSpan backoff = BackoffDelay(attempt + 1);
+                    if (!FitsBeforeDeadline(backoff, elapsed))
+                    {
+                        throw;
+                    }
+
                     attempt++;
-                    await DelayAsync(BackoffDelay(attempt), deadline.Token).ConfigureAwait(false);
+                    await DelayAsync(backoff, deadline.Token).ConfigureAwait(false);
                     continue;
                 }
 
@@ -290,10 +297,13 @@ public sealed class VerifiablClient : IVerifiablClient
                     && IsRetryableStatus((int)response.StatusCode, idempotent))
                 {
                     TimeSpan delay = RetryAfterOrBackoff(response, attempt + 1);
-                    response.Dispose();
-                    attempt++;
-                    await DelayAsync(delay, deadline.Token).ConfigureAwait(false);
-                    continue;
+                    if (FitsBeforeDeadline(delay, elapsed))
+                    {
+                        response.Dispose();
+                        attempt++;
+                        await DelayAsync(delay, deadline.Token).ConfigureAwait(false);
+                        continue;
+                    }
                 }
 
                 using (response)
@@ -531,10 +541,17 @@ public sealed class VerifiablClient : IVerifiablClient
         return idempotent && (status == 408 || (status >= 500 && status <= 599));
     }
 
+    /// <summary>
+    /// Whether a retry delay leaves time for another attempt. A wait that would
+    /// outlast the deadline ends the call with the last failure instead, so the
+    /// caller sees the rate limit or fault, not a timeout.
+    /// </summary>
+    private bool FitsBeforeDeadline(TimeSpan delay, Stopwatch elapsed) => delay < _timeout - elapsed.Elapsed;
+
     private static TimeSpan RetryAfterOrBackoff(HttpResponseMessage response, int attempt)
     {
-        // A server-provided Retry-After is honoured in full (the overall deadline
-        // still bounds the wait); only the computed backoff is capped.
+        // A server-provided Retry-After is never shortened; only the computed
+        // backoff is capped. A wait past the deadline ends the retries instead.
         RetryConditionHeaderValue? retryAfter = response.Headers.RetryAfter;
         if (retryAfter is not null)
         {
@@ -662,17 +679,13 @@ public sealed class VerifiablClient : IVerifiablClient
         }
     }
 
-    private static readonly string[] RequestIdHeaders =
-        ["x-request-id", "request-id", "x-verifiabl-request-id"];
+    private const string RequestIdHeader = "X-Request-Id";
 
     private static string? ExtractRequestId(HttpResponseMessage response)
     {
-        return RequestIdHeaders
-            .SelectMany(header =>
-                response.Headers.TryGetValues(header, out IEnumerable<string>? values)
-                    ? values
-                    : Enumerable.Empty<string>())
-            .FirstOrDefault();
+        return response.Headers.TryGetValues(RequestIdHeader, out IEnumerable<string>? values)
+            ? values.FirstOrDefault()
+            : null;
     }
 
     private static void CallHook<T>(Action<T>? hook, T eventArgs)

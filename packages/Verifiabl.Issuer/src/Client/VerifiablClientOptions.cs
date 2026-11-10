@@ -34,7 +34,8 @@ public sealed class VerifiablClientOptions
     /// and network faults. <see cref="IVerifiablClient.RegisterAndBuildBarcodeAsync"/>
     /// uses a server-minted reference that cannot deduplicate a resend, so it
     /// retries only 429, which the API enforces before any processing. All
-    /// retries share the call <see cref="Timeout"/> as an overall deadline.
+    /// retries share the call <see cref="Timeout"/> as an overall deadline; a
+    /// retry whose wait would outlast it is skipped, and the last failure is thrown.
     /// </remarks>
     public int MaxRetries { get; set; } = 2;
 
@@ -101,7 +102,7 @@ public sealed class VerifiablResponseEvent : VerifiablRequestEvent
     /// <summary>Elapsed time in milliseconds.</summary>
     public double ElapsedMs { get; }
 
-    /// <summary>Request ID returned by the API, when present.</summary>
+    /// <summary>The response's <c>X-Request-Id</c>. Quote it to Verifiabl support.</summary>
     public string? RequestId { get; }
 }
 

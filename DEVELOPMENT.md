@@ -24,16 +24,18 @@ dotnet build Verifiabl.slnx --configuration Release --framework net472 --artifac
 The separate artifacts path keeps this build from replacing the normal restore output. With
 `BuildNetFrameworkTests`, test projects use `packages.windows.lock.json`.
 
-By default the [issuer example](examples/issuer/SelfManagedIssuer/) and the
-[lender verifier example](examples/verifier/LenderVerifier/) build against the SDK projects in this
-repository. `script/packed-package-check.mjs` also restores both from locally packed NuGet packages
-and runs their offline paths as a package-consumer check; see their READMEs for instructions.
+By default the [issuer example](examples/issuer/SelfManagedIssuer/), the
+[payload verifier example](examples/verifier/PayloadVerifier/) and the
+[document verifier example](examples/verifier/DocumentVerifier/) build against the SDK projects in
+this repository. `script/packed-package-check.mjs` also restores them from locally packed NuGet
+packages and runs their offline paths as a package-consumer check. The document example reads back a
+PDF carrying the issuer example's payload in its metadata. See each README for instructions.
 
 ## Verifier consumer contract
 
 The solution includes `packages/Verifiabl.Verifier/consumer-tests`, an assembly
 without internal SDK access. It exercises client fakes, public result/error
-construction and application-owned lender mapping on the supported runtimes.
+construction and application-owned mapping on the supported runtimes.
 
 By default it references the source project. To test a packed NuGet package,
 restore that project with `-p:VerifiablVerifierVersion=<packed-version>`, a

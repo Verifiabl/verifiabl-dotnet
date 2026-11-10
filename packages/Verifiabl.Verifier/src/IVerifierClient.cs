@@ -7,13 +7,13 @@ namespace Verifiabl.Verifier;
 /// <remarks>
 /// The interface has one method, so fakes and decorators stay small. Later
 /// versions add per-verification details to <see cref="VerificationRequest"/>,
-/// not new members here. Call
-/// <see cref="VerifierClientExtensions.VerifyAsync(IVerifierClient, string, CancellationToken)"/>
-/// to verify barcode text without building a request.
+/// not new members here. To retry a verification, send the same
+/// <see cref="VerificationRequest"/> again, so every attempt carries its
+/// idempotency key.
 /// </remarks>
 public interface IVerifierClient
 {
-    /// <summary>Return issuer-authenticated payslip data for an extracted payload.</summary>
+    /// <summary>Return the payslip data the issuer registered for an extracted payload.</summary>
     /// <param name="request">The extracted payload to verify.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
     /// <returns>
@@ -22,8 +22,7 @@ public interface IVerifierClient
     /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="request"/> is null.</exception>
     /// <exception cref="VerifierRejectedException">
-    /// The barcode failed verification, including empty or over-long text. Treat
-    /// the document as unverified.
+    /// The barcode could not be verified, including empty or over-long text.
     /// </exception>
     /// <exception cref="VerifierAuthException">
     /// Authentication could not be completed. Check

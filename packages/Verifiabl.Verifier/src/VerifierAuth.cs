@@ -2,7 +2,7 @@ namespace Verifiabl.Verifier;
 
 /// <summary>How a <see cref="VerifierClient"/> authenticates to the Verifiabl API.</summary>
 /// <remarks>
-/// Pass the OAuth client ID and secret from your lender onboarding to
+/// Pass the OAuth client ID and secret from your verifier onboarding to
 /// <see cref="ClientCredentials"/>. The client fetches, caches and refreshes
 /// access tokens itself.
 /// </remarks>
@@ -12,7 +12,7 @@ public abstract class VerifierAuth
     {
     }
 
-    /// <summary>OAuth client credentials issued by Verifiabl during lender onboarding.</summary>
+    /// <summary>OAuth client credentials issued by Verifiabl during verifier onboarding.</summary>
     /// <param name="clientId">OAuth client ID.</param>
     /// <param name="clientSecret">OAuth client secret. Keep it out of logs and source control.</param>
     /// <param name="tokenUrl">

@@ -27,7 +27,9 @@ public sealed class VerifierClientOptions
     /// <summary>
     /// Maximum automatic retries after the first attempt. Defaults to 2; set 0 to
     /// disable. Rate limits, timeouts, 5xx responses and network faults are
-    /// retried with exponential backoff, honouring <c>Retry-After</c>.
+    /// retried with exponential backoff, honouring <c>Retry-After</c>. A retry
+    /// whose wait would outlast <see cref="Timeout"/> is skipped, and the last
+    /// failure is thrown with its <see cref="VerifierException.RetryAfter"/>.
     /// </summary>
     public int MaxRetries { get; set; } = 2;
 

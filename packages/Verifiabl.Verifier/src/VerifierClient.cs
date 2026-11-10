@@ -49,23 +49,39 @@ public sealed class VerifierClient : IVerifierClient
         string barcode = request.Barcode;
 
         // The API parses the barcode, so the SDK accepts every format it does.
-        // Extracted text is untrusted input, so a bad length is a rejection in
-        // the returned task, like the API's own, not an ArgumentException.
+        // Extracted text is untrusted input, so a bad length is not verified, in
+        // the returned task like the API's own answer, not an ArgumentException.
         if (barcode.Length == 0 || barcode.Length > MaxBarcodeLength)
         {
             return Task.FromException<VerificationResult>(LengthRejection());
         }
 
-        var body = new JsonObject { ["barcode"] = barcode };
-        return _transport.PostAsync(VerifyPath, body, Wire.ResultFromWire, cancellationToken);
+        return SendAsync(request, cancellationToken);
+    }
+
+    private async Task<VerificationResult> SendAsync(VerificationRequest request, CancellationToken cancellationToken)
+    {
+        Guid key = request.IdempotencyKey;
+        var body = new JsonObject { ["barcode"] = request.Barcode };
+        try
+        {
+            return await _transport.PostAsync(
+                VerifyPath,
+                body,
+                key,
+                (json, requestId) => Wire.ResultFromWire(json, requestId, key),
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (VerifierException exception)
+        {
+            exception.RecordIdempotencyKey(key);
+            throw;
+        }
     }
 
     private static VerifierRejectedException LengthRejection()
     {
         string message = $"The barcode must be between 1 and {MaxBarcodeLength} characters.";
-        return new VerifierRejectedException(VerifierErrorCodes.ValidationFailed, message)
-        {
-            FieldErrors = [new VerifierFieldError("barcode", message)],
-        };
+        return new VerifierRejectedException(VerifierErrorCodes.NotVerified, message);
     }
 }

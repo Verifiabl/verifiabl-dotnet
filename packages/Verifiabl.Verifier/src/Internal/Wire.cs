@@ -23,7 +23,7 @@ internal static class Wire
     }
 
     /// <summary>Parse a 200 verification response. Throws <see cref="FormatException"/> on an unexpected shape.</summary>
-    internal static VerificationResult ResultFromWire(JsonElement root)
+    internal static VerificationResult ResultFromWire(JsonElement root, string? requestId, Guid idempotencyKey)
     {
         if (root.ValueKind != JsonValueKind.Object
             || !root.TryGetProperty("verified", out JsonElement verified)
@@ -56,7 +56,11 @@ internal static class Wire
             ReadString(payslip, "schema"),
             payslip,
             employee,
-            decryptedAt);
+            decryptedAt)
+        {
+            RequestId = requestId,
+            IdempotencyKey = idempotencyKey,
+        };
     }
 
     internal static VerifierErrorBody? ErrorBodyFromWire(JsonElement root)

@@ -135,6 +135,28 @@ public class ClientRetryTests
     }
 
     [Fact]
+    public async Task ReportsTheLastAttemptsRequestId()
+    {
+        var delays = new List<TimeSpan>();
+        FakeHttpHandler handler = QueuedHandler(
+            () => WithRequestId(FakeHttpHandler.Json(HttpStatusCode.ServiceUnavailable, "{}"), "req-first"),
+            () => WithRequestId(FakeHttpHandler.Json(HttpStatusCode.ServiceUnavailable, "{}"), "req-last"));
+        VerifiablClient client = Client(handler, delays, o => o.MaxRetries = 1);
+
+        VerifiablApiException error = await Assert.ThrowsAsync<VerifiablApiException>(
+            () => client.RegisterNonPiiBatchAsync([BatchRecordItem()]));
+
+        Assert.Equal("req-last", error.RequestId);
+        Assert.Equal(2, handler.ApiRequests.Count());
+    }
+
+    private static HttpResponseMessage WithRequestId(HttpResponseMessage response, string requestId)
+    {
+        response.Headers.Add("X-Request-Id", requestId);
+        return response;
+    }
+
+    [Fact]
     public async Task RetriesSingleRegistrationOnAmbiguous5xxResendingTheSameReference()
     {
         var delays = new List<TimeSpan>();
@@ -267,13 +289,36 @@ public class ClientRetryTests
                 return response;
             },
             BatchOk);
-        VerifiablClient client = Client(handler, delays);
+        VerifiablClient client = Client(handler, delays, o => o.Timeout = TimeSpan.FromMinutes(2));
 
         await client.RegisterNonPiiBatchAsync([BatchRecordItem()]);
 
         // The server's backpressure request wins over the internal backoff cap.
         Assert.Single(delays);
         Assert.Equal(TimeSpan.FromSeconds(60), delays[0]);
+    }
+
+    [Fact]
+    public async Task ARetryAfterBeyondTheDeadlineSurfacesTheResponse()
+    {
+        var delays = new List<TimeSpan>();
+        FakeHttpHandler handler = QueuedHandler(
+            () =>
+            {
+                HttpResponseMessage response = FakeHttpHandler.Json((HttpStatusCode)429, "{}");
+                response.Headers.RetryAfter =
+                    new RetryConditionHeaderValue(TimeSpan.FromSeconds(60));
+                return response;
+            },
+            BatchOk);
+        VerifiablClient client = Client(handler, delays, o => o.Timeout = TimeSpan.FromSeconds(30));
+
+        VerifiablApiException error = await Assert.ThrowsAsync<VerifiablApiException>(
+            () => client.RegisterNonPiiBatchAsync([BatchRecordItem()]));
+
+        Assert.Equal(429, error.Status);
+        Assert.Empty(delays);
+        Assert.Single(handler.ApiRequests);
     }
 
     [Fact]

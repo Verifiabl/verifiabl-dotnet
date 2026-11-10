@@ -2,7 +2,9 @@
 using System.Net;
 #endif
 using System.Net.Http;
+using System.Diagnostics;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -18,8 +20,8 @@ namespace Verifiabl.Verifier.Internal;
 /// </summary>
 /// <remarks>
 /// Adapted from Verifiabl.Issuer's client. Keep retry and token behaviour in
-/// step with it. Retries can create additional verification events; invoice-time
-/// rating policy, not this transport, determines their charges.
+/// step with it. All attempts of a call send the same <c>Idempotency-Key</c>,
+/// so the API charges a retried verification once.
 /// </remarks>
 internal sealed class ApiTransport
 {
@@ -38,8 +40,8 @@ internal sealed class ApiTransport
 
     private static readonly Lazy<HttpClient> SharedHttpClient = new(CreateSharedHttpClient);
 
-    private static readonly string[] RequestIdHeaders =
-        ["x-request-id", "request-id", "x-verifiabl-request-id"];
+    private const string RequestIdHeader = "X-Request-Id";
+    private const string IdempotencyKeyHeader = "Idempotency-Key";
 
     /// <summary>
     /// Sent so Verifiabl support can identify the SDK version behind a call. It
@@ -132,15 +134,18 @@ internal sealed class ApiTransport
     internal async Task<T> PostAsync<T>(
         string path,
         JsonObject body,
-        Func<JsonElement, T> parseResponse,
+        Guid idempotencyKey,
+        Func<JsonElement, string?, T> parseResponse,
         CancellationToken cancellationToken)
     {
         string json = body.ToJsonString();
+        string key = idempotencyKey.ToString("D");
 
         // One deadline covers the whole operation: token fetches, requests, the
         // 401 refresh, and every transient retry with its backoff.
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(_timeout);
+        var elapsed = Stopwatch.StartNew();
 
         try
         {
@@ -150,22 +155,31 @@ internal sealed class ApiTransport
                 HttpResponseMessage response;
                 try
                 {
-                    response = await SendWithAuthAsync(path, json, deadline.Token).ConfigureAwait(false);
+                    response = await SendWithAuthAsync(path, json, key, deadline.Token).ConfigureAwait(false);
                 }
                 catch (HttpRequestException) when (attempt < _maxRetries)
                 {
+                    TimeSpan backoff = BackoffDelay(attempt + 1);
+                    if (!FitsBeforeDeadline(backoff, elapsed))
+                    {
+                        throw;
+                    }
+
                     attempt++;
-                    await DelayAsync(BackoffDelay(attempt), deadline.Token).ConfigureAwait(false);
+                    await DelayAsync(backoff, deadline.Token).ConfigureAwait(false);
                     continue;
                 }
 
                 if (attempt < _maxRetries && IsRetryableStatus((int)response.StatusCode))
                 {
                     TimeSpan delay = RetryAfterOrBackoff(response, attempt + 1);
-                    response.Dispose();
-                    attempt++;
-                    await DelayAsync(delay, deadline.Token).ConfigureAwait(false);
-                    continue;
+                    if (FitsBeforeDeadline(delay, elapsed))
+                    {
+                        response.Dispose();
+                        attempt++;
+                        await DelayAsync(delay, deadline.Token).ConfigureAwait(false);
+                        continue;
+                    }
                 }
 
                 using (response)
@@ -186,12 +200,19 @@ internal sealed class ApiTransport
         }
     }
 
+    /// <summary>
+    /// Whether a retry delay leaves time for another attempt. A wait that would
+    /// outlast the deadline ends the call with the last failure instead, so the
+    /// caller sees the rate limit or fault and its Retry-After, not a timeout.
+    /// </summary>
+    private bool FitsBeforeDeadline(TimeSpan delay, Stopwatch elapsed) => delay < _timeout - elapsed.Elapsed;
+
     private VerifierTimeoutException TimedOut() =>
         new($"The Verifiabl verification did not complete within {_timeout.TotalSeconds:0.###} seconds.", _timeout);
 
     private static async Task<T> ReadResponseAsync<T>(
         HttpResponseMessage response,
-        Func<JsonElement, T> parseResponse,
+        Func<JsonElement, string?, T> parseResponse,
         CancellationToken cancellationToken)
     {
         string text = await ReadBodyAsync(response, cancellationToken).ConfigureAwait(false);
@@ -206,7 +227,7 @@ internal sealed class ApiTransport
         using JsonDocument document = ParseJsonBody(text, status, requestId);
         try
         {
-            return parseResponse(document.RootElement);
+            return parseResponse(document.RootElement, requestId);
         }
         catch (FormatException exception)
         {
@@ -247,7 +268,6 @@ internal sealed class ApiTransport
             RequestId = requestId,
             Reason = body.Reason,
             Detail = body.Detail,
-            FieldErrors = body.FieldErrors,
         };
     }
 
@@ -258,16 +278,17 @@ internal sealed class ApiTransport
     private async Task<HttpResponseMessage> SendWithAuthAsync(
         string path,
         string json,
+        string idempotencyKey,
         CancellationToken cancellationToken)
     {
         (HttpResponseMessage response, string bearerToken) =
-            await SendAsync(path, json, cancellationToken).ConfigureAwait(false);
+            await SendAsync(path, json, idempotencyKey, cancellationToken).ConfigureAwait(false);
 
         if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {
             response.Dispose();
             await InvalidateRejectedTokenAsync(bearerToken, cancellationToken).ConfigureAwait(false);
-            (response, _) = await SendAsync(path, json, cancellationToken).ConfigureAwait(false);
+            (response, _) = await SendAsync(path, json, idempotencyKey, cancellationToken).ConfigureAwait(false);
         }
 
         return response;
@@ -295,6 +316,7 @@ internal sealed class ApiTransport
     private async Task<(HttpResponseMessage Response, string BearerToken)> SendAsync(
         string path,
         string json,
+        string idempotencyKey,
         CancellationToken cancellationToken)
     {
         string token = await GetBearerTokenAsync(cancellationToken).ConfigureAwait(false);
@@ -303,6 +325,7 @@ internal sealed class ApiTransport
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         request.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
+        request.Headers.TryAddWithoutValidation(IdempotencyKeyHeader, idempotencyKey);
         request.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
         HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
@@ -338,6 +361,8 @@ internal sealed class ApiTransport
         }
     }
 
+    // Token failures carry no RequestId: the token endpoint is the identity
+    // provider, not a Verifiabl API service, so support cannot look its IDs up.
     private async Task<CachedToken> RequestAccessTokenAsync(CancellationToken cancellationToken)
     {
         var body = new JsonObject
@@ -373,17 +398,16 @@ internal sealed class ApiTransport
                     $"Verifiabl OAuth token request failed with status {(int)response.StatusCode}.")
                 {
                     Status = (int)response.StatusCode,
-                    RequestId = ExtractRequestId(response),
                     RetryAfter = ReadRetryAfter(response),
                 };
             }
 
             string text = await ReadBodyAsync(response, cancellationToken).ConfigureAwait(false);
-            return ParseToken(text, ExtractRequestId(response), ReadRetryAfter(response));
+            return ParseToken(text, ReadRetryAfter(response));
         }
     }
 
-    private static CachedToken ParseToken(string text, string? requestId, TimeSpan? retryAfter)
+    private static CachedToken ParseToken(string text, TimeSpan? retryAfter)
     {
         JsonDocument document;
         try
@@ -394,7 +418,6 @@ internal sealed class ApiTransport
         {
             throw new VerifierAuthException("Verifiabl OAuth token response was not valid JSON.")
             {
-                RequestId = requestId,
                 RetryAfter = retryAfter,
             };
         }
@@ -404,7 +427,6 @@ internal sealed class ApiTransport
             Wire.TokenResponse token = Wire.TokenFromWire(document.RootElement)
                 ?? throw new VerifierAuthException("Verifiabl OAuth token response had an unexpected shape.")
                 {
-                    RequestId = requestId,
                     RetryAfter = retryAfter,
                 };
             DateTimeOffset issuedAt = DateTimeOffset.UtcNow;
@@ -420,8 +442,8 @@ internal sealed class ApiTransport
 
     private static TimeSpan RetryAfterOrBackoff(HttpResponseMessage response, int attempt)
     {
-        // A server-provided Retry-After is honoured in full (the overall deadline
-        // still bounds the wait); only the computed backoff is capped.
+        // A server-provided Retry-After is never shortened; only the computed
+        // backoff is capped. A wait past the deadline ends the retries instead.
         return ReadRetryAfter(response) ?? BackoffDelay(attempt);
     }
 
@@ -465,9 +487,26 @@ internal sealed class ApiTransport
 
     private static string BuildUserAgent()
     {
-        Version? version = typeof(ApiTransport).Assembly.GetName().Version;
-        string v = version is null ? "0.0.0" : $"{version.Major}.{version.Minor}.{version.Build}";
-        return $"verifiabl-verifier-dotnet/{v} ({RuntimeInformation.FrameworkDescription})";
+        return $"verifiabl-verifier-dotnet/{PackageVersion()} ({RuntimeInformation.FrameworkDescription})";
+    }
+
+    /// <summary>
+    /// The NuGet package version, including any prerelease label. The assembly
+    /// version drops the label, and the informational version may carry a
+    /// <c>+commit</c> suffix that support does not need.
+    /// </summary>
+    private static string PackageVersion()
+    {
+        string? informational = typeof(ApiTransport).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+        if (string.IsNullOrEmpty(informational))
+        {
+            return "0.0.0";
+        }
+
+        int metadata = informational!.IndexOf('+');
+        return metadata < 0 ? informational : informational.Substring(0, metadata);
     }
 
     private static HttpClient CreateSharedHttpClient()
@@ -566,12 +605,9 @@ internal sealed class ApiTransport
 
     private static string? ExtractRequestId(HttpResponseMessage response)
     {
-        return RequestIdHeaders
-            .SelectMany(header =>
-                response.Headers.TryGetValues(header, out IEnumerable<string>? values)
-                    ? values
-                    : Enumerable.Empty<string>())
-            .FirstOrDefault();
+        return response.Headers.TryGetValues(RequestIdHeader, out IEnumerable<string>? values)
+            ? values.FirstOrDefault()
+            : null;
     }
 
     private static string TokenUrlFor(VerifierAuth.ClientCredentialsAuth auth, VerifierEnvironment environment) =>

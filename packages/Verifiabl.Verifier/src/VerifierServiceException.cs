@@ -3,14 +3,14 @@ using Verifiabl.Verifier.Internal;
 namespace Verifiabl.Verifier;
 
 /// <summary>
-/// Thrown when Verifiabl returns an error that is not about the barcode or the
-/// credentials, such as an outage, a rate limit or an unavailable key. Check
+/// Thrown when Verifiabl returns an error that is not a failed verification or
+/// about the credentials, such as an outage, a rate limit or a malformed request. Check
 /// <see cref="VerifierException.IsRetryable"/>, and quote
 /// <see cref="VerifierException.RequestId"/> to Verifiabl support. Match on
 /// <see cref="Code"/>, not the message.
 /// </summary>
 /// <remarks>
-/// Rejected barcodes throw <see cref="VerifierRejectedException"/>, and 401 or 403
+/// Payloads that could not be verified throw <see cref="VerifierRejectedException"/>, and 401 or 403
 /// responses throw <see cref="VerifierAuthException"/>.
 /// </remarks>
 public sealed class VerifierServiceException : VerifierException
@@ -30,7 +30,7 @@ public sealed class VerifierServiceException : VerifierException
     public int Status { get; }
 
     /// <summary>
-    /// Stable error code, such as <see cref="VerifierErrorCodes.KeyVersionUnavailable"/>.
+    /// Stable error code, such as <see cref="VerifierErrorCodes.ServiceUnavailable"/>.
     /// <see cref="VerifierErrorCodes.InternalError"/> when the response had no
     /// Verifiabl error body.
     /// </summary>

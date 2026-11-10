@@ -668,7 +668,7 @@ public class ClientRequestTests
                 HttpResponseMessage response = FakeHttpHandler.Json(
                     HttpStatusCode.InternalServerError,
                     "{\"error\":\"boom\",\"code\":\"INTERNAL_ERROR\"}");
-                response.Headers.Add("x-request-id", "req-123");
+                response.Headers.Add("X-Request-Id", "req-123");
                 return Task.FromResult(response);
             },
         };
@@ -678,6 +678,29 @@ public class ClientRequestTests
             () => client.RegisterNonPiiAsync(ValidRequest()));
 
         Assert.Equal("req-123", exception.RequestId);
+    }
+
+    [Fact]
+    public async Task ReadsOnlyTheXRequestIdHeader()
+    {
+        var handler = new FakeHttpHandler
+        {
+            Responder = (_, _, _) =>
+            {
+                HttpResponseMessage response = FakeHttpHandler.Json(
+                    HttpStatusCode.InternalServerError,
+                    "{\"error\":\"boom\",\"code\":\"INTERNAL_ERROR\"}");
+                response.Headers.Add("request-id", "req-other");
+                response.Headers.Add("x-verifiabl-request-id", "req-other");
+                return Task.FromResult(response);
+            },
+        };
+        VerifiablClient client = Client(handler);
+
+        VerifiablApiException exception = await Assert.ThrowsAsync<VerifiablApiException>(
+            () => client.RegisterNonPiiAsync(ValidRequest()));
+
+        Assert.Null(exception.RequestId);
     }
 
     [Fact]
