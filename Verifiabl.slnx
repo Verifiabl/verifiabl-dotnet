@@ -11,4 +11,12 @@
     <Project Path="packages/Verifiabl.Verifier/tests/Verifiabl.Verifier.Tests.csproj" />
     <Project Path="packages/Verifiabl.Verifier/consumer-tests/Verifiabl.Verifier.Consumer.Tests.csproj" />
   </Folder>
+  <Folder Name="/Verifiabl.Verifier.Extraction/">
+    <Project Path="packages/Verifiabl.Verifier.Extraction/src/Verifiabl.Verifier.Extraction.csproj" />
+    <Project Path="packages/Verifiabl.Verifier.Extraction/tests/Verifiabl.Verifier.Extraction.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Verifiabl.Verifier.Pdf/">
+    <Project Path="packages/Verifiabl.Verifier.Pdf/src/Verifiabl.Verifier.Pdf.csproj" />
+    <Project Path="packages/Verifiabl.Verifier.Pdf/tests/Verifiabl.Verifier.Pdf.Tests.csproj" />
+  </Folder>
 </Solution>

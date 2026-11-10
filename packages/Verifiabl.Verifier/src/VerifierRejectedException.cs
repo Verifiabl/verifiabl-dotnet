@@ -1,45 +1,40 @@
 namespace Verifiabl.Verifier;
 
 /// <summary>
-/// Thrown when the barcode fails verification: it is not a Verifiabl payload,
-/// was altered or truncated, or has no registered payslip. Treat the document as
-/// unverified; retrying the same barcode gives the same answer.
+/// Thrown when the payload could not be verified. The text cannot be read,
+/// Verifiabl has no record of it, its issuer has no active key, or it does not
+/// decrypt to a valid payslip payload; the API does not say which. A damaged
+/// scan or a code from another product or environment gives the same result.
+/// Sending the same text again usually gives the same answer, so it is not retryable.
 /// </summary>
 /// <remarks>
-/// <see cref="Code"/> says why, for logs and support. Matching on it is optional.
+/// <see cref="Code"/> is <see cref="VerifierErrorCodes.NotVerified"/>. Quote
+/// <see cref="VerifierException.RequestId"/> to Verifiabl support to find the cause.
 /// </remarks>
 public sealed class VerifierRejectedException : VerifierException
 {
-    private readonly IReadOnlyList<VerifierFieldError> _fieldErrors = Array.Empty<VerifierFieldError>();
-
     /// <summary>Create a rejection for an adapter or test fake.</summary>
-    /// <remarks>Keep messages, detail and field errors free of payloads, payslip data and credentials.</remarks>
+    /// <remarks>Keep messages and detail free of payloads, payslip data and credentials.</remarks>
     public VerifierRejectedException(string code, string message)
         : base(message)
     {
         Code = code;
     }
 
-    /// <summary>
-    /// Why the barcode was rejected, such as <see cref="VerifierErrorCodes.DecryptionFailed"/>.
-    /// </summary>
+    /// <summary><see cref="VerifierErrorCodes.NotVerified"/>.</summary>
     public string Code { get; }
 
-    /// <summary>HTTP status code, or null when the client rejected the barcode without sending it.</summary>
+    /// <summary>HTTP status code, or null when the client checked the text without sending it.</summary>
     public int? Status { get; init; }
 
-    /// <summary>A finer reason for some codes, when the API sends one.</summary>
+    /// <summary>
+    /// A finer cause, sent only by the issuer self-test routes so issuers can
+    /// debug their own payslips. Verifier routes send none.
+    /// </summary>
     public string? Reason { get; init; }
 
     /// <summary>Extra detail, when the API sends it.</summary>
     public string? Detail { get; init; }
-
-    /// <summary>The request fields that failed validation. Empty for other rejections.</summary>
-    public IReadOnlyList<VerifierFieldError> FieldErrors
-    {
-        get => _fieldErrors;
-        init => _fieldErrors = Array.AsReadOnly(value?.ToArray() ?? []);
-    }
 
     /// <inheritdoc />
     public override bool IsRetryable => false;

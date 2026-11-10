@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Same targets as Verifiabl.Verifier. -->
+    <TargetFrameworks>net472;net8.0;net10.0</TargetFrameworks>
+    <PackageId>Verifiabl.Verifier.Extraction</PackageId>
+    <RootNamespace>Verifiabl.Verifier.Extraction</RootNamespace>
+    <Version>0.1.0-rc.2</Version>
+    <Description>Shared building blocks for Verifiabl.Verifier extraction add-ons: read a Verifiabl QR code from image pixels and compare payload copies. Managed code only.</Description>
+    <Authors>Verifiabl</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://verifiabl.io</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Verifiabl/verifiabl-dotnet</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>verifiabl;payslip;verifier;qr-code</PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EnablePackageValidation>true</EnablePackageValidation>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\..\icon.png" Pack="true" PackagePath="\" />
+    <InternalsVisibleTo Include="Verifiabl.Verifier.Extraction.Tests" Key="$(VerifiablPublicKey)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Pure managed QR decoding, Apache-2.0. -->
+    <PackageReference Include="ZXing.Net" Version="0.16.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Public API only, for the barcode length limit. -->
+    <ProjectReference Include="..\..\Verifiabl.Verifier\src\Verifiabl.Verifier.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

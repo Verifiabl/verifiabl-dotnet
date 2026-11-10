@@ -4,6 +4,17 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- `VerifiablApiException.RequestId` and `VerifiablResponseEvent.RequestId` read
+  only the `X-Request-Id` header, which the API sends on every response. After
+  retries it is the last attempt's. Quote it to Verifiabl support.
+- A retry whose `Retry-After` or backoff would outlast `Timeout` is no longer
+  attempted. The call fails with the last response, such as a 429
+  `VerifiablApiException`, instead of a `VerifiablTimeoutException` at the deadline.
+
 ## [1.1.0] - 2026-11-03
 
 ### Added

@@ -14,8 +14,8 @@ public class ConsumerTests
         VerificationResult verified = Result("au.payslip.v2");
         IVerifierClient client = new FakeVerifier(verified);
 
-        VerificationResult result = await client.VerifyAsync("already-extracted-payload");
-        LenderPayslip mapped = MapForLender(result);
+        VerificationResult result = await client.VerifyAsync(new VerificationRequest("already-extracted-payload"));
+        MappedPayslip mapped = MapPayslip(result);
 
         Assert.Same(verified, result);
         Assert.Equal(Reference, mapped.Reference);
@@ -41,7 +41,7 @@ public class ConsumerTests
     {
         VerificationResult verified = Result("future.payslip.v3");
 
-        Assert.Throws<NotSupportedException>(() => MapForLender(verified));
+        Assert.Throws<NotSupportedException>(() => MapPayslip(verified));
         Assert.Equal(Reference, verified.VerifiablReference);
     }
 
@@ -51,64 +51,47 @@ public class ConsumerTests
         using JsonDocument empty = JsonDocument.Parse("{}");
         var verified = new VerificationResult(Reference, "au.payslip.v2", empty.RootElement, empty.RootElement, DateTimeOffset.UtcNow);
 
-        Assert.Throws<KeyNotFoundException>(() => MapForLender(verified));
+        Assert.Throws<KeyNotFoundException>(() => MapPayslip(verified));
     }
 
     [Fact]
     public async Task ConsumerCanFakeTypedServiceFailures()
     {
+        var fields = new List<VerifierFieldError> { new("barcode", "Expected string") };
         var failure = new VerifierServiceException(
-            422,
-            VerifierErrorCodes.KeyVersionUnavailable,
-            "Decryption is not available for this record")
+            400,
+            VerifierErrorCodes.ValidationFailed,
+            "Validation failed")
         {
-            RequestId = "request-1",
-            Detail = "Contact support.",
-        };
-        IVerifierClient client = new FakeVerifier(failure);
-
-        VerifierServiceException actual = await Assert.ThrowsAsync<VerifierServiceException>(() => client.VerifyAsync("payload"));
-
-        Assert.Same(failure, actual);
-        Assert.Equal(422, actual.Status);
-        Assert.Equal(VerifierErrorCodes.KeyVersionUnavailable, actual.Code);
-        Assert.Equal("request-1", actual.RequestId);
-        Assert.Empty(actual.FieldErrors);
-    }
-
-    [Fact]
-    public async Task ConsumerCanFakeRejectionsWithFieldErrors()
-    {
-        var fields = new List<VerifierFieldError> { new("barcode", "Unrecognised barcode format") };
-        var failure = new VerifierRejectedException(VerifierErrorCodes.ValidationFailed, "Validation failed")
-        {
-            Status = 400,
             RequestId = "request-1",
             FieldErrors = fields,
         };
         fields.Clear();
         IVerifierClient client = new FakeVerifier(failure);
 
-        VerifierRejectedException actual = await Assert.ThrowsAsync<VerifierRejectedException>(() => client.VerifyAsync("invalid"));
+        VerifierServiceException actual = await Assert.ThrowsAsync<VerifierServiceException>(() => client.VerifyAsync(new VerificationRequest("payload")));
 
         Assert.Same(failure, actual);
+        Assert.Equal(400, actual.Status);
+        Assert.Equal(VerifierErrorCodes.ValidationFailed, actual.Code);
+        Assert.Equal("request-1", actual.RequestId);
         Assert.Single(actual.FieldErrors);
     }
 
     [Fact]
     public async Task ConsumerCanFakeRejections()
     {
-        var failure = new VerifierRejectedException(VerifierErrorCodes.DecryptionFailed, "Decryption failed")
+        var failure = new VerifierRejectedException(VerifierErrorCodes.NotVerified, "Not verified")
         {
-            Status = 400,
+            Status = 422,
+            RequestId = "request-1",
         };
         IVerifierClient client = new FakeVerifier(failure);
 
-        VerifierRejectedException actual = await Assert.ThrowsAsync<VerifierRejectedException>(() => client.VerifyAsync("altered"));
+        VerifierRejectedException actual = await Assert.ThrowsAsync<VerifierRejectedException>(() => client.VerifyAsync(new VerificationRequest("unreadable")));
 
         Assert.Same(failure, actual);
         Assert.False(actual.IsRetryable);
-        Assert.Empty(actual.FieldErrors);
     }
 
     [Fact]
@@ -123,7 +106,7 @@ public class ConsumerTests
     public void RetryabilityFollowsTheFailure()
     {
         Assert.True(new VerifierServiceException(503, VerifierErrorCodes.ServiceUnavailable, "Unavailable").IsRetryable);
-        Assert.False(new VerifierServiceException(422, VerifierErrorCodes.KeyVersionUnavailable, "Unavailable").IsRetryable);
+        Assert.False(new VerifierServiceException(400, VerifierErrorCodes.ValidationFailed, "Validation failed").IsRetryable);
         Assert.False(new VerifierAuthException("Forbidden") { Status = 403, Code = VerifierErrorCodes.Forbidden }.IsRetryable);
         Assert.True(new VerifierAuthException("Unreachable").IsRetryable);
         Assert.False(new VerifierAuthException("Token denied") { Status = 401 }.IsRetryable);
@@ -184,6 +167,52 @@ public class ConsumerTests
         Assert.Null(extraction.RequestId);
     }
 
+    [Fact]
+    public async Task ConsumerCanFakeAResultWithARequestId()
+    {
+        VerificationResult verified = new VerificationResult(
+            Reference,
+            "au.payslip.v2",
+            JsonDocument.Parse("{}").RootElement,
+            JsonDocument.Parse("{}").RootElement,
+            DateTimeOffset.UtcNow)
+        {
+            RequestId = "request-1",
+        };
+        IVerifierClient client = new FakeVerifier(verified);
+
+        VerificationResult result = await client.VerifyAsync(new VerificationRequest("payload"));
+
+        Assert.Equal("request-1", result.RequestId);
+    }
+
+    [Fact]
+    public async Task ConsumerCanFakeIdempotencyKeysOnResultsAndFailures()
+    {
+        var request = new VerificationRequest("payload") { IdempotencyKey = Guid.NewGuid() };
+        VerificationResult verified = new VerificationResult(
+            Reference,
+            "au.payslip.v2",
+            JsonDocument.Parse("{}").RootElement,
+            JsonDocument.Parse("{}").RootElement,
+            DateTimeOffset.UtcNow)
+        {
+            IdempotencyKey = request.IdempotencyKey,
+        };
+        var failure = new VerifierServiceException(409, VerifierErrorCodes.IdempotencyKeyReused, "Key reused")
+        {
+            IdempotencyKey = request.IdempotencyKey,
+        };
+
+        VerificationResult result = await new FakeVerifier(verified).VerifyAsync(request);
+        VerifierServiceException actual = await Assert.ThrowsAsync<VerifierServiceException>(
+            () => new FakeVerifier(failure).VerifyAsync(request));
+
+        Assert.Equal(request.IdempotencyKey, result.IdempotencyKey);
+        Assert.Equal(request.IdempotencyKey, actual.IdempotencyKey);
+        Assert.False(actual.IsRetryable);
+    }
+
     // The catch sequence from the README, in order.
     private static async Task<string> OutcomeOf(VerifierException failure)
     {
@@ -192,7 +221,7 @@ public class ConsumerTests
         string outcome;
         try
         {
-            await client.VerifyAsync("payload");
+            await client.VerifyAsync(new VerificationRequest("payload"));
             outcome = "verified";
         }
         catch (VerifierRejectedException)
@@ -231,7 +260,7 @@ public class ConsumerTests
         return new VerificationResult(Reference, schema, payslip.RootElement, employee.RootElement, DateTimeOffset.UtcNow);
     }
 
-    private static LenderPayslip MapForLender(VerificationResult verified)
+    private static MappedPayslip MapPayslip(VerificationResult verified)
     {
         if (verified.Schema != "au.payslip.v2")
         {
@@ -239,15 +268,15 @@ public class ConsumerTests
         }
 
         JsonElement fields = verified.Payslip.GetProperty("payslip_non_pii");
-        return new LenderPayslip(
+        return new MappedPayslip(
             verified.VerifiablReference,
             fields.GetProperty("currency").GetString()!,
             fields.GetProperty("gross").GetString()!);
     }
 
-    private sealed class LenderPayslip
+    private sealed class MappedPayslip
     {
-        internal LenderPayslip(string reference, string currency, string gross)
+        internal MappedPayslip(string reference, string currency, string gross)
         {
             Reference = reference;
             Currency = currency;

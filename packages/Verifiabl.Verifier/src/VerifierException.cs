@@ -6,8 +6,8 @@ namespace Verifiabl.Verifier;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <see cref="VerifierRejectedException"/> means the barcode itself failed
-/// verification. <see cref="PayloadExtractionException"/> means no payload could
+/// <see cref="VerifierRejectedException"/> means the payload could not be
+/// verified. <see cref="PayloadExtractionException"/> means no payload could
 /// be read from a document, so nothing was verified. Every other subtype is an
 /// operational failure; check <see cref="IsRetryable"/> to decide whether to try
 /// again later. Do not put payloads, payslip data or credentials in custom
@@ -32,16 +32,23 @@ public abstract class VerifierException : Exception
     {
     }
 
+    private Guid? _idempotencyKey;
+
     /// <summary>
     /// Whether the same call may succeed later, such as after an outage or rate
-    /// limit. This does not mean the previous attempt did not complete or that
-    /// replay cannot produce additional verification events. Verification requests
-    /// may already have retried up to <see cref="VerifierClientOptions.MaxRetries"/>
-    /// times; token-endpoint failures are not automatically retried.
+    /// limit. It does not show whether the previous attempt completed. To retry,
+    /// send the same <see cref="VerificationRequest"/> again, so Verifiabl does
+    /// not charge twice. Verification requests may already have retried up to
+    /// <see cref="VerifierClientOptions.MaxRetries"/> times; token-endpoint
+    /// failures are not automatically retried.
     /// </summary>
     public abstract bool IsRetryable { get; }
 
-    /// <summary>Request ID to quote to Verifiabl support, when a response carried one.</summary>
+    /// <summary>
+    /// The API response's <c>X-Request-Id</c>, from the last attempt when the call
+    /// was retried. Quote it to Verifiabl support. Null when no API response was
+    /// handled, such as for token-endpoint and network failures.
+    /// </summary>
     public string? RequestId { get; init; }
 
     /// <summary>
@@ -51,4 +58,21 @@ public abstract class VerifierException : Exception
     /// your deadline.
     /// </summary>
     public TimeSpan? RetryAfter { get; init; }
+
+    /// <summary>
+    /// The <see cref="VerificationRequest.IdempotencyKey"/> of the failed call.
+    /// The verification can complete even when the call fails. Quote the key
+    /// when you ask Verifiabl about the verification or its charge. Null when
+    /// the SDK did not start a verification call: for a
+    /// <see cref="PayloadExtractionException"/>, and when
+    /// <see cref="VerifierClient"/> rejects empty or over-long text.
+    /// </summary>
+    public Guid? IdempotencyKey
+    {
+        get => _idempotencyKey;
+        init => _idempotencyKey = value;
+    }
+
+    // The transport creates exceptions without the request, so the client adds the key.
+    internal void RecordIdempotencyKey(Guid key) => _idempotencyKey = key;
 }

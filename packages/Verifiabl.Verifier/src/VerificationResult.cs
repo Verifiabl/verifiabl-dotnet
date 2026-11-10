@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace Verifiabl.Verifier;
 
-/// <summary>Issuer-authenticated data returned for a verified payload, not an assessment of a document.</summary>
+/// <summary>The data the issuer registered, returned for a verified payload. It is not an assessment of a document.</summary>
 /// <remarks>
 /// <see cref="Employee"/> holds personal information. Keep it out of logs.
 /// <see cref="ToString"/> omits it and the payslip values.
@@ -12,7 +12,7 @@ public sealed class VerificationResult
     /// <summary>Create a result for an adapter or test fake. This does not perform verification.</summary>
     /// <remarks>
     /// JSON objects are cloned so they outlive their source documents. Unknown
-    /// schemas and fields are preserved; no lender-specific mapping is applied.
+    /// schemas and fields are preserved; no verifier-specific mapping is applied.
     /// </remarks>
     public VerificationResult(
         string verifiablReference,
@@ -55,6 +55,19 @@ public sealed class VerificationResult
 
     /// <summary>When Verifiabl decrypted the barcode.</summary>
     public DateTimeOffset DecryptedAt { get; }
+
+    /// <summary>
+    /// The successful response's <c>X-Request-Id</c>. Keep it so Verifiabl
+    /// support can find this verification.
+    /// </summary>
+    public string? RequestId { get; init; }
+
+    /// <summary>
+    /// The <see cref="VerificationRequest.IdempotencyKey"/> sent for this
+    /// verification. Store it with your decision. Use it to ask Verifiabl about
+    /// this verification or its charge.
+    /// </summary>
+    public Guid? IdempotencyKey { get; init; }
 
     /// <summary>The reference and schema only, so the result is safe to log.</summary>
     public override string ToString() =>

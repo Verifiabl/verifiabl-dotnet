@@ -24,8 +24,8 @@ public class ConcurrentRefreshTests
 
         try
         {
-            Task<VerificationResult> first = client.VerifyAsync(RefreshExchange.FirstBarcode, cancellation.Token);
-            Task<VerificationResult> second = client.VerifyAsync(RefreshExchange.SecondBarcode, cancellation.Token);
+            Task<VerificationResult> first = client.VerifyAsync(new VerificationRequest(RefreshExchange.FirstBarcode), cancellation.Token);
+            Task<VerificationResult> second = client.VerifyAsync(new VerificationRequest(RefreshExchange.SecondBarcode), cancellation.Token);
             await WithinStep(exchange.BothOldRequests.Task);
 
             exchange.FirstRejection.SetResult(true);
@@ -40,7 +40,7 @@ public class ConcurrentRefreshTests
             await WithinStep(exchange.SecondRejected.Task);
             exchange.FinishRefresh.TrySetResult(true);
             await WithinStep(Task.WhenAll(first, second));
-            await WithinStep(client.VerifyAsync("cached", cancellation.Token));
+            await WithinStep(client.VerifyAsync(new VerificationRequest("cached"), cancellation.Token));
 
             Assert.Equal(2, exchange.TokenRequests);
             Assert.Equal(3, exchange.FreshTokenRequests);

@@ -30,7 +30,8 @@ public sealed class VerifierTransportException : VerifierException
 
     /// <summary>
     /// True for network faults. False when a 2xx response was malformed: the API
-    /// answered, so a retry repeats a verification and likely the same response.
+    /// answered, so a retry would likely get the same response. Quote
+    /// <see cref="VerifierException.RequestId"/> to Verifiabl support.
     /// </summary>
     public override bool IsRetryable { get; }
 }

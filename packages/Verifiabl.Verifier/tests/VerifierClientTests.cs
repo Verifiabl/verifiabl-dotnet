@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Text.Json;
 using Xunit;
 
@@ -33,7 +34,7 @@ public class VerifierClientTests
         var handler = new FakeHttpHandler { Responder = responder };
         var client = new VerifierClient(new VerifierClientOptions
         {
-            Auth = VerifierAuth.ClientCredentials("lender-client", "lender-secret"),
+            Auth = VerifierAuth.ClientCredentials("verifier-client", "verifier-secret"),
             Environment = VerifierEnvironment.Sandbox,
             HttpClient = new HttpClient(handler),
             MaxRetries = maxRetries,
@@ -69,7 +70,7 @@ public class VerifierClientTests
     {
         (VerifierClient client, FakeHttpHandler handler) = CreateClient(Respond((HttpStatusCode.OK, VerifiedJson)));
 
-        await client.VerifyAsync(Barcode);
+        await client.VerifyAsync(new VerificationRequest(Barcode));
 
         CapturedRequest token = Assert.Single(handler.TokenRequests);
         Assert.Equal("https://auth.sandbox.verifiabl.io/oauth/token", token.Uri.AbsoluteUri);
@@ -80,7 +81,11 @@ public class VerifierClientTests
         CapturedRequest api = Assert.Single(handler.ApiRequests);
         Assert.Equal("https://verify.sandbox.verifiabl.io/v1/verifications/payload", api.Uri.AbsoluteUri);
         Assert.Equal("Bearer token-1", api.Authorization);
-        Assert.StartsWith("verifiabl-verifier-dotnet/", api.UserAgent);
+        string packageVersion = typeof(VerifierClient).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()!
+            .InformationalVersion
+            .Split('+')[0];
+        Assert.StartsWith($"verifiabl-verifier-dotnet/{packageVersion} (", api.UserAgent);
         using JsonDocument apiBody = JsonDocument.Parse(api.Body);
         Assert.Equal(Barcode, apiBody.RootElement.GetProperty("barcode").GetString());
     }
@@ -94,7 +99,7 @@ public class VerifierClientTests
     {
         (VerifierClient client, FakeHttpHandler handler) = CreateClient(Respond((HttpStatusCode.OK, VerifiedJson)));
 
-        await client.VerifyAsync(payload);
+        await client.VerifyAsync(new VerificationRequest(payload));
 
         using JsonDocument body = JsonDocument.Parse(Assert.Single(handler.ApiRequests).Body);
         Assert.Equal(payload, body.RootElement.GetProperty("barcode").GetString());
@@ -106,7 +111,7 @@ public class VerifierClientTests
         string json = VerifiedJson.Replace("au.payslip.v2", "future.payslip.v3");
         (VerifierClient client, _) = CreateClient(Respond((HttpStatusCode.OK, json)));
 
-        VerificationResult result = await client.VerifyAsync(Barcode);
+        VerificationResult result = await client.VerifyAsync(new VerificationRequest(Barcode));
 
         Assert.Equal("future.payslip.v3", result.Schema);
         Assert.Equal("T Nguyen", result.Employee.GetProperty("account_name").GetString());
@@ -118,7 +123,7 @@ public class VerifierClientTests
     {
         (VerifierClient client, _) = CreateClient(Respond((HttpStatusCode.OK, VerifiedJson)));
 
-        VerificationResult result = await client.VerifyAsync(Barcode);
+        VerificationResult result = await client.VerifyAsync(new VerificationRequest(Barcode));
 
         Assert.Equal(Reference, result.VerifiablReference);
         Assert.Equal("au.payslip.v2", result.Schema);
@@ -128,11 +133,31 @@ public class VerifierClientTests
     }
 
     [Fact]
+    public async Task SuccessfulResultsCarryTheRequestId()
+    {
+        (VerifierClient client, _) = CreateClient((request, _, _) =>
+        {
+            if (IsTokenRequest(request))
+            {
+                return Task.FromResult(FakeHttpHandler.Token());
+            }
+
+            HttpResponseMessage response = FakeHttpHandler.Json(HttpStatusCode.OK, VerifiedJson);
+            response.Headers.Add("X-Request-Id", "request-ok");
+            return Task.FromResult(response);
+        });
+
+        VerificationResult result = await client.VerifyAsync(new VerificationRequest(Barcode));
+
+        Assert.Equal("request-ok", result.RequestId);
+    }
+
+    [Fact]
     public async Task ResultToStringOmitsEmployeeAndPayslipData()
     {
         (VerifierClient client, _) = CreateClient(Respond((HttpStatusCode.OK, VerifiedJson)));
 
-        VerificationResult result = await client.VerifyAsync(Barcode);
+        VerificationResult result = await client.VerifyAsync(new VerificationRequest(Barcode));
 
         Assert.Contains(Reference, result.ToString());
         Assert.DoesNotContain(EmployeeName, result.ToString());
@@ -140,60 +165,91 @@ public class VerifierClientTests
     }
 
     [Fact]
-    public async Task RejectionsCarryTheCodeAndReasonButNotTheBarcode()
-    {
-        (VerifierClient client, _) = CreateClient(Respond((
-            HttpStatusCode.BadRequest,
-            """{"error":"Decryption failed","code":"DECRYPTION_FAILED","reason":"no_key_matched"}""")));
-
-        VerifierRejectedException error = await Assert.ThrowsAsync<VerifierRejectedException>(() => client.VerifyAsync(Barcode));
-
-        Assert.Equal(400, error.Status);
-        Assert.False(error.IsRetryable);
-        Assert.Equal(VerifierErrorCodes.DecryptionFailed, error.Code);
-        Assert.Equal("no_key_matched", error.Reason);
-        Assert.DoesNotContain(Reference, error.Message);
-    }
-
-    [Fact]
-    public async Task ValidationErrorsListTheFields()
-    {
-        (VerifierClient client, _) = CreateClient(Respond((
-            HttpStatusCode.BadRequest,
-            """{"error":"Validation failed","code":"VALIDATION_FAILED","field_errors":[{"path":"barcode","message":"Unrecognised barcode format"}]}""")));
-
-        VerifierRejectedException error = await Assert.ThrowsAsync<VerifierRejectedException>(() => client.VerifyAsync("not a barcode"));
-
-        VerifierFieldError field = Assert.Single(error.FieldErrors);
-        Assert.Equal("barcode", field.Path);
-        Assert.Equal("Unrecognised barcode format", field.Message);
-    }
-
-    [Fact]
-    public async Task UnknownReferencesAreRejectedWithoutRetrying()
-    {
-        (VerifierClient client, FakeHttpHandler handler) = CreateClient(Respond((
-            HttpStatusCode.NotFound,
-            """{"error":"Not found","code":"VERIFIABL_REFERENCE_NOT_FOUND"}""")));
-
-        VerifierRejectedException error = await Assert.ThrowsAsync<VerifierRejectedException>(() => client.VerifyAsync(Barcode));
-
-        Assert.Equal(VerifierErrorCodes.VerifiablReferenceNotFound, error.Code);
-        Assert.Single(handler.ApiRequests);
-    }
-
-    [Fact]
-    public async Task UnavailableKeysAreServiceErrorsThatAreNotRetryable()
+    public async Task NotVerifiedIsARejectionThatIsNotRetried()
     {
         (VerifierClient client, FakeHttpHandler handler) = CreateClient(Respond((
             (HttpStatusCode)422,
-            """{"error":"Unavailable","code":"KEY_VERSION_UNAVAILABLE","detail":"Contact support."}""")));
+            """{"error":"Not verified","code":"NOT_VERIFIED"}""")));
 
-        VerifierServiceException error = await Assert.ThrowsAsync<VerifierServiceException>(() => client.VerifyAsync(Barcode));
+        VerifierRejectedException error = await Assert.ThrowsAsync<VerifierRejectedException>(() => client.VerifyAsync(new VerificationRequest(Barcode)));
 
-        Assert.Equal(VerifierErrorCodes.KeyVersionUnavailable, error.Code);
+        Assert.Equal(422, error.Status);
+        Assert.False(error.IsRetryable);
+        Assert.Equal(VerifierErrorCodes.NotVerified, error.Code);
+        Assert.Null(error.Reason);
+        Assert.DoesNotContain(Reference, error.Message);
+        Assert.Single(handler.ApiRequests);
+    }
+
+    // Issuer self-test routes send a granular reason with the same code.
+    [Fact]
+    public async Task RejectionsCarryAReasonWhenTheApiSendsOne()
+    {
+        (VerifierClient client, _) = CreateClient(Respond((
+            (HttpStatusCode)422,
+            """{"error":"Not verified","code":"NOT_VERIFIED","reason":"no_key_matched"}""")));
+
+        VerifierRejectedException error = await Assert.ThrowsAsync<VerifierRejectedException>(() => client.VerifyAsync(new VerificationRequest(Barcode)));
+
+        Assert.Equal("no_key_matched", error.Reason);
+    }
+
+    // A malformed request means the SDK and API disagree. It is not a failed
+    // verification, whatever reason or field paths it carries.
+    [Theory]
+    [InlineData("""{"error":"Validation failed","code":"VALIDATION_FAILED","field_errors":[{"path":"barcode","message":"Expected string"}]}""")]
+    [InlineData("""{"error":"Validation failed","code":"VALIDATION_FAILED","field_errors":[{"path":"","message":"Unrecognized key: \"extra\""}]}""")]
+    [InlineData("""{"error":"Validation failed","code":"VALIDATION_FAILED","reason":"invalid_barcode","field_errors":[{"path":"barcode","message":"Invalid"}]}""")]
+    public async Task ValidationErrorsAreServiceErrorsWithTheirFields(string body)
+    {
+        (VerifierClient client, FakeHttpHandler handler) = CreateClient(Respond((HttpStatusCode.BadRequest, body)));
+
+        VerifierServiceException error = await Assert.ThrowsAsync<VerifierServiceException>(() => client.VerifyAsync(new VerificationRequest(Barcode)));
+
+        Assert.Equal(VerifierErrorCodes.ValidationFailed, error.Code);
+        Assert.Equal(400, error.Status);
+        Assert.False(error.IsRetryable);
+        Assert.Single(error.FieldErrors);
+        Assert.Single(handler.ApiRequests);
+    }
+
+    [Theory]
+    [InlineData(413, "PAYLOAD_TOO_LARGE")]
+    [InlineData(415, "UNSUPPORTED_MEDIA_TYPE")]
+    public async Task IntegrationFaultsAreServiceErrorsThatAreNotRetried(int status, string code)
+    {
+        (VerifierClient client, FakeHttpHandler handler) = CreateClient(Respond((
+            (HttpStatusCode)status,
+            $$"""{"error":"Request refused","code":"{{code}}"}""")));
+
+        VerifierServiceException error = await Assert.ThrowsAsync<VerifierServiceException>(() => client.VerifyAsync(new VerificationRequest(Barcode)));
+
+        Assert.Equal(code, error.Code);
         Assert.False(error.IsRetryable);
         Assert.Single(handler.ApiRequests);
+    }
+
+    [Fact]
+    public async Task ReadsOnlyTheXRequestIdHeader()
+    {
+        (VerifierClient client, _) = CreateClient((request, _, _) =>
+        {
+            if (IsTokenRequest(request))
+            {
+                return Task.FromResult(FakeHttpHandler.Token());
+            }
+
+            HttpResponseMessage response = FakeHttpHandler.Json(
+                HttpStatusCode.Forbidden,
+                """{"error":"Forbidden","code":"FORBIDDEN"}""");
+            response.Headers.Add("request-id", "request-other");
+            response.Headers.Add("x-verifiabl-request-id", "request-other");
+            return Task.FromResult(response);
+        });
+
+        VerifierAuthException error = await Assert.ThrowsAsync<VerifierAuthException>(() => client.VerifyAsync(new VerificationRequest(Barcode)));
+
+        Assert.Null(error.RequestId);
     }
 
     [Fact]
@@ -209,11 +265,11 @@ public class VerifierClientTests
             HttpResponseMessage response = FakeHttpHandler.Json(
                 HttpStatusCode.Forbidden,
                 """{"error":"Forbidden","code":"FORBIDDEN"}""");
-            response.Headers.Add("x-request-id", "request-1");
+            response.Headers.Add("X-Request-Id", "request-1");
             return Task.FromResult(response);
         });
 
-        VerifierAuthException error = await Assert.ThrowsAsync<VerifierAuthException>(() => client.VerifyAsync(Barcode));
+        VerifierAuthException error = await Assert.ThrowsAsync<VerifierAuthException>(() => client.VerifyAsync(new VerificationRequest(Barcode)));
 
         Assert.Equal(403, error.Status);
         Assert.Equal(VerifierErrorCodes.Forbidden, error.Code);
@@ -230,7 +286,7 @@ public class VerifierClientTests
                 ? FakeHttpHandler.Token()
                 : FakeHttpHandler.Html(HttpStatusCode.Unauthorized, "<html>unauthorized</html>")));
 
-        VerifierAuthException error = await Assert.ThrowsAsync<VerifierAuthException>(() => client.VerifyAsync(Barcode));
+        VerifierAuthException error = await Assert.ThrowsAsync<VerifierAuthException>(() => client.VerifyAsync(new VerificationRequest(Barcode)));
 
         Assert.Equal(401, error.Status);
         Assert.Equal(VerifierErrorCodes.Unauthorized, error.Code);
@@ -245,7 +301,7 @@ public class VerifierClientTests
             ? FakeHttpHandler.Token()
             : FakeHttpHandler.Html(HttpStatusCode.BadRequest, "<html>bad request</html>")));
 
-        VerifierServiceException error = await Assert.ThrowsAsync<VerifierServiceException>(() => client.VerifyAsync(Barcode));
+        VerifierServiceException error = await Assert.ThrowsAsync<VerifierServiceException>(() => client.VerifyAsync(new VerificationRequest(Barcode)));
 
         Assert.Equal(VerifierErrorCodes.InternalError, error.Code);
         Assert.False(error.IsRetryable);
@@ -261,7 +317,7 @@ public class VerifierClientTests
             (status, """{"error":"Busy","code":"SERVICE_UNAVAILABLE"}"""),
             (HttpStatusCode.OK, VerifiedJson)));
 
-        await client.VerifyAsync(Barcode);
+        await client.VerifyAsync(new VerificationRequest(Barcode));
 
         Assert.Equal(2, handler.ApiRequests.Count());
     }
@@ -275,7 +331,7 @@ public class VerifierClientTests
                 : FakeHttpHandler.Html(HttpStatusCode.BadGateway, "<html>bad gateway</html>")),
             maxRetries: 1);
 
-        VerifierServiceException error = await Assert.ThrowsAsync<VerifierServiceException>(() => client.VerifyAsync(Barcode));
+        VerifierServiceException error = await Assert.ThrowsAsync<VerifierServiceException>(() => client.VerifyAsync(new VerificationRequest(Barcode)));
 
         Assert.Equal(502, error.Status);
         Assert.Equal(VerifierErrorCodes.InternalError, error.Code);
@@ -292,7 +348,7 @@ public class VerifierClientTests
                 : throw new HttpRequestException("connection reset"),
             maxRetries: 1);
 
-        VerifierTransportException error = await Assert.ThrowsAsync<VerifierTransportException>(() => client.VerifyAsync(Barcode));
+        VerifierTransportException error = await Assert.ThrowsAsync<VerifierTransportException>(() => client.VerifyAsync(new VerificationRequest(Barcode)));
 
         Assert.True(error.IsRetryable);
     }
@@ -313,7 +369,7 @@ public class VerifierClientTests
                 : Task.FromResult(FakeHttpHandler.Json(HttpStatusCode.OK, VerifiedJson));
         });
 
-        await client.VerifyAsync(Barcode);
+        await client.VerifyAsync(new VerificationRequest(Barcode));
 
         Assert.Equal(2, apiCalls);
     }
@@ -336,7 +392,7 @@ public class VerifierClientTests
                 : FakeHttpHandler.Json(HttpStatusCode.OK, VerifiedJson));
         });
 
-        await client.VerifyAsync(Barcode);
+        await client.VerifyAsync(new VerificationRequest(Barcode));
 
         Assert.Equal(2, tokens);
         Assert.Equal(2, apiCalls);
@@ -347,8 +403,8 @@ public class VerifierClientTests
     {
         (VerifierClient client, FakeHttpHandler handler) = CreateClient(Respond((HttpStatusCode.OK, VerifiedJson)));
 
-        await client.VerifyAsync(Barcode);
-        await client.VerifyAsync(Barcode);
+        await client.VerifyAsync(new VerificationRequest(Barcode));
+        await client.VerifyAsync(new VerificationRequest(Barcode));
 
         Assert.Single(handler.TokenRequests);
     }
@@ -359,7 +415,7 @@ public class VerifierClientTests
         (VerifierClient client, _) = CreateClient((_, _, _) =>
             Task.FromResult(FakeHttpHandler.Json(HttpStatusCode.Forbidden, """{"error":"access_denied"}""")));
 
-        VerifierAuthException error = await Assert.ThrowsAsync<VerifierAuthException>(() => client.VerifyAsync(Barcode));
+        VerifierAuthException error = await Assert.ThrowsAsync<VerifierAuthException>(() => client.VerifyAsync(new VerificationRequest(Barcode)));
 
         Assert.Equal(403, error.Status);
         Assert.False(error.IsRetryable);
@@ -370,7 +426,7 @@ public class VerifierClientTests
     {
         (VerifierClient client, _) = CreateClient((_, _, _) => throw new HttpRequestException("connection refused"));
 
-        VerifierAuthException error = await Assert.ThrowsAsync<VerifierAuthException>(() => client.VerifyAsync(Barcode));
+        VerifierAuthException error = await Assert.ThrowsAsync<VerifierAuthException>(() => client.VerifyAsync(new VerificationRequest(Barcode)));
 
         Assert.Null(error.Status);
         Assert.True(error.IsRetryable);
@@ -381,7 +437,7 @@ public class VerifierClientTests
     {
         (VerifierClient client, _) = CreateClient(Respond((HttpStatusCode.OK, """{"verified":false}""")));
 
-        VerifierTransportException error = await Assert.ThrowsAsync<VerifierTransportException>(() => client.VerifyAsync(Barcode));
+        VerifierTransportException error = await Assert.ThrowsAsync<VerifierTransportException>(() => client.VerifyAsync(new VerificationRequest(Barcode)));
 
         Assert.False(error.IsRetryable);
     }
@@ -400,12 +456,12 @@ public class VerifierClientTests
             }
 
             HttpResponseMessage response = FakeHttpHandler.Json(HttpStatusCode.OK, body);
-            response.Headers.Add("x-request-id", "malformed-1");
+            response.Headers.Add("X-Request-Id", "malformed-1");
             return Task.FromResult(response);
         });
 
         VerifierTransportException error = await Assert.ThrowsAsync<VerifierTransportException>(
-            () => client.VerifyAsync(Barcode));
+            () => client.VerifyAsync(new VerificationRequest(Barcode)));
 
         Assert.Equal(200, error.Status);
         Assert.Equal("malformed-1", error.RequestId);
@@ -432,8 +488,8 @@ public class VerifierClientTests
             HttpResponseMessage response = FakeHttpHandler.Json(
                 (HttpStatusCode)429,
                 """{"error":"Busy","code":"RATE_LIMITED"}""");
-            response.Headers.Add("Retry-After", (60 + apiCalls).ToString());
-            response.Headers.Add("x-request-id", $"request-{apiCalls}");
+            response.Headers.Add("Retry-After", apiCalls.ToString());
+            response.Headers.Add("X-Request-Id", $"request-{apiCalls}");
             return Task.FromResult(response);
         }, maxRetries: maxRetries);
         var delays = new List<TimeSpan>();
@@ -444,16 +500,51 @@ public class VerifierClientTests
         };
 
         VerifierServiceException error = await Assert.ThrowsAsync<VerifierServiceException>(
-            () => client.VerifyAsync(Barcode));
+            () => client.VerifyAsync(new VerificationRequest(Barcode)));
 
-        Assert.Equal(TimeSpan.FromSeconds(61 + maxRetries), error.RetryAfter);
+        Assert.Equal(TimeSpan.FromSeconds(1 + maxRetries), error.RetryAfter);
         Assert.Equal($"request-{1 + maxRetries}", error.RequestId);
         Assert.Equal(1 + maxRetries, handler.ApiRequests.Count());
         Assert.Equal(maxRetries, delays.Count);
         if (maxRetries > 0)
         {
-            Assert.Equal(TimeSpan.FromSeconds(61), delays[0]);
+            Assert.Equal(TimeSpan.FromSeconds(1), delays[0]);
         }
+    }
+
+    [Fact]
+    public async Task RetryAfterBeyondTheDeadlineReportsTheResponse()
+    {
+        (VerifierClient client, FakeHttpHandler handler) = CreateClient(
+            (request, _, _) =>
+            {
+                if (IsTokenRequest(request))
+                {
+                    return Task.FromResult(FakeHttpHandler.Token());
+                }
+
+                HttpResponseMessage response = FakeHttpHandler.Json(
+                    (HttpStatusCode)429,
+                    """{"error":"Busy","code":"RATE_LIMITED"}""");
+                response.Headers.Add("Retry-After", "60");
+                return Task.FromResult(response);
+            },
+            timeout: TimeSpan.FromSeconds(30));
+        var delays = new List<TimeSpan>();
+        client.DelayAsync = (delay, _) =>
+        {
+            delays.Add(delay);
+            return Task.CompletedTask;
+        };
+
+        VerifierServiceException error = await Assert.ThrowsAsync<VerifierServiceException>(
+            () => client.VerifyAsync(new VerificationRequest(Barcode)));
+
+        Assert.Equal(VerifierErrorCodes.RateLimited, error.Code);
+        Assert.Equal(TimeSpan.FromSeconds(60), error.RetryAfter);
+        Assert.True(error.IsRetryable);
+        Assert.Single(handler.ApiRequests);
+        Assert.Empty(delays);
     }
 
     [Theory]
@@ -481,7 +572,7 @@ public class VerifierClientTests
         }, maxRetries: 0);
 
         VerifierServiceException error = await Assert.ThrowsAsync<VerifierServiceException>(
-            () => client.VerifyAsync(Barcode));
+            () => client.VerifyAsync(new VerificationRequest(Barcode)));
 
         Assert.True(error.IsRetryable);
         Assert.Null(error.RetryAfter);
@@ -503,7 +594,7 @@ public class VerifierClientTests
         });
 
         VerifierAuthException error = await Assert.ThrowsAsync<VerifierAuthException>(
-            () => client.VerifyAsync(Barcode));
+            () => client.VerifyAsync(new VerificationRequest(Barcode)));
 
         Assert.False(error.IsRetryable);
         Assert.Equal(TimeSpan.FromSeconds(60), error.RetryAfter);
@@ -517,36 +608,36 @@ public class VerifierClientTests
         {
             HttpResponseMessage response = FakeHttpHandler.Json(HttpStatusCode.ServiceUnavailable, "{}");
             response.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(retryAt);
-            response.Headers.Add("request-id", "token-1");
+            response.Headers.Add("X-Request-Id", "token-1");
             return Task.FromResult(response);
         });
 
         VerifierAuthException error = await Assert.ThrowsAsync<VerifierAuthException>(
-            () => client.VerifyAsync(Barcode));
+            () => client.VerifyAsync(new VerificationRequest(Barcode)));
 
         Assert.True(error.IsRetryable);
         Assert.Equal(503, error.Status);
-        Assert.Equal("token-1", error.RequestId);
+        Assert.Null(error.RequestId);
         Assert.InRange(error.RetryAfter!.Value.TotalSeconds, 110, 120);
     }
 
     [Theory]
     [InlineData("")]
     [InlineData("{}")]
-    public async Task MalformedTokenResponsesPreserveRequestIds(string body)
+    public async Task MalformedTokenResponsesCarryNoRequestId(string body)
     {
         (VerifierClient client, _) = CreateClient((_, _, _) =>
         {
             HttpResponseMessage response = FakeHttpHandler.Json(HttpStatusCode.OK, body);
-            response.Headers.Add("x-verifiabl-request-id", "token-malformed-1");
+            response.Headers.Add("X-Request-Id", "token-malformed-1");
             return Task.FromResult(response);
         });
 
         VerifierAuthException error = await Assert.ThrowsAsync<VerifierAuthException>(
-            () => client.VerifyAsync(Barcode));
+            () => client.VerifyAsync(new VerificationRequest(Barcode)));
 
         Assert.True(error.IsRetryable);
-        Assert.Equal("token-malformed-1", error.RequestId);
+        Assert.Null(error.RequestId);
         Assert.Null(error.RetryAfter);
     }
 
@@ -563,7 +654,7 @@ public class VerifierClientTests
         });
 
         VerifierAuthException error = await Assert.ThrowsAsync<VerifierAuthException>(
-            () => client.VerifyAsync(Barcode));
+            () => client.VerifyAsync(new VerificationRequest(Barcode)));
 
         Assert.True(error.IsRetryable);
         Assert.Equal(TimeSpan.FromSeconds(60), error.RetryAfter);
@@ -575,7 +666,7 @@ public class VerifierClientTests
         string json = VerifiedJson.Replace(Reference, "");
         (VerifierClient client, _) = CreateClient(Respond((HttpStatusCode.OK, json)));
 
-        await Assert.ThrowsAsync<VerifierTransportException>(() => client.VerifyAsync(Barcode));
+        await Assert.ThrowsAsync<VerifierTransportException>(() => client.VerifyAsync(new VerificationRequest(Barcode)));
     }
 
     [Fact]
@@ -594,7 +685,7 @@ public class VerifierClientTests
             },
             timeout: TimeSpan.FromMilliseconds(50));
 
-        VerifierTimeoutException error = await Assert.ThrowsAsync<VerifierTimeoutException>(() => client.VerifyAsync(Barcode));
+        VerifierTimeoutException error = await Assert.ThrowsAsync<VerifierTimeoutException>(() => client.VerifyAsync(new VerificationRequest(Barcode)));
 
         Assert.True(error.IsRetryable);
     }
@@ -606,7 +697,7 @@ public class VerifierClientTests
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => client.VerifyAsync(Barcode, cancelled.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => client.VerifyAsync(new VerificationRequest(Barcode), cancelled.Token));
     }
 
     [Theory]
@@ -618,12 +709,12 @@ public class VerifierClientTests
         (VerifierClient client, FakeHttpHandler handler) = CreateClient(Respond((HttpStatusCode.OK, VerifiedJson)));
 
         // The rejection is in the task, not thrown synchronously.
-        Task<VerificationResult> verification = client.VerifyAsync(new string('A', length));
+        Task<VerificationResult> verification = client.VerifyAsync(new VerificationRequest(new string('A', length)));
         VerifierRejectedException error = await Assert.ThrowsAsync<VerifierRejectedException>(() => verification);
 
-        Assert.Equal(VerifierErrorCodes.ValidationFailed, error.Code);
+        Assert.Equal(VerifierErrorCodes.NotVerified, error.Code);
         Assert.Null(error.Status);
-        Assert.Equal("barcode", Assert.Single(error.FieldErrors).Path);
+        Assert.Null(error.Reason);
         Assert.Empty(handler.Requests);
     }
 
@@ -633,7 +724,6 @@ public class VerifierClientTests
         (VerifierClient client, FakeHttpHandler handler) = CreateClient(Respond((HttpStatusCode.OK, VerifiedJson)));
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => client.VerifyAsync((VerificationRequest)null!));
-        await Assert.ThrowsAsync<ArgumentNullException>(() => client.VerifyAsync(barcode: null!));
         Assert.Throws<ArgumentNullException>(() => new VerificationRequest(null!));
         Assert.Empty(handler.Requests);
     }
@@ -687,9 +777,146 @@ public class VerifierClientTests
             HttpClient = new HttpClient(handler),
         });
 
-        await client.VerifyAsync(Barcode);
+        await client.VerifyAsync(new VerificationRequest(Barcode));
 
         Assert.Equal("http://localhost:4010/oauth/token", Assert.Single(handler.TokenRequests).Uri.AbsoluteUri);
         Assert.Equal("http://localhost:4020/v1/verifications/payload", Assert.Single(handler.ApiRequests).Uri.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task EveryAttemptSendsTheRequestsIdempotencyKey()
+    {
+        int apiCalls = 0;
+        (VerifierClient client, FakeHttpHandler handler) = CreateClient((request, _, _) =>
+        {
+            if (IsTokenRequest(request))
+            {
+                return Task.FromResult(FakeHttpHandler.Token());
+            }
+
+            return apiCalls++ switch
+            {
+                0 => throw new HttpRequestException("connection reset"),
+                1 => Task.FromResult(FakeHttpHandler.Json(HttpStatusCode.Unauthorized, """{"error":"Expired","code":"UNAUTHORIZED"}""")),
+                2 => Task.FromResult(FakeHttpHandler.Json(HttpStatusCode.ServiceUnavailable, """{"error":"Busy","code":"SERVICE_UNAVAILABLE"}""")),
+                _ => Task.FromResult(FakeHttpHandler.Json(HttpStatusCode.OK, VerifiedJson)),
+            };
+        });
+        var request = new VerificationRequest(Barcode);
+
+        VerificationResult result = await client.VerifyAsync(request);
+
+        string expected = request.IdempotencyKey.ToString("D");
+        Assert.Equal(4, handler.ApiRequests.Count());
+        Assert.All(handler.ApiRequests, sent => Assert.Equal(expected, sent.IdempotencyKey));
+        Assert.Equal(request.IdempotencyKey, result.IdempotencyKey);
+    }
+
+    [Fact]
+    public async Task EachRequestHasItsOwnIdempotencyKeyAndAReplayReusesIt()
+    {
+        (VerifierClient client, FakeHttpHandler handler) = CreateClient(Respond((HttpStatusCode.OK, VerifiedJson)));
+        var replayed = new VerificationRequest(Barcode);
+
+        await client.VerifyAsync(new VerificationRequest(Barcode));
+        await client.VerifyAsync(new VerificationRequest(Barcode));
+        await client.VerifyAsync(replayed);
+        await client.VerifyAsync(replayed);
+
+        string?[] keys = handler.ApiRequests.Select(sent => sent.IdempotencyKey).ToArray();
+        Assert.Equal(3, keys.Distinct().Count());
+        Assert.Equal(replayed.IdempotencyKey.ToString("D"), keys[2]);
+        Assert.Equal(keys[2], keys[3]);
+    }
+
+    [Fact]
+    public async Task ASuppliedIdempotencyKeyIsSent()
+    {
+        (VerifierClient client, FakeHttpHandler handler) = CreateClient(Respond((HttpStatusCode.OK, VerifiedJson)));
+        var key = Guid.Parse("5f0c2a7e-8d4b-4c19-9e3a-7b6d1f2c4e80");
+
+        VerificationResult result = await client.VerifyAsync(new VerificationRequest(Barcode) { IdempotencyKey = key });
+
+        Assert.Equal("5f0c2a7e-8d4b-4c19-9e3a-7b6d1f2c4e80", Assert.Single(handler.ApiRequests).IdempotencyKey);
+        Assert.Equal(key, result.IdempotencyKey);
+    }
+
+    [Fact]
+    public async Task FailuresCarryTheIdempotencyKey()
+    {
+        (VerifierClient service, _) = CreateClient(Respond((HttpStatusCode.ServiceUnavailable, """{"error":"Busy","code":"SERVICE_UNAVAILABLE"}""")));
+        (VerifierClient transport, _) = CreateClient((request, _, _) => IsTokenRequest(request)
+            ? Task.FromResult(FakeHttpHandler.Token())
+            : throw new HttpRequestException("connection reset"));
+        (VerifierClient rejecting, _) = CreateClient(Respond(((HttpStatusCode)422, """{"error":"Not verified","code":"NOT_VERIFIED"}""")));
+        var request = new VerificationRequest(Barcode);
+
+        VerifierException serviceError = await Assert.ThrowsAsync<VerifierServiceException>(() => service.VerifyAsync(request));
+        VerifierException transportError = await Assert.ThrowsAsync<VerifierTransportException>(() => transport.VerifyAsync(request));
+        VerifierException rejection = await Assert.ThrowsAsync<VerifierRejectedException>(() => rejecting.VerifyAsync(request));
+
+        Assert.Equal(request.IdempotencyKey, serviceError.IdempotencyKey);
+        Assert.Equal(request.IdempotencyKey, transportError.IdempotencyKey);
+        Assert.Equal(request.IdempotencyKey, rejection.IdempotencyKey);
+    }
+
+    [Fact]
+    public async Task TimeoutsCarryTheIdempotencyKey()
+    {
+        (VerifierClient client, _) = CreateClient(
+            async (request, _, cancellationToken) =>
+            {
+                if (IsTokenRequest(request))
+                {
+                    return FakeHttpHandler.Token();
+                }
+
+                await Task.Delay(Timeout.Infinite, cancellationToken);
+                throw new InvalidOperationException("unreachable");
+            },
+            timeout: TimeSpan.FromMilliseconds(50));
+        var request = new VerificationRequest(Barcode);
+
+        VerifierTimeoutException error = await Assert.ThrowsAsync<VerifierTimeoutException>(() => client.VerifyAsync(request));
+
+        Assert.Equal(request.IdempotencyKey, error.IdempotencyKey);
+    }
+
+    [Fact]
+    public async Task TokenFailuresCarryTheIdempotencyKey()
+    {
+        (VerifierClient client, FakeHttpHandler handler) = CreateClient((_, _, _) =>
+            Task.FromResult(FakeHttpHandler.Json(HttpStatusCode.ServiceUnavailable, """{"error":"unavailable"}""")));
+        var request = new VerificationRequest(Barcode);
+
+        VerifierAuthException error = await Assert.ThrowsAsync<VerifierAuthException>(() => client.VerifyAsync(request));
+
+        Assert.Empty(handler.ApiRequests);
+        Assert.Equal(request.IdempotencyKey, error.IdempotencyKey);
+    }
+
+    [Fact]
+    public async Task LocalRejectionsHaveNoIdempotencyKey()
+    {
+        (VerifierClient client, _) = CreateClient(Respond((HttpStatusCode.OK, VerifiedJson)));
+
+        VerifierRejectedException error = await Assert.ThrowsAsync<VerifierRejectedException>(() => client.VerifyAsync(new VerificationRequest(string.Empty)));
+
+        Assert.Null(error.IdempotencyKey);
+    }
+
+    [Fact]
+    public async Task AReusedIdempotencyKeyIsAServiceErrorThatIsNotRetried()
+    {
+        (VerifierClient client, FakeHttpHandler handler) = CreateClient(Respond((
+            HttpStatusCode.Conflict,
+            """{"error":"Idempotency key reused","code":"IDEMPOTENCY_KEY_REUSED"}""")));
+
+        VerifierServiceException error = await Assert.ThrowsAsync<VerifierServiceException>(() => client.VerifyAsync(new VerificationRequest(Barcode)));
+
+        Assert.Equal(VerifierErrorCodes.IdempotencyKeyReused, error.Code);
+        Assert.Equal(409, error.Status);
+        Assert.False(error.IsRetryable);
+        Assert.Single(handler.ApiRequests);
     }
 }

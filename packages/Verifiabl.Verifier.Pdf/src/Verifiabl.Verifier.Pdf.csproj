@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Same targets as Verifiabl.Verifier. -->
+    <TargetFrameworks>net472;net8.0;net10.0</TargetFrameworks>
+    <PackageId>Verifiabl.Verifier.Pdf</PackageId>
+    <RootNamespace>Verifiabl.Verifier.Pdf</RootNamespace>
+    <Version>0.1.0-rc.2</Version>
+    <Description>Optional add-on to Verifiabl.Verifier: read a payslip PDF's metadata payload and the QR code in its embedded images, compare them, and verify one. Managed code only; nothing is rendered.</Description>
+    <Authors>Verifiabl</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://verifiabl.io</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Verifiabl/verifiabl-dotnet</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>verifiabl;payslip;verifier;qr-code;pdf</PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EnablePackageValidation>true</EnablePackageValidation>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\..\icon.png" Pack="true" PackagePath="\" />
+    <InternalsVisibleTo Include="Verifiabl.Verifier.Pdf.Tests" Key="$(VerifiablPublicKey)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Managed PDF parsing, Apache-2.0. It reads embedded images; it does not render pages.
+      A 0.1.17 nightly: 0.1.16 overflows the stack, ending the process, on a
+      cyclic /Dests tree or self-referencing /Filter. Move to stable 0.1.17
+      before this package leaves prerelease.
+    -->
+    <PackageReference Include="PdfPig" Version="0.1.17-alpha-202611030024-c46d2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Verifiabl.Verifier\src\Verifiabl.Verifier.csproj" />
+    <ProjectReference Include="..\..\Verifiabl.Verifier.Extraction\src\Verifiabl.Verifier.Extraction.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

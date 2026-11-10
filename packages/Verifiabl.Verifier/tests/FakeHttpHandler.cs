@@ -6,12 +6,13 @@ namespace Verifiabl.Verifier.Tests;
 
 internal sealed class CapturedRequest
 {
-    internal CapturedRequest(Uri uri, string body, string? authorization, string? userAgent)
+    internal CapturedRequest(Uri uri, string body, string? authorization, string? userAgent, string? idempotencyKey)
     {
         Uri = uri;
         Body = body;
         Authorization = authorization;
         UserAgent = userAgent;
+        IdempotencyKey = idempotencyKey;
     }
 
     internal Uri Uri { get; }
@@ -21,6 +22,8 @@ internal sealed class CapturedRequest
     internal string? Authorization { get; }
 
     internal string? UserAgent { get; }
+
+    internal string? IdempotencyKey { get; }
 }
 
 internal sealed class FakeHttpHandler : HttpMessageHandler
@@ -88,13 +91,17 @@ internal sealed class FakeHttpHandler : HttpMessageHandler
         string? userAgent = request.Headers.TryGetValues("User-Agent", out IEnumerable<string>? ua)
             ? string.Join(" ", ua)
             : null;
+        string? idempotencyKey = request.Headers.TryGetValues("Idempotency-Key", out IEnumerable<string>? keys)
+            ? string.Join(",", keys)
+            : null;
         lock (_requests)
         {
             _requests.Add(new CapturedRequest(
                 request.RequestUri!,
                 body,
                 request.Headers.Authorization?.ToString(),
-                userAgent));
+                userAgent,
+                idempotencyKey));
         }
         return await Responder!(request, body, cancellationToken).ConfigureAwait(false);
     }
