@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <UseAppHost>false</UseAppHost>
+    <!-- Set VerifiablVerifierVersion to test the locally packed packages instead of source. -->
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
+  <!-- Each add-on brings Verifiabl.Verifier and Verifiabl.Verifier.Extraction with it. -->
+  <ItemGroup Condition="'$(VerifiablVerifierVersion)' == ''">
+    <ProjectReference Include="../../../packages/Verifiabl.Verifier.Pdf/src/Verifiabl.Verifier.Pdf.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(VerifiablVerifierVersion)' != ''">
+    <PackageReference Include="Verifiabl.Verifier.Pdf" Version="$(VerifiablVerifierVersion)" />
+  </ItemGroup>
+
+</Project>

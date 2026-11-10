@@ -6,10 +6,10 @@ namespace Verifiabl.Verifier;
 /// Nothing was sent to Verifiabl.
 /// </summary>
 /// <remarks>
-/// The document was neither verified nor rejected. It may not carry a Verifiabl
-/// payload, or the copy may be too poor to read; check <see cref="Failure"/> to
-/// decide whether to ask for a clearer copy. Do not treat it as a rejected or
-/// altered document. Messages never contain payload text.
+/// No payload was verified, and this is not a failed verification. The input
+/// may not carry a Verifiabl payload, or the copy may be too poor to read;
+/// <see cref="Failure"/> says which.
+/// Messages never contain payload text.
 /// </remarks>
 public sealed class PayloadExtractionException : VerifierException
 {

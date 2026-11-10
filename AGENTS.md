@@ -8,15 +8,18 @@ Each NuGet package lives in `packages/<PackageId>/`, with its project in `src/`,
 
 - Keep offline `Verifiabl` code separate from networked `Verifiabl.Client`. Keep dependency injection optional. Do not add verifier functions to issuer packages.
 - Preserve public APIs, strong naming, target frameworks and thread-safe client/token reuse.
-- `Verifiabl.Verifier` holds no keys and never decrypts. It sends barcode text to the API unchanged and leaves parsing to the API. It does not depend on `Verifiabl.Issuer`; its transport is a copy of the issuer client's, so keep token and retry behaviour in step.
-- Keep the verifier core limited to already-extracted payloads. Optional PDF/image extraction composes with `IVerifierClient.VerifyAsync`; lender-specific mapping runs after verification in application-owned adapters. Verification authenticates payload data, not a document's visible contents.
+- `Verifiabl.Verifier` holds no keys and never decrypts. It sends barcode text to the API unchanged and leaves validation to the API. `VerifiablPayloadText` only recognises payload-shaped text, so integrators with their own extraction need no add-on. It does not depend on `Verifiabl.Issuer`; its transport is a copy of the issuer client's, so keep token and retry behaviour in step.
+- Verify a document's metadata payload, and read its QR code only when there is no metadata payload. Do not compare the two or report how they differ.
+- Keep the verifier core limited to already-extracted payloads. Optional PDF/image extraction composes with `IVerifierClient.VerifyAsync`; verifier-specific mapping runs after verification in application-owned adapters. A verification shows that the payload matches the issuer's registered record, not that the document's visible contents do.
 - `IVerifierClient` keeps one method. Add per-verification inputs as init-only properties on `VerificationRequest`, and add only fields the API accepts.
 - Extraction add-ons (`Verifiabl.Verifier.<Format>`) follow the [extraction package contract](packages/Verifiabl.Verifier/README.md#extraction-packages), and also:
   - Use only the core's public API: no `InternalsVisibleTo`, and no checks for `VerifierClient`, so fakes and decorators work.
   - Report "no single payload" with the core's `PayloadExtractionException`. Do not add `VerifierException` subtypes or wrap verification failures. Add a `PayloadExtractionFailure` value in the core when no existing one fits.
   - Keep shared managed code, such as QR decoding, in `Verifiabl.Verifier.Extraction`. Put native dependencies in their own add-on.
+  - Take an optional idempotency key on every verify call and pass it to the request, so callers can retry without a second charge.
+  - Give extraction its own time budget; never share the client's deadline. `Verifiabl.Verifier.Pdf` reads embedded images and never renders untrusted PDFs in-process.
   - Give results and payload holders a public constructor for fakes and a `ToString()` without payload text.
-  - Version with `Verifiabl.Verifier` in the `dotnet/verifier` release target, with consumer and packed-package checks like the core's.
+  - Version with `Verifiabl.Verifier`, with consumer and packed-package checks like the core's. They are not in the `dotnet/verifier` release target yet, so they are not published; add one to the target only with release approval.
 - Keep PII out of non-PII fields, logs and errors. Use synthetic fixtures. Never commit live credentials or keys.
 - Preserve generated v2 models and decimal-string wire values. The API owns full non-PII value validation. Do not copy another SDK's full validator. Preserve unknown/future schema pass-through.
 - Regenerate models, profiles, fixtures and API references from source. Do not edit generated output.

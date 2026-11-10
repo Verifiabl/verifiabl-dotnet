@@ -16,9 +16,11 @@ public static class VerifiablBarcode
     /// <remarks>
     /// Write the barcode payload (<see cref="BuildPayload(BarcodeParts)"/>) into the payslip
     /// PDF's XMP metadata in addition to the QR code, so a verifier can read the
-    /// payload even when the QR itself cannot be scanned. Both hold the identical
-    /// encrypted <c>2|verifiablReference|&lt;Base32 ciphertext&gt;</c> value by default; never
-    /// write plaintext PII to metadata, which is not encrypted. Write the value
+    /// payload even when the QR itself cannot be scanned. The QR code holds the scan
+    /// URL (<see cref="BuildScanUrl"/>) and the metadata holds the bare
+    /// <c>2|verifiablReference|&lt;Base32 ciphertext&gt;</c> payload; both carry the same
+    /// reference and ciphertext. Never write plaintext PII to metadata, which is not
+    /// encrypted. Write the value
     /// with any PDF toolchain that can set a custom XMP property; the SDK only
     /// provides the keys.
     /// </remarks>

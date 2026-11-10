@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { packageVersion, packageSourceConfig } from "./packed-package-check.mjs";
+import { metadataPdf, packageVersion, packageSourceConfig } from "./packed-package-check.mjs";
 
 test("reads the package version from a project", () => {
   const directory = mkdtempSync(join(tmpdir(), "verifiabl-version-test-"));
@@ -21,4 +21,14 @@ test("limits Verifiabl packages to the packed source", () => {
   assert.match(config, /key="packed" value="\/tmp\/packages"/);
   assert.match(config, /packageSource key="packed"><package pattern="Verifiabl\.\*"/);
   assert.match(config, /packageSource key="nuget\.org"><package pattern="\*"/);
+});
+
+test("writes a PDF whose cross-reference offsets point at its objects", () => {
+  const pdf = metadataPdf("2|reference|ciphertext").toString("utf8");
+  const xref = Number(pdf.match(/startxref\n(\d+)/)[1]);
+  assert.ok(pdf.startsWith("xref", xref));
+  const offsets = [...pdf.slice(xref).matchAll(/^(\d{10}) 00000 n $/gm)].map((match) => Number(match[1]));
+  assert.equal(offsets.length, 4);
+  offsets.forEach((offset, index) => assert.ok(pdf.startsWith(`${index + 1} 0 obj`, offset)));
+  assert.match(pdf, /<verifiabl:payload>2\|reference\|ciphertext<\/verifiabl:payload>/);
 });

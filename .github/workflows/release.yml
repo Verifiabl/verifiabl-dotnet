@@ -10,10 +10,9 @@ name: Release
 #     Repository: verifiabl-dotnet
 #     Workflow File: release.yml
 #     Environment: nuget-publish
-# Configure Trusted Publishing for each package id before its first release:
-# Verifiabl.Issuer, Verifiabl.Issuer.Extensions.DependencyInjection and
-# Verifiabl.Verifier. A release publishes only its tag's target: issuer/v* or
-# verifier/v*.
+# Configure Trusted Publishing for each package id in .github/release-target.json
+# before its first release.
+# A release publishes only its tag's target: issuer/v* or verifier/v*.
 # The NUGET_USER repository secret holds the nuget.org profile name that owns
 # the trusted publishing policy (the profile name, not an email address).
 #

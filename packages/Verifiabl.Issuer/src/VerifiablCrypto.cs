@@ -36,8 +36,8 @@ public static class VerifiablCrypto
 
     /// <summary>
     /// Encrypt a formatted PII string with AES-256-GCM. The GCM authentication
-    /// tag, returned in the metadata, lets the verifier detect any tampering with
-    /// the ciphertext at scan time.
+    /// tag, returned in the metadata, lets the verifier detect a change to the
+    /// ciphertext at scan time.
     /// </summary>
     /// <remarks>
     /// Every call draws a fresh random IV, which is what keeps AES-256-GCM safe

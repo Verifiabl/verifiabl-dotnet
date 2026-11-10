@@ -38,7 +38,9 @@ Console.CancelKeyPress += (_, e) =>
 
 try
 {
-    VerificationResult result = await verifier.VerifyAsync(payload, cts.Token);
+    // Keep the request to retry it: every send carries the same idempotency key.
+    var request = new VerificationRequest(payload);
+    VerificationResult result = await verifier.VerifyAsync(request, cts.Token);
 
     // ToString() shows only the reference and schema. Employee details are
     // personal information, so this example never prints them.
@@ -49,33 +51,33 @@ try
 catch (VerifierRejectedException rejected)
 {
     Console.Error.WriteLine($"Not verified ({rejected.Code}): {rejected.Message}");
-    PrintRequestId(rejected);
+    PrintSupportIds(rejected);
     return 1;
 }
 catch (VerifierException failure) when (failure.IsRetryable)
 {
     Console.Error.WriteLine($"Verifiabl is unavailable; try again later. {failure.Message}");
-    PrintRequestId(failure);
+    PrintSupportIds(failure);
     return 1;
 }
 catch (VerifierAuthException failure)
 {
     Console.Error.WriteLine($"Check VERIFIABL_CLIENT_ID, VERIFIABL_CLIENT_SECRET and their permissions. {failure.Message}");
-    PrintRequestId(failure);
+    PrintSupportIds(failure);
     return 1;
 }
 catch (VerifierServiceException failure)
 {
     Console.Error.WriteLine($"Verifiabl returned an error ({failure.Code}): {failure.Message}");
-    PrintRequestId(failure);
+    PrintSupportIds(failure);
     return 1;
 }
 catch (VerifierException failure)
 {
     // A response the SDK could not read. Retrying would likely get the same answer,
-    // and the document is not rejected, so escalate it.
-    Console.Error.WriteLine($"Verification failed: {failure.Message}");
-    PrintRequestId(failure);
+    // and it is not a failed verification, so escalate it.
+    Console.Error.WriteLine($"Could not complete verification: {failure.Message}");
+    PrintSupportIds(failure);
     return 1;
 }
 catch (OperationCanceledException) when (cts.IsCancellationRequested)
@@ -84,10 +86,16 @@ catch (OperationCanceledException) when (cts.IsCancellationRequested)
     return 130;
 }
 
-static void PrintRequestId(VerifierException failure)
+static void PrintSupportIds(VerifierException failure)
 {
     if (failure.RequestId is not null)
     {
         Console.Error.WriteLine($"Quote request ID {failure.RequestId} to Verifiabl support.");
+    }
+
+    if (failure.IdempotencyKey is Guid key)
+    {
+        // The verification may have completed even though the call failed.
+        Console.Error.WriteLine($"Quote idempotency key {key} when you ask whether it completed or was charged.");
     }
 }

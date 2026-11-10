@@ -45,7 +45,10 @@ public class VerifiablApiException : VerifiablException
     /// <summary>The parsed error body, when the response carried one.</summary>
     public VerifiablErrorBody? Body { get; }
 
-    /// <summary>Request ID to quote to Verifiabl support, when the response carried one.</summary>
+    /// <summary>
+    /// The response's <c>X-Request-Id</c>, from the last attempt when the call was
+    /// retried. Quote it to Verifiabl support.
+    /// </summary>
     public string? RequestId { get; }
 
     /// <summary>
