@@ -12,6 +12,28 @@
           "Microsoft.TestPlatform.TestHost": "17.14.1"
         }
       },
+      "PdfPig": {
+        "type": "Direct",
+        "requested": "[0.1.17-alpha-202611030024-c46d2, )",
+        "resolved": "0.1.17-alpha-202611030024-c46d2",
+        "contentHash": "CfI3D3OfywOoN5SV040JCdh2W1j5zWHYE4v8XP5w8RTT+n7yR5swdC7G0lPcWz1um4OrLdf4SDNpTEFJaPWBtw=="
+      },
+      "SkiaSharp": {
+        "type": "Direct",
+        "requested": "[4.155.0, )",
+        "resolved": "4.155.0",
+        "contentHash": "uWKxXehFrFm+CpNmP9l2IQzASoQYaQoj4QWn/LVMi3r2h++snhqdFlEAcnL8gDJUBIclN+EoLAjCZHxCsZCH2w==",
+        "dependencies": {
+          "SkiaSharp.NativeAssets.Win32": "4.155.0",
+          "SkiaSharp.NativeAssets.macOS": "4.155.0"
+        }
+      },
+      "SkiaSharp.NativeAssets.Linux.NoDependencies": {
+        "type": "Direct",
+        "requested": "[4.155.0, )",
+        "resolved": "4.155.0",
+        "contentHash": "Z5GYcFdUNn+LwWDCcyOqLuhF9bvtCW+HChDwnH+1mwHSbyowIO+JwOzckzxROh/MXbjPdZxnbkMnCXbIUhe80w=="
+      },
       "xunit": {
         "type": "Direct",
         "requested": "[2.9.3, )",
@@ -28,6 +50,12 @@
         "requested": "[2.8.2, )",
         "resolved": "2.8.2",
         "contentHash": "vm1tbfXhFmjFMUmS4M0J0ASXz3/U5XvXBa6DOQUL3fEz4Vt6YPhv+ESCarx6M6D+9kJkJYZKCNvJMas1+nVfmQ=="
+      },
+      "ZXing.Net": {
+        "type": "Direct",
+        "requested": "[0.16.11, )",
+        "resolved": "0.16.11",
+        "contentHash": "OZfAVu88hl87BffQ+rlWCj/vLvAhhCK4QnFaoveeF/MY8SjHNSYBQ3qyUEWlPKNgBQGh1syXhCDg10vUnCsqkg=="
       },
       "Microsoft.CodeCoverage": {
         "type": "Transitive",
@@ -48,10 +76,25 @@
           "Newtonsoft.Json": "13.0.3"
         }
       },
+      "Net.Codecrete.QrCodeGenerator": {
+        "type": "Transitive",
+        "resolved": "3.2.1",
+        "contentHash": "MLseDo4x2T8+7gbXDt5vLjC4b6v4SavtrwoM+adKjlicnTHAqII4zAWy8VL5D94oB3VA8qz7bvMyOxfVLJnARg=="
+      },
       "Newtonsoft.Json": {
         "type": "Transitive",
         "resolved": "13.0.3",
         "contentHash": "HrC5BXdl00IP9zeV+0Z848QWPAoCr9P3bDEZguI+gkLcBKAOxix/tLEAAHC+UvDNPv4a2d18lOReHMOagPa+zQ=="
+      },
+      "SkiaSharp.NativeAssets.macOS": {
+        "type": "Transitive",
+        "resolved": "4.155.0",
+        "contentHash": "NaXi75WZBJWW1+zdHTdh319vBpPR2m04uznYZ9Z2BcIue7Ip4YNIycMgWjz88giLP0fVh5FCcng66+if/tqF8Q=="
+      },
+      "SkiaSharp.NativeAssets.Win32": {
+        "type": "Transitive",
+        "resolved": "4.155.0",
+        "contentHash": "mTpojWcWzoB8mERp8Du9/T6KnBHo1nguYiLdy0AxjIsA6xHIDdo4xAU7FB6CxW9ATEkR77drNFTv84RuUDurvQ=="
       },
       "xunit.abstractions": {
         "type": "Transitive",
@@ -93,10 +136,11 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
-      "ZXing.Net": {
-        "type": "Transitive",
-        "resolved": "0.16.11",
-        "contentHash": "OZfAVu88hl87BffQ+rlWCj/vLvAhhCK4QnFaoveeF/MY8SjHNSYBQ3qyUEWlPKNgBQGh1syXhCDg10vUnCsqkg=="
+      "Verifiabl.Issuer": {
+        "type": "Project",
+        "dependencies": {
+          "Net.Codecrete.QrCodeGenerator": "[3.2.1, )"
+        }
       },
       "verifiabl.verifier": {
         "type": "Project"
@@ -104,8 +148,7 @@
       "verifiabl.verifier.extraction": {
         "type": "Project",
         "dependencies": {
-          "Verifiabl.Verifier": "[0.1.0-rc.2, )",
-          "ZXing.Net": "[0.16.11, )"
+          "Verifiabl.Verifier": "[0.1.0-rc.3, )"
         }
       }
     },
@@ -120,6 +163,28 @@
           "Microsoft.TestPlatform.TestHost": "17.14.1"
         }
       },
+      "PdfPig": {
+        "type": "Direct",
+        "requested": "[0.1.17-alpha-202611030024-c46d2, )",
+        "resolved": "0.1.17-alpha-202611030024-c46d2",
+        "contentHash": "CfI3D3OfywOoN5SV040JCdh2W1j5zWHYE4v8XP5w8RTT+n7yR5swdC7G0lPcWz1um4OrLdf4SDNpTEFJaPWBtw=="
+      },
+      "SkiaSharp": {
+        "type": "Direct",
+        "requested": "[4.155.0, )",
+        "resolved": "4.155.0",
+        "contentHash": "uWKxXehFrFm+CpNmP9l2IQzASoQYaQoj4QWn/LVMi3r2h++snhqdFlEAcnL8gDJUBIclN+EoLAjCZHxCsZCH2w==",
+        "dependencies": {
+          "SkiaSharp.NativeAssets.Win32": "4.155.0",
+          "SkiaSharp.NativeAssets.macOS": "4.155.0"
+        }
+      },
+      "SkiaSharp.NativeAssets.Linux.NoDependencies": {
+        "type": "Direct",
+        "requested": "[4.155.0, )",
+        "resolved": "4.155.0",
+        "contentHash": "Z5GYcFdUNn+LwWDCcyOqLuhF9bvtCW+HChDwnH+1mwHSbyowIO+JwOzckzxROh/MXbjPdZxnbkMnCXbIUhe80w=="
+      },
       "xunit": {
         "type": "Direct",
         "requested": "[2.9.3, )",
@@ -136,6 +201,12 @@
         "requested": "[2.8.2, )",
         "resolved": "2.8.2",
         "contentHash": "vm1tbfXhFmjFMUmS4M0J0ASXz3/U5XvXBa6DOQUL3fEz4Vt6YPhv+ESCarx6M6D+9kJkJYZKCNvJMas1+nVfmQ=="
+      },
+      "ZXing.Net": {
+        "type": "Direct",
+        "requested": "[0.16.11, )",
+        "resolved": "0.16.11",
+        "contentHash": "OZfAVu88hl87BffQ+rlWCj/vLvAhhCK4QnFaoveeF/MY8SjHNSYBQ3qyUEWlPKNgBQGh1syXhCDg10vUnCsqkg=="
       },
       "Microsoft.CodeCoverage": {
         "type": "Transitive",
@@ -156,10 +227,25 @@
           "Newtonsoft.Json": "13.0.3"
         }
       },
+      "Net.Codecrete.QrCodeGenerator": {
+        "type": "Transitive",
+        "resolved": "3.2.1",
+        "contentHash": "MLseDo4x2T8+7gbXDt5vLjC4b6v4SavtrwoM+adKjlicnTHAqII4zAWy8VL5D94oB3VA8qz7bvMyOxfVLJnARg=="
+      },
       "Newtonsoft.Json": {
         "type": "Transitive",
         "resolved": "13.0.3",
         "contentHash": "HrC5BXdl00IP9zeV+0Z848QWPAoCr9P3bDEZguI+gkLcBKAOxix/tLEAAHC+UvDNPv4a2d18lOReHMOagPa+zQ=="
+      },
+      "SkiaSharp.NativeAssets.macOS": {
+        "type": "Transitive",
+        "resolved": "4.155.0",
+        "contentHash": "NaXi75WZBJWW1+zdHTdh319vBpPR2m04uznYZ9Z2BcIue7Ip4YNIycMgWjz88giLP0fVh5FCcng66+if/tqF8Q=="
+      },
+      "SkiaSharp.NativeAssets.Win32": {
+        "type": "Transitive",
+        "resolved": "4.155.0",
+        "contentHash": "mTpojWcWzoB8mERp8Du9/T6KnBHo1nguYiLdy0AxjIsA6xHIDdo4xAU7FB6CxW9ATEkR77drNFTv84RuUDurvQ=="
       },
       "xunit.abstractions": {
         "type": "Transitive",
@@ -201,10 +287,11 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
-      "ZXing.Net": {
-        "type": "Transitive",
-        "resolved": "0.16.11",
-        "contentHash": "OZfAVu88hl87BffQ+rlWCj/vLvAhhCK4QnFaoveeF/MY8SjHNSYBQ3qyUEWlPKNgBQGh1syXhCDg10vUnCsqkg=="
+      "Verifiabl.Issuer": {
+        "type": "Project",
+        "dependencies": {
+          "Net.Codecrete.QrCodeGenerator": "[3.2.1, )"
+        }
       },
       "verifiabl.verifier": {
         "type": "Project"
@@ -212,8 +299,7 @@
       "verifiabl.verifier.extraction": {
         "type": "Project",
         "dependencies": {
-          "Verifiabl.Verifier": "[0.1.0-rc.2, )",
-          "ZXing.Net": "[0.16.11, )"
+          "Verifiabl.Verifier": "[0.1.0-rc.3, )"
         }
       }
     }

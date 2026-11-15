@@ -1,0 +1,78 @@
+<Project>
+
+  <PropertyGroup>
+    <WasmtimeCache>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(BaseIntermediateOutputPath)'))wasmtime/$(WasmtimeVersion)/</WasmtimeCache>
+    <WasmtimeReleaseUrl>https://github.com/bytecodealliance/wasmtime/releases/download/v$(WasmtimeVersion)</WasmtimeReleaseUrl>
+
+    <_WasmtimeHostOs Condition="$([MSBuild]::IsOSPlatform('Windows'))">win</_WasmtimeHostOs>
+    <_WasmtimeHostOs Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux</_WasmtimeHostOs>
+    <_WasmtimeHostOs Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_WasmtimeHostOs>
+    <_WasmtimeHostArchitecture>$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</_WasmtimeHostArchitecture>
+
+    <!-- WasmtimePlatform is a runtime identifier, "host" for this machine's, or "all". -->
+    <_WasmtimeRuntimeIdentifier>$(WasmtimePlatform)</_WasmtimeRuntimeIdentifier>
+    <_WasmtimeRuntimeIdentifier Condition="'$(WasmtimePlatform)' == 'host'">$(_WasmtimeHostOs)-$(_WasmtimeHostArchitecture)</_WasmtimeRuntimeIdentifier>
+
+    <BeforePack>$(BeforePack);_VerifiablPackWasmtime</BeforePack>
+  </PropertyGroup>
+
+  <!--
+    Returns the libraries for WasmtimePlatform, downloading those not in the
+    cache. Call it through the MSBuild task with WasmtimePlatform as a global
+    property and no target framework, so concurrent callers share one run.
+  -->
+  <Target Name="VerifiablFetchWasmtime" DependsOnTargets="_VerifiablSelectWasmtime;_VerifiablFetchWasmtimeArchive"
+          Returns="@(_WasmtimeWanted->'$(WasmtimeCache)%(RuntimeIdentifier)/%(Library)')">
+    <Message Condition="'@(_WasmtimeWanted)' == ''" Importance="high"
+             Text="Wasmtime $(WasmtimeVersion) has no library for $(_WasmtimeRuntimeIdentifier), so the sandbox cannot run there." />
+  </Target>
+
+  <Target Name="_VerifiablSelectWasmtime">
+    <ItemGroup>
+      <_WasmtimeWanted Include="@(WasmtimeArchive)"
+                       Condition="'$(WasmtimePlatform)' == 'all' or '%(RuntimeIdentifier)' == '$(_WasmtimeRuntimeIdentifier)'" />
+      <_WasmtimeMissing Include="@(_WasmtimeWanted)"
+                        Condition="!Exists('$(WasmtimeCache)%(RuntimeIdentifier)/%(Library)')" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Runs once for each missing library. -->
+  <Target Name="_VerifiablFetchWasmtimeArchive" Condition="'@(_WasmtimeMissing)' != ''" Outputs="%(_WasmtimeMissing.Identity)">
+    <PropertyGroup>
+      <_WasmtimeArchiveName>wasmtime-v$(WasmtimeVersion)-%(_WasmtimeMissing.Identity)-c-api</_WasmtimeArchiveName>
+      <_WasmtimeArchiveFile>$(_WasmtimeArchiveName).%(_WasmtimeMissing.Format)</_WasmtimeArchiveFile>
+      <_WasmtimeArchiveFormat>%(_WasmtimeMissing.Format)</_WasmtimeArchiveFormat>
+      <_WasmtimeArchiveSha256>%(_WasmtimeMissing.Sha256)</_WasmtimeArchiveSha256>
+      <_WasmtimeLibrary>%(_WasmtimeMissing.Library)</_WasmtimeLibrary>
+      <_WasmtimeLibraryDirectory>$(WasmtimeCache)%(_WasmtimeMissing.RuntimeIdentifier)/</_WasmtimeLibraryDirectory>
+      <!-- Unique, in case another build fetches the same library at once. -->
+      <_WasmtimeScratch>$(WasmtimeCache)fetch-%(_WasmtimeMissing.RuntimeIdentifier)-$([System.Guid]::NewGuid().ToString('N'))/</_WasmtimeScratch>
+    </PropertyGroup>
+
+    <DownloadFile SourceUrl="$(WasmtimeReleaseUrl)/$(_WasmtimeArchiveFile)" DestinationFolder="$(_WasmtimeScratch)" Retries="3" />
+    <VerifyFileHash File="$(_WasmtimeScratch)$(_WasmtimeArchiveFile)" Algorithm="SHA256" Hash="$(_WasmtimeArchiveSha256)" />
+
+    <Unzip Condition="'$(_WasmtimeArchiveFormat)' == 'zip'"
+           SourceFiles="$(_WasmtimeScratch)$(_WasmtimeArchiveFile)" DestinationFolder="$(_WasmtimeScratch)" />
+    <!-- MSBuild has no task that reads xz. -->
+    <Exec Condition="'$(_WasmtimeArchiveFormat)' == 'tar.xz'" ContinueOnError="true" StandardErrorImportance="low"
+          Command="tar -xf &quot;$(_WasmtimeScratch)$(_WasmtimeArchiveFile)&quot; -C &quot;$(_WasmtimeScratch)&quot;" />
+    <Error Condition="'$(MSBuildLastTaskResult)' == 'false'"
+           Text="Could not unpack $(_WasmtimeArchiveFile): this needs a tar that reads xz, as on Linux and macOS." />
+
+    <Copy SourceFiles="$(_WasmtimeScratch)$(_WasmtimeArchiveName)/LICENSE" DestinationFolder="$(WasmtimeCache)" />
+    <!-- Moved last, so a library in the cache is whole and from a verified archive. -->
+    <Move SourceFiles="$(_WasmtimeScratch)$(_WasmtimeArchiveName)/lib/$(_WasmtimeLibrary)" DestinationFolder="$(_WasmtimeLibraryDirectory)" />
+    <RemoveDir Directories="$(_WasmtimeScratch)" />
+  </Target>
+
+  <Target Name="_VerifiablPackWasmtime">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="VerifiablFetchWasmtime" Properties="WasmtimePlatform=all" RemoveProperties="TargetFramework" />
+    <ItemGroup>
+      <None Include="@(WasmtimeArchive->'$(WasmtimeCache)%(RuntimeIdentifier)/%(Library)')"
+            Pack="true" PackagePath="runtimes/%(WasmtimeArchive.RuntimeIdentifier)/native/" Visible="false" />
+      <None Include="$(WasmtimeCache)LICENSE" Pack="true" PackagePath="licenses/wasmtime/" Visible="false" />
+    </ItemGroup>
+  </Target>
+
+</Project>

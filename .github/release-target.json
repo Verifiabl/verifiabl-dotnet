@@ -89,15 +89,42 @@
             "versionElement": "Version",
             "packageIdElement": "PackageId"
           }
+        },
+        {
+          "id": "Verifiabl.Verifier.Extraction",
+          "versionSource": {
+            "kind": "xml",
+            "path": "packages/Verifiabl.Verifier.Extraction/src/Verifiabl.Verifier.Extraction.csproj",
+            "versionElement": "Version",
+            "packageIdElement": "PackageId"
+          }
         }
       ],
-      "coupledVersionGroups": [],
+      "coupledVersionGroups": [
+        [
+          "Verifiabl.Verifier",
+          "Verifiabl.Verifier.Extraction"
+        ]
+      ],
       "packCommands": [
         {
           "run": [
             "dotnet",
             "pack",
             "packages/Verifiabl.Verifier/src/Verifiabl.Verifier.csproj",
+            "--configuration",
+            "Release",
+            "--no-build",
+            "--output",
+            "artifacts",
+            "-p:Version={version}"
+          ]
+        },
+        {
+          "run": [
+            "dotnet",
+            "pack",
+            "packages/Verifiabl.Verifier.Extraction/src/Verifiabl.Verifier.Extraction.csproj",
             "--configuration",
             "Release",
             "--no-build",

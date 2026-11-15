@@ -1,7 +1,7 @@
 namespace Verifiabl.Verifier;
 
 /// <summary>
-/// Thrown by optional extraction packages, such as <c>Verifiabl.Verifier.Pdf</c>,
+/// Thrown by an optional extraction package, such as <c>Verifiabl.Verifier.Extraction</c>,
 /// when no single Verifiabl payload could be read from a document or image.
 /// Nothing was sent to Verifiabl.
 /// </summary>

@@ -8,13 +8,13 @@
     <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
   </PropertyGroup>
 
-  <!-- Each add-on brings Verifiabl.Verifier and Verifiabl.Verifier.Extraction with it. -->
+  <!-- The add-on brings Verifiabl.Verifier with it. -->
   <ItemGroup Condition="'$(VerifiablVerifierVersion)' == ''">
-    <ProjectReference Include="../../../packages/Verifiabl.Verifier.Pdf/src/Verifiabl.Verifier.Pdf.csproj" />
+    <ProjectReference Include="../../../packages/Verifiabl.Verifier.Extraction/src/Verifiabl.Verifier.Extraction.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(VerifiablVerifierVersion)' != ''">
-    <PackageReference Include="Verifiabl.Verifier.Pdf" Version="$(VerifiablVerifierVersion)" />
+    <PackageReference Include="Verifiabl.Verifier.Extraction" Version="$(VerifiablVerifierVersion)" />
   </ItemGroup>
 
 </Project>

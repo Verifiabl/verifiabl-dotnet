@@ -1,0 +1,17 @@
+<Project>
+  <!--
+    .NET Framework does not copy native libraries from a package's runtimes/
+    folder, so copy this package's 64-bit Windows Wasmtime libraries to
+    wasmtime/<arch>/, where Verifiabl.Verifier.Extraction loads them by full path.
+    NuGet resolves them into RuntimeTargetsCopyLocalItems, so this needs
+    PackageReference.
+  -->
+  <Target Name="VerifiablCopyWasmtimeNatives" AfterTargets="ResolvePackageAssets" Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
+    <ItemGroup>
+      <_VerifiablWasmtimeNative Include="@(RuntimeTargetsCopyLocalItems)" Condition="'%(NuGetPackageId)' == 'Verifiabl.Verifier.Extraction' and '%(AssetType)' == 'native'" />
+      <ReferenceCopyLocalPaths Include="@(_VerifiablWasmtimeNative)" Condition="'%(RuntimeIdentifier)' == 'win-x64'" DestinationSubDirectory="wasmtime\x64\" />
+      <ReferenceCopyLocalPaths Include="@(_VerifiablWasmtimeNative)" Condition="'%(RuntimeIdentifier)' == 'win-arm64'" DestinationSubDirectory="wasmtime\arm64\" />
+    </ItemGroup>
+    <Warning Condition="'@(_VerifiablWasmtimeNative)' == ''" Text="Verifiabl.Verifier.Extraction found no Wasmtime native libraries to copy, so reading will fail. Reference the package with PackageReference." />
+  </Target>
+</Project>

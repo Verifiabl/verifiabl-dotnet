@@ -1,0 +1,16 @@
+[
+  { "module": "recurses.wasm", "status": "unreadable" },
+  { "module": "throws.wasm", "status": "unreadable" },
+  { "module": "spins.wasm", "status": "timedOut" },
+  { "module": "spins-after-trap.wasm", "status": "timedOut" },
+  { "module": "unknown-status.wasm", "status": "unreadable" },
+  { "module": "alloc-outside-memory.wasm", "status": "unreadable" },
+  { "module": "alloc-fails.wasm", "status": "outOfMemory" },
+  { "module": "outside-memory-result.wasm", "status": "unreadable" },
+  { "module": "not-json-result.wasm", "status": "unreadable" },
+  { "module": "null-result.wasm", "status": "unreadable" },
+  { "module": "nested-result.wasm", "status": "unreadable" },
+  { "module": "too-large-result.wasm", "status": "unreadable" },
+  { "module": "trapping-result.wasm", "status": "unreadable" },
+  { "module": "negative-pages.wasm", "status": "unreadable" }
+]

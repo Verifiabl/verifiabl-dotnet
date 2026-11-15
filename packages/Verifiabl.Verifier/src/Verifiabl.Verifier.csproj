@@ -4,7 +4,7 @@
     <!-- Same targets as Verifiabl.Issuer: .NET Framework 4.7.2+ and the current LTS runtimes. -->
     <TargetFrameworks>net472;net8.0;net10.0</TargetFrameworks>
     <PackageId>Verifiabl.Verifier</PackageId>
-    <Version>0.1.0-rc.2</Version>
+    <Version>0.1.0-rc.3</Version>
     <Description>Official Verifiabl .NET SDK for verifiers: verify an already-extracted Verifiabl payload through the Verifiabl verification API.</Description>
     <Authors>Verifiabl</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

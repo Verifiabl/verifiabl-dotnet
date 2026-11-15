@@ -7,8 +7,7 @@
             "packages/Verifiabl.Issuer/src/Verifiabl.csproj",
             "packages/Verifiabl.Issuer.Extensions.DependencyInjection/src/Verifiabl.Extensions.DependencyInjection.csproj",
             "packages/Verifiabl.Verifier/src/Verifiabl.Verifier.csproj",
-            "packages/Verifiabl.Verifier.Extraction/src/Verifiabl.Verifier.Extraction.csproj",
-            "packages/Verifiabl.Verifier.Pdf/src/Verifiabl.Verifier.Pdf.csproj"
+            "packages/Verifiabl.Verifier.Extraction/src/Verifiabl.Verifier.Extraction.csproj"
           ],
           "src": ".."
         }

@@ -6,22 +6,42 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-The optional extraction add-ons are not published on NuGet yet.
+## [0.1.0-rc.3] - 2026-11-13
+
+Third release candidate of the verifier SDK. It is the first release of
+`Verifiabl.Verifier.Extraction`, which embeds
+[verifiabl-extraction v0.1.0](https://github.com/Verifiabl/verifiabl-extraction/releases/tag/v0.1.0).
+The API and behaviour of `Verifiabl.Verifier` do not change; its README is
+reorganised.
 
 ### Added
 
-- `Verifiabl.Verifier.Pdf`, an optional add-on, verifies a payslip PDF's XMP
-  metadata payload through `IVerifierClient.VerifyAsync`, and reads the QR code
-  in its embedded images only when there is no metadata payload. It uses
-  PdfPig and never renders the PDF. Size, page, image and pixel limits and a
-  time budget bound work on untrusted PDFs. JPEG images need a decoder from the
-  application. It depends on a PdfPig 0.1.17 prerelease, because 0.1.16 ends
-  the process on some small crafted PDFs; the stable release will depend on
-  stable PdfPig 0.1.17. `VerifyPdfAsync` takes an optional `idempotencyKey`,
-  so a PDF verification can be retried with its failure's key.
-- `Verifiabl.Verifier.Extraction` holds the managed QR reader that extraction
-  add-ons share.
-  Both packages version with `Verifiabl.Verifier`.
+- `Verifiabl.Verifier.Extraction`, an optional add-on, finds the Verifiabl
+  payload in a document and verifies it through `IVerifierClient.VerifyAsync`.
+  It versions with `Verifiabl.Verifier`, which stays managed code only.
+  - `VerifyPdfAsync`, in `Verifiabl.Verifier.Extraction.Pdf`, verifies a
+    payslip PDF's XMP metadata payload, and renders its pages to read a QR
+    code only when there is no metadata payload, so a code drawn as vector
+    shapes is found.
+  - `VerifyImageAsync`, in `Verifiabl.Verifier.Extraction.Images`, verifies
+    the QR code in a PNG, JPEG or WebP file.
+  - `QrPayloadReader` reads the QR code in pixels an application decoded
+    itself, with the reader that reads image files, so a code reads the same
+    from a file and from its pixels.
+  - File size, page, pixel and memory limits and a time budget bound work on
+    untrusted files. Each verify method takes an optional `idempotencyKey`, so
+    a verification can be retried with its failure's key.
+  - Files and pixels are read in a WebAssembly module that imports nothing,
+    run by Wasmtime: PDFium renders PDFs and ZXing-C++ reads QR codes, with no
+    access to files, the network or the host process. The time budget stops a
+    read within about 50 milliseconds. The package includes Wasmtime's native
+    libraries from its 48 long-term-support releases, and the licences of
+    Wasmtime and of the code in the module. `extraction-release.json` in the
+    package names the extraction release that the module came from, and its
+    SHA-256. The sandbox uses Wasmtime's
+    explicit checks instead of signal handlers, so it adds no process-wide
+    signal or exception handlers, and a damaged file cannot end a Windows
+    process that enforces hardware shadow stacks.
 
 ## [0.1.0-rc.2] - 2026-11-10
 

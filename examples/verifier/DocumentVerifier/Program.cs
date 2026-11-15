@@ -3,15 +3,17 @@ using Verifiabl.Verifier;
 
 const string ReadOnlyFlag = "--read-only";
 const string PdfCommandName = "pdf";
+const string ImageCommandName = "image";
 
 if (args.Length is < 2 or > 3
     || (args.Length == 3 && args[2] != ReadOnlyFlag)
-    || args[0] != PdfCommandName)
+    || args[0] is not (PdfCommandName or ImageCommandName))
 {
     PrintUsage();
     return 2;
 }
 
+bool isImage = args[0] == ImageCommandName;
 string path = args[1];
 bool readOnly = args.Length == 3;
 
@@ -34,7 +36,9 @@ try
 {
     if (readOnly)
     {
-        return await PdfCommand.ReadAsync(path, cts.Token);
+        return isImage
+            ? await ImageCommand.ReadAsync(path, cts.Token)
+            : await PdfCommand.ReadAsync(path, cts.Token);
     }
 
     IVerifierClient? verifier = CreateVerifier();
@@ -44,7 +48,9 @@ try
         return 2;
     }
 
-    return await PdfCommand.VerifyAsync(verifier, path, cts.Token);
+    return isImage
+        ? await ImageCommand.VerifyAsync(verifier, path, cts.Token)
+        : await PdfCommand.VerifyAsync(verifier, path, cts.Token);
 }
 catch (Exception failure) when (failure is IOException or UnauthorizedAccessException)
 {
@@ -120,6 +126,8 @@ static void PrintUsage()
     Console.Error.WriteLine("Commands:");
     Console.Error.WriteLine(
         $"  {PdfCommandName,-6} A payslip PDF: verifies its metadata payload, or its QR code when it has none.");
+    Console.Error.WriteLine(
+        $"  {ImageCommandName,-6} A PNG, JPEG or WebP image, such as a photo of a payslip: verifies its QR code.");
 }
 
 static void PrintRequestId(VerifierException failure)

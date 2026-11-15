@@ -5,10 +5,9 @@ This repository holds the Verifiabl .NET SDKs. Each package is in `packages/`.
 - [`Verifiabl.Issuer`](packages/Verifiabl.Issuer): the issuer SDK, published as [Verifiabl.Issuer](https://www.nuget.org/packages/Verifiabl.Issuer) on NuGet.
 - [`Verifiabl.Issuer.Extensions.DependencyInjection`](packages/Verifiabl.Issuer.Extensions.DependencyInjection): registers the issuer client with `Microsoft.Extensions.DependencyInjection`.
 - [`Verifiabl.Verifier`](packages/Verifiabl.Verifier): the verifier SDK, which verifies already-extracted QR or PDF metadata payloads.
-- [`Verifiabl.Verifier.Pdf`](packages/Verifiabl.Verifier.Pdf): optional add-on that verifies a payslip PDF's metadata payload, or its embedded QR code when it has none. Managed code only. Not yet published on NuGet.
-- [`Verifiabl.Verifier.Extraction`](packages/Verifiabl.Verifier.Extraction): shared QR reading for extraction add-ons. Not yet published on NuGet.
+- [`Verifiabl.Verifier.Extraction`](packages/Verifiabl.Verifier.Extraction): optional add-on that finds the payload in a payslip PDF, an image file or pixels you decoded, in a WebAssembly sandbox run by Wasmtime, and verifies it. Not yet published on NuGet.
 - [`examples/issuer`](examples/issuer): runnable issuer examples.
-- [`examples/verifier`](examples/verifier): runnable verifier examples: `PayloadVerifier` for extracted payload text, and `DocumentVerifier` for documents read by the optional add-ons.
+- [`examples/verifier`](examples/verifier): runnable verifier examples: `PayloadVerifier` for extracted payload text, and `DocumentVerifier` for documents read by the optional add-on.
 
 Documentation is at [docs.verifiabl.io](https://docs.verifiabl.io/issuer-sdk?lang=dotnet). To build and test the packages, see [DEVELOPMENT.md](DEVELOPMENT.md).
 
@@ -21,7 +20,7 @@ package to its attested build. The issuer packages are released together at one 
 ```sh
 VERSION='<package version>'
 PACKAGE=verifiabl.issuer # or verifiabl.issuer.extensions.dependencyinjection, verifiabl.verifier,
-                         # verifiabl.verifier.extraction, verifiabl.verifier.pdf
+                         # verifiabl.verifier.extraction
 TAG_PREFIX=issuer # verifier for the verifiabl.verifier packages
 LOWER_VERSION="$(printf '%s' "$VERSION" | tr '[:upper:]' '[:lower:]')"
 FILE="$PACKAGE.$LOWER_VERSION.nupkg"
