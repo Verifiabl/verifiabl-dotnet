@@ -45,6 +45,45 @@ with the same version property and `--no-restore`. Restore the solution normally
 afterwards to return to source-project tests. Windows CI is still required for
 .NET Framework execution; cross-compilation is not runtime qualification.
 
+## Extraction package contract
+
+`Verifiabl.Verifier.Extraction` reads a document and gives one payload to `IVerifierClient.VerifyAsync`. It works with any `IVerifierClient`, including fakes and decorators. It obeys these rules:
+
+- **Failures.** A document with no single readable payload throws `PayloadExtractionException`, never `VerifierRejectedException`: only Verifiabl decides that a payload could not be verified. Verification failures pass through without change.
+- **Retries.** Each verify call takes an optional idempotency key, so a caller can retry with the `IdempotencyKey` of a failure, not start a new verification that is charged.
+- **One verification for each document.** When a document has a payload in its metadata and in a QR code, the package verifies the metadata payload. It reads the QR code only when there is no metadata payload.
+- **Results.** Results wrap `VerificationResult` with the payload that the package read.
+- **Bounds.** Input size, decoding work and time have limits separate from `VerifierClientOptions.Timeout`. The package obeys cancellation.
+- **Isolation.** The package decodes and renders documents only in its WebAssembly sandbox, which has no access to files, the network or the host process.
+- **Privacy.** Payload text and document images never occur in messages, logs or `ToString()`.
+
+Verifier-specific mapping runs after extraction and verification, in the application.
+
+## Wasmtime
+
+`Verifiabl.Verifier.Extraction` ships Wasmtime's native libraries from the C API archives of
+[Wasmtime's releases](https://github.com/bytecodealliance/wasmtime/releases).
+[`Wasmtime.props`](packages/Verifiabl.Verifier.Extraction/src/Wasmtime.props) pins a
+[long-term-support](https://docs.wasmtime.dev/stability-release.html) version and each archive's
+SHA-256.
+
+A build downloads the library an application or test project needs for its runtime and copies it to
+that project's output. `dotnet pack` downloads every platform's, so it needs a `tar` that reads xz:
+pack on Linux or macOS.
+
+Dependabot does not report Wasmtime's
+[advisories](https://github.com/bytecodealliance/wasmtime/security/advisories). To take a patch
+release, set `WasmtimeVersion` and replace the hashes with the release's:
+
+```sh
+gh api repos/bytecodealliance/wasmtime/releases/tags/v<version> \
+  --jq '.assets[] | select(.name | test("-(x86_64|aarch64)-(windows|linux|macos)-c-api")) | "\(.digest) \(.name)"'
+```
+
+Before moving to another major version, compare the headers in the archive's `include/` with
+[`WasmtimeNative.cs`](packages/Verifiabl.Verifier.Extraction/src/Internal/Wasmtime/WasmtimeNative.cs),
+which calls them unchecked.
+
 ## Generated API reference
 
 The public API reference is generated from the projects and their XML documentation with the pinned

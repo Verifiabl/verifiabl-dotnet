@@ -5,14 +5,14 @@
     <TargetFrameworks>net472;net8.0;net10.0</TargetFrameworks>
     <PackageId>Verifiabl.Verifier.Extraction</PackageId>
     <RootNamespace>Verifiabl.Verifier.Extraction</RootNamespace>
-    <Version>0.1.0-rc.2</Version>
-    <Description>Shared building blocks for Verifiabl.Verifier extraction add-ons: read a Verifiabl QR code from image pixels and compare payload copies. Managed code only.</Description>
+    <Version>0.1.0-rc.3</Version>
+    <Description>Optional add-on to Verifiabl.Verifier: find the Verifiabl payload in a payslip PDF, an image file or pixels you decoded, inside a WebAssembly sandbox that cannot reach files, the network or the host process, and verify it.</Description>
     <Authors>Verifiabl</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://verifiabl.io</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Verifiabl/verifiabl-dotnet</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>verifiabl;payslip;verifier;qr-code</PackageTags>
+    <PackageTags>verifiabl;payslip;verifier;qr-code;pdf;image;webassembly;sandbox</PackageTags>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -25,22 +25,31 @@
 
   <ItemGroup>
     <None Include="..\README.md" Pack="true" PackagePath="\" />
-    <None Include="..\..\..\icon.png" Pack="true" PackagePath="\" />
+    <!-- The licences of the code in verifiabl-extract.wasm, which is not all MIT. -->
+    <None Include="..\THIRD-PARTY-NOTICES.txt" Pack="true" PackagePath="\" />
+    <!-- The extraction release that verifiabl-extract.wasm came from, which the README cites. -->
+    <None Include="..\extraction-release.json" Pack="true" PackagePath="\" />
     <InternalsVisibleTo Include="Verifiabl.Verifier.Extraction.Tests" Key="$(VerifiablPublicKey)" />
+    <None Include="buildTransitive\net472\Verifiabl.Verifier.Extraction.targets" Pack="true" PackagePath="buildTransitive\net472\" />
+    <None Include="..\..\..\icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Pure managed QR decoding, Apache-2.0. -->
-    <PackageReference Include="ZXing.Net" Version="0.16.11" />
+    <!-- A copy of the extraction module's build; do not edit it. -->
+    <EmbeddedResource Include="verifiabl-extract.wasm" LogicalName="Verifiabl.Verifier.Extraction.verifiabl-extract.wasm" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Public API only, for the barcode length limit. -->
+    <!-- Public API only, so fakes and decorators of IVerifierClient work. -->
     <ProjectReference Include="..\..\Verifiabl.Verifier\src\Verifiabl.Verifier.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
   </ItemGroup>
+
+  <!-- Wasmtime's native libraries (Apache-2.0 WITH LLVM-exception), pinned to a long-term-support release. -->
+  <Import Project="Wasmtime.props" />
+  <Import Project="Wasmtime.targets" />
 
 </Project>

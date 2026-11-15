@@ -723,7 +723,7 @@ public class VerifierClientTests
     {
         (VerifierClient client, FakeHttpHandler handler) = CreateClient(Respond((HttpStatusCode.OK, VerifiedJson)));
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() => client.VerifyAsync((VerificationRequest)null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => client.VerifyAsync(null!));
         Assert.Throws<ArgumentNullException>(() => new VerificationRequest(null!));
         Assert.Empty(handler.Requests);
     }

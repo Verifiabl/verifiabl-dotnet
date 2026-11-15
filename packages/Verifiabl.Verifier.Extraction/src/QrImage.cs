@@ -1,17 +1,20 @@
+using Verifiabl.Verifier.Extraction.Internal;
+
 namespace Verifiabl.Verifier.Extraction;
 
-/// <summary>An image's pixels, for reading its Verifiabl QR code.</summary>
+/// <summary>An image's pixels, for reading its Verifiabl QR code with <see cref="QrPayloadReader"/>.</summary>
 /// <remarks>
 /// Decode the image file with your own imaging library, then pass its pixels
-/// here, tightly packed with no row padding. The SDK keeps a reference to the
-/// array, so do not change it while it is being read.
+/// here: rows from top to bottom, tightly packed with no row padding. Alpha is
+/// not premultiplied; transparent pixels read as white. The SDK keeps a
+/// reference to the array, so do not change it while it is being read.
 /// </remarks>
 public sealed class QrImage
 {
     /// <summary>The largest image the SDK reads: 50 megapixels, more than an A4 page scanned at 600 dpi.</summary>
     public const int MaxPixels = 50_000_000;
 
-    private QrImage(byte[] pixels, int width, int height, QrPixelFormat format)
+    private QrImage(byte[] pixels, int width, int height, PixelFormat format)
     {
         Pixels = pixels;
         Width = width;
@@ -27,24 +30,24 @@ public sealed class QrImage
 
     internal byte[] Pixels { get; }
 
-    internal QrPixelFormat Format { get; }
+    internal PixelFormat Format { get; }
 
     /// <summary>Pixels with 4 bytes each, in red, green, blue, alpha order.</summary>
     /// <exception cref="ArgumentException">The size is out of range or does not match the buffer.</exception>
     public static QrImage FromRgba32(byte[] pixels, int width, int height) =>
-        Create(pixels, width, height, QrPixelFormat.Rgba32);
+        Create(pixels, width, height, PixelFormat.Rgba32);
 
     /// <summary>Pixels with 4 bytes each, in blue, green, red, alpha order, as Windows and Skia often store them.</summary>
     /// <exception cref="ArgumentException">The size is out of range or does not match the buffer.</exception>
     public static QrImage FromBgra32(byte[] pixels, int width, int height) =>
-        Create(pixels, width, height, QrPixelFormat.Bgra32);
+        Create(pixels, width, height, PixelFormat.Bgra32);
 
     /// <summary>Greyscale pixels with 1 byte each.</summary>
     /// <exception cref="ArgumentException">The size is out of range or does not match the buffer.</exception>
     public static QrImage FromGray8(byte[] pixels, int width, int height) =>
-        Create(pixels, width, height, QrPixelFormat.Gray8);
+        Create(pixels, width, height, PixelFormat.Gray8);
 
-    private static QrImage Create(byte[] pixels, int width, int height, QrPixelFormat format)
+    private static QrImage Create(byte[] pixels, int width, int height, PixelFormat format)
     {
         if (pixels is null)
         {
@@ -69,13 +72,5 @@ public sealed class QrImage
         return new QrImage(pixels, width, height, format);
     }
 
-    private static int BytesPerPixel(QrPixelFormat format) => format == QrPixelFormat.Gray8 ? 1 : 4;
-}
-
-/// <summary>How a <see cref="QrImage"/> stores its pixels.</summary>
-internal enum QrPixelFormat
-{
-    Rgba32,
-    Bgra32,
-    Gray8,
+    private static int BytesPerPixel(PixelFormat format) => format == PixelFormat.Gray8 ? 1 : 4;
 }

@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { deflateSync } from "node:zlib";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
@@ -132,6 +133,42 @@ export function metadataPdf(payload) {
   return Buffer.from(pdf, "utf8");
 }
 
+/** PNG's CRC-32. zlib.crc32 needs a newer Node than some CI runners carry. */
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit++) crc = crc & 1 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+/** A white greyscale PNG with no QR code, so reading it exercises the sandboxed decoder. */
+export function blankPng(size = 64) {
+  const chunk = (type, data) => {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body));
+    return Buffer.concat([length, body, crc]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(size, 0);
+  header.writeUInt32BE(size, 4);
+  header[8] = 8; // bit depth
+  header[9] = 0; // greyscale
+  // Each row is a filter byte of 0 followed by white pixels.
+  const row = Buffer.concat([Buffer.from([0]), Buffer.alloc(size, 255)]);
+  const pixels = Buffer.concat(Array.from({ length: size }, () => row));
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", header),
+    chunk("IDAT", deflateSync(pixels)),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
 function isReadable(path) {
   try {
     accessSync(path, constants.R_OK);
@@ -144,7 +181,7 @@ function isReadable(path) {
 /** Exit codes and messages of the document example's offline paths. No request is sent. */
 function checkDocumentExample(config, temporary, xmpPayload) {
   const project = "examples/verifier/DocumentVerifier/DocumentVerifier.csproj";
-  const version = packageVersion(join(root, "packages/Verifiabl.Verifier.Pdf/src/Verifiabl.Verifier.Pdf.csproj"));
+  const version = packageVersion(join(root, "packages/Verifiabl.Verifier.Extraction/src/Verifiabl.Verifier.Extraction.csproj"));
   const versionProperty = `--property:VerifiablVerifierVersion=${version}`;
   restoreAndBuild(project, config, join(temporary, "document-packages"), versionProperty);
 
@@ -190,12 +227,45 @@ function checkDocumentExample(config, temporary, xmpPayload) {
   // The issuer example's real payload, read back from PDF metadata by the verifier add-on.
   const read = example("pdf", pdf, "--read-only");
   assert.equal(read.status, 0, `Read-only mode must read the metadata payload: ${read.stderr}`);
-  assert.match(read.stdout, /HasMetadata = True, HasQrCode = False, SkippedImages = 0/);
+  assert.match(read.stdout, /HasMetadata = True, HasQrCode = False, RenderedPages = 0/);
   // The reference may be printed; the ciphertext must not be.
   const output = read.stdout + read.stderr;
   const ciphertext = xmpPayload.split("|").at(-1);
   assert.ok(!output.includes(xmpPayload), "Read-only mode must not print the payload");
   assert.ok(!output.includes(ciphertext), "Read-only mode must not print the ciphertext");
+
+  // Decoding needs Wasmtime's native library and the embedded module from the packed packages.
+  const image = join(temporary, "blank.png");
+  writeFileSync(image, blankPng());
+  const blank = example("image", image, "--read-only");
+  assert.equal(blank.status, 1, `An image without a QR code must not be read as one: ${blank.stderr}`);
+  assert.match(blank.stdout, /HasQrCode = False/);
+
+  const notImage = example("image", pdf, "--read-only");
+  assert.equal(notImage.status, 1, `A file that is not an image must be reported: ${notImage.stderr}`);
+  assert.match(notImage.stderr, /Could not read a payload \(Unreadable\)/);
+}
+
+/** Where NuGet looks for each Wasmtime library that Wasmtime.props pins. */
+export function wasmtimeLibraries(props) {
+  const archives = props.matchAll(/<WasmtimeArchive\b[^>]*\bRuntimeIdentifier="([^"]+)"[^>]*\bLibrary="([^"]+)"/g);
+  return Array.from(archives, ([, runtime, library]) => `runtimes/${runtime}/native/${library}`);
+}
+
+// The Extraction package carries other projects' code, so their licences must be in it,
+// with the record of the module's release that its README cites. The example above
+// proves only this machine's Wasmtime library.
+function checkExtractionContents(packages) {
+  const version = packageVersion(join(root, "packages/Verifiabl.Verifier.Extraction/src/Verifiabl.Verifier.Extraction.csproj"));
+  const archive = readFileSync(join(packages, `Verifiabl.Verifier.Extraction.${version}.nupkg`));
+  // A zip archive stores each file's name as plain bytes.
+  const libraries = wasmtimeLibraries(readFileSync(join(root, "packages/Verifiabl.Verifier.Extraction/src/Wasmtime.props"), "utf8"));
+  assert.ok(libraries.length > 0, "Wasmtime.props must pin a library");
+  // NuGet imports build targets only from a file named after the package.
+  const targets = "buildTransitive/net472/Verifiabl.Verifier.Extraction.targets";
+  for (const file of ["THIRD-PARTY-NOTICES.txt", "extraction-release.json", "licenses/wasmtime/LICENSE", targets, ...libraries]) {
+    assert.ok(archive.includes(file), `Verifiabl.Verifier.Extraction must pack ${file}`);
+  }
 }
 
 export function check(packageDirectory = "artifacts") {
@@ -256,6 +326,7 @@ export function check(packageDirectory = "artifacts") {
       join(output, runDirectory, "batch", "PAY-1001", "xmp-payload.txt"), "utf8",
     ).trim();
     checkDocumentExample(config, temporary, xmpPayload);
+    checkExtractionContents(packages);
   } finally {
     rmSync(temporary, { recursive: true, force: true });
   }

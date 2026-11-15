@@ -281,11 +281,8 @@ public class PngBarcodeTests
         int bytesPerPixel = colorType == 3 ? 1 : 4;
         int stride = width * bytesPerPixel + 1;
         Assert.Equal(stride * height, raw.Length);
-        if (colorType == 3)
-        {
-            // PNG requires PLTE ahead of IDAT, so an indexed image always has one here.
-            Assert.NotNull(plte);
-        }
+        // PNG requires PLTE ahead of IDAT, so an indexed image always has one here.
+        byte[] palette = colorType == 3 ? Assert.IsType<byte[]>(plte) : Array.Empty<byte>();
 
         for (int y = 0; y < height; y++)
         {
@@ -297,9 +294,9 @@ public class PngBarcodeTests
                 if (colorType == 3)
                 {
                     int index = raw[source];
-                    rgba[target] = plte![index * 3];
-                    rgba[target + 1] = plte[index * 3 + 1];
-                    rgba[target + 2] = plte[index * 3 + 2];
+                    rgba[target] = palette[index * 3];
+                    rgba[target + 1] = palette[index * 3 + 1];
+                    rgba[target + 2] = palette[index * 3 + 2];
                     rgba[target + 3] = trns is not null && index < trns.Length ? trns[index] : (byte)255;
                 }
                 else

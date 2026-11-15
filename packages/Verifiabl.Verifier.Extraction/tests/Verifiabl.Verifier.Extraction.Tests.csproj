@@ -19,10 +19,22 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <!-- Test-only: ZXing.Net writes QR codes, SkiaSharp encodes image files and PdfPig's writer builds the fixture PDFs. The package reads them all in its sandbox. -->
+    <PackageReference Include="ZXing.Net" Version="0.16.11" />
+    <PackageReference Include="PdfPig" Version="0.1.17-alpha-202611030024-c46d2" />
+    <PackageReference Include="SkiaSharp" Version="4.155.0" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.155.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="ExtractionFixtures\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="StandIns\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\src\Verifiabl.Verifier.Extraction.csproj" />
+    <!-- Test-only: real issuer badges and payloads to embed. -->
+    <ProjectReference Include="..\..\Verifiabl.Issuer\src\Verifiabl.csproj" />
   </ItemGroup>
 
 </Project>

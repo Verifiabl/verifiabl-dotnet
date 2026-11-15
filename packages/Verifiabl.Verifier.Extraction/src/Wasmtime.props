@@ -1,0 +1,24 @@
+<Project>
+
+  <!-- Wasmtime's native libraries, pinned to a long-term-support release. See DEVELOPMENT.md#wasmtime. -->
+  <PropertyGroup>
+    <WasmtimeVersion>48.0.8</WasmtimeVersion>
+  </PropertyGroup>
+
+  <!-- Each platform's C API archive in that release, with its SHA-256. -->
+  <ItemGroup>
+    <WasmtimeArchive Include="x86_64-windows" RuntimeIdentifier="win-x64" Format="zip" Library="wasmtime.dll"
+                     Sha256="31c2d97399b2555c06233a5fe0d2ba7373d020dae584107b1e3f459dd1756c42" />
+    <WasmtimeArchive Include="aarch64-windows" RuntimeIdentifier="win-arm64" Format="zip" Library="wasmtime.dll"
+                     Sha256="2dd5ec2f86b9d50da93e4f29985472c0520ee3545e5ab9e8771430f39011c269" />
+    <WasmtimeArchive Include="x86_64-linux" RuntimeIdentifier="linux-x64" Format="tar.xz" Library="libwasmtime.so"
+                     Sha256="6cd2e5a976d68932afb546c2d14d89ba9e5578127a9716a13500dde40fc1e0e6" />
+    <WasmtimeArchive Include="aarch64-linux" RuntimeIdentifier="linux-arm64" Format="tar.xz" Library="libwasmtime.so"
+                     Sha256="3bb7d77fcbf0da214b7d56fc1f244e77b6dbb51b740c63ff7cbd8ece398308dc" />
+    <WasmtimeArchive Include="x86_64-macos" RuntimeIdentifier="osx-x64" Format="tar.xz" Library="libwasmtime.dylib"
+                     Sha256="07dc84f84debc1cca9f79c5b75200799296bb53d83f2e9d0e8dc83fe05245a63" />
+    <WasmtimeArchive Include="aarch64-macos" RuntimeIdentifier="osx-arm64" Format="tar.xz" Library="libwasmtime.dylib"
+                     Sha256="2c7c4e75ca41f505867ef7c836c942c6b1190f708939753d10d1927585eaed59" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,20 @@
+[
+  { "file": "qr.png", "read": "image", "status": "ok", "codes": ["https://v.sandbox.verifiabl.io/v/n5waC35dPCoRtMXW5_gJqw#2.JVSWY3DPO5XXE3DE"] },
+  { "file": "qr-photo.jpg", "read": "image", "status": "ok", "codes": ["https://v.sandbox.verifiabl.io/v/n5waC35dPCoRtMXW5_gJqw#2.JVSWY3DPO5XXE3DE"] },
+  { "file": "blank.webp", "read": "image", "status": "ok", "codes": [] },
+  { "file": "qr.gray8", "read": "pixels", "pixels": { "width": 123, "height": 123, "format": "gray8" }, "status": "ok", "codes": ["https://v.sandbox.verifiabl.io/v/n5waC35dPCoRtMXW5_gJqw#2.JVSWY3DPO5XXE3DE"] },
+  { "file": "qr.gray8", "read": "pixels", "pixels": { "width": 123, "height": 124, "format": "gray8" }, "status": "unreadable" },
+  { "file": "qr.gray8", "read": "pixels", "pixels": { "width": 123, "height": 123, "format": "rgba32" }, "status": "unreadable" },
+  { "file": "qr-transparent.rgba32", "read": "pixels", "pixels": { "width": 123, "height": 123, "format": "rgba32" }, "status": "ok", "codes": ["https://v.sandbox.verifiabl.io/v/n5waC35dPCoRtMXW5_gJqw#2.JVSWY3DPO5XXE3DE"] },
+  { "file": "qr-blue.bgra32", "read": "pixels", "pixels": { "width": 123, "height": 123, "format": "bgra32" }, "status": "ok", "codes": ["https://v.sandbox.verifiabl.io/v/n5waC35dPCoRtMXW5_gJqw#2.JVSWY3DPO5XXE3DE"] },
+  { "file": "qr-blue.bgra32", "read": "pixels", "pixels": { "width": 123, "height": 123, "format": "rgba32" }, "status": "ok", "codes": [] },
+  { "file": "not-a-file.bin", "read": "image", "status": "unreadable" },
+  { "file": "not-a-file.bin", "read": "pdf", "status": "unreadable" },
+  { "file": "vector-qr.pdf", "read": "pdf", "status": "ok", "metadata": [], "codes": ["https://v.sandbox.verifiabl.io/v/n5waC35dPCoRtMXW5_gJqw#2.JVSWY3DPO5XXE3DE"], "pages": 1 },
+  { "file": "metadata.pdf", "read": "pdf", "status": "ok", "metadata": ["2|n5waC35dPCoRtMXW5_gJqw|JVSWY3DPO5XXE3DE"], "codes": [], "pages": 0 },
+  { "file": "utf16-metadata.pdf", "read": "pdf", "status": "ok", "metadata": ["2|n5waC35dPCoRtMXW5_gJqw|JVSWY3DPO5XXE3DE"], "codes": [], "pages": 0 },
+  { "file": "nested-metadata.pdf", "read": "pdf", "status": "tooMuchMetadata" },
+  { "file": "oversized-metadata.pdf", "read": "pdf", "status": "tooMuchMetadata" },
+  { "file": "long-path.pdf", "read": "pdf", "status": "outOfMemory" },
+  { "file": "long-metadata-qr.pdf", "read": "pdf", "status": "ok", "metadata": [], "codes": ["https://v.sandbox.verifiabl.io/v/n5waC35dPCoRtMXW5_gJqw#2.JVSWY3DPO5XXE3DE"], "pages": 1 }
+]

@@ -1,0 +1,37 @@
+<Project>
+
+  <!--
+    An application or test project that references Verifiabl.Verifier.Extraction
+    by project gets Wasmtime's library for its own runtime, as a package
+    reference does from the package's runtimes/ folder.
+  -->
+  <Target Name="VerifiablCopyWasmtime" BeforeTargets="AssignTargetPaths" DependsOnTargets="IncludeTransitiveProjectReferences"
+          Condition="'$(TargetFramework)' != '' and '$(DesignTimeBuild)' != 'true' and ('$(OutputType)' == 'Exe' or '$(IsTestProject)' == 'true')">
+    <PropertyGroup>
+      <_VerifiablIsNetFramework Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">true</_VerifiablIsNetFramework>
+      <_VerifiablWasmtimePlatform>host</_VerifiablWasmtimePlatform>
+      <!-- .NET Framework's default runtime identifier is 32-bit, and the sandbox needs a 64-bit process. -->
+      <_VerifiablWasmtimePlatform Condition="'$(RuntimeIdentifier)' != '' and '$(_VerifiablIsNetFramework)' != 'true'">$(RuntimeIdentifier)</_VerifiablWasmtimePlatform>
+    </PropertyGroup>
+    <ItemGroup>
+      <_VerifiablSandboxReference Include="@(ProjectReference)" Condition="'%(Filename)' == 'Verifiabl.Verifier.Extraction'" />
+    </ItemGroup>
+
+    <!-- .NET Framework runs only on Windows. -->
+    <MSBuild Condition="'@(_VerifiablSandboxReference)' != '' and ('$(_VerifiablIsNetFramework)' != 'true' or $([MSBuild]::IsOSPlatform('Windows')))"
+             Projects="@(_VerifiablSandboxReference->'%(FullPath)')" Targets="VerifiablFetchWasmtime"
+             Properties="WasmtimePlatform=$(_VerifiablWasmtimePlatform)" RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained">
+      <Output TaskParameter="TargetOutputs" ItemName="_VerifiablWasmtimeLibrary" />
+    </MSBuild>
+
+    <ItemGroup>
+      <!-- .NET loads the library from beside the assembly. -->
+      <None Include="@(_VerifiablWasmtimeLibrary)" Condition="'$(_VerifiablIsNetFramework)' != 'true'"
+            Link="%(_VerifiablWasmtimeLibrary.Filename)%(_VerifiablWasmtimeLibrary.Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      <!-- WasmtimeLibrary loads it from wasmtime\<architecture>\. -->
+      <None Include="@(_VerifiablWasmtimeLibrary)" Condition="'$(_VerifiablIsNetFramework)' == 'true'"
+            Link="wasmtime\$([System.String]::Copy('%(_VerifiablWasmtimeLibrary.RuntimeIdentifier)').Replace('win-', ''))\%(_VerifiablWasmtimeLibrary.Filename)%(_VerifiablWasmtimeLibrary.Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    </ItemGroup>
+  </Target>
+
+</Project>
